@@ -1,0 +1,299 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Modelo 1: plano
+model Plan {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  priceMonthly Decimal  @default(0) @db.Decimal(10, 2)
+  limitsJson   Json     @default("{}")
+  featuresJson Json     @default("{}")
+  createdAt    DateTime @default(now()) @db.Timestamp(6)
+  organizations Organization[]
+  subscriptions Subscription[]
+}
+
+// Modelo 2: usuário
+model User {
+  id               String    @id @default(uuid()) @db.Uuid
+  email            String    @unique @db.VarChar(255)
+  name             String    @db.VarChar(255)
+  passwordHash     String    @db.VarChar(255)
+  emailVerified    Boolean   @default(false)
+  createdAt        DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt        DateTime  @updatedAt
+  organizationMembers OrganizationMember[]
+  sessions         Session[]
+  passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+// Modelo 3: organização (tenant)
+model Organization {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(255)
+  slug         String    @unique @db.VarChar(100)
+  planId       String?   @db.Uuid
+  plan         Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  status       String    @default("active") @db.VarChar(50)
+  createdAt    DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime  @updatedAt
+  members      OrganizationMember[]
+  roles        Role[]
+  subscriptions Subscription[]
+  usage        Usage[]
+  billingEvents BillingEvent[]
+}
+
+// Modelo 4: membro de organização
+model OrganizationMember {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String        @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String        @default("member") @db.VarChar(50)
+  joinedAt       DateTime      @default(now()) @db.Timestamp(6)
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// Modelo 5: roles
+model Role {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String        @db.VarChar(100)
+  permissionsJson Json         @default("[]")
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// Modelo 6: permissões globais
+model Permission {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  resource  String   @db.VarChar(100)
+  action    String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+}
+
+// Modelo 7: sessões persistentes
+model Session {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @db.Uuid
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId  String?    @db.Uuid
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tokenHash       String     @unique @db.VarChar(255)
+  expiresAt       DateTime   @db.Timestamp(6)
+  revokedAt       DateTime?  @db.Timestamp(6)
+  createdAt       DateTime   @default(now()) @db.Timestamp(6)
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+// Modelo 8: tokens de reset de senha
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique @db.VarChar(255)
+  expiresAt DateTime @db.Timestamp(6)
+  usedAt    DateTime? @db.Timestamp(6)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  @@index([userId])
+}
+
+// Modelo 9: tokens de verificação de email
+model EmailVerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique @db.VarChar(255)
+  expiresAt DateTime @db.Timestamp(6)
+  usedAt    DateTime? @db.Timestamp(6)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  @@index([userId])
+}
+
+// Modelo 10: subscrições
+model Subscription {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId         String?       @db.Uuid
+  plan           Plan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
+  status         String        @default("trial") @db.VarChar(50)
+  startedAt      DateTime?     @db.Timestamp(6)
+  endedAt        DateTime?     @db.Timestamp(6)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// Modelo 11: uso / métricas
+model Usage {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metric         String        @db.VarChar(100)
+  value          Int           @default(0)
+  period         String        @default("monthly") @db.VarChar(20)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@unique([organizationId, metric, period])
+  @@index([organizationId])
+}
+
+// Modelo 12: eventos de faturamento
+model BillingEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  eventType      String        @db.VarChar(100)
+  amount         Decimal?      @db.Decimal(10, 2)
+  status         String        @default("pending") @db.VarChar(50)
+  externalId     String?       @db.VarChar(255)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 3 — CRM
+model Contact {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String        @db.VarChar(255)
+  name           String        @db.VarChar(255)
+  phone          String?       @db.VarChar(50)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+model Lead {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contactId      String?       @db.Uuid
+  contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  source         String        @default("organic") @db.VarChar(50)
+  status         String        @default("new") @db.VarChar(50)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+model Deal {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId         String?       @db.Uuid
+  lead           Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  title          String        @db.VarChar(255)
+  value          Decimal       @default(0) @db.Decimal(10, 2)
+  stage          String        @default("prospecting") @db.VarChar(50)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+model Pipeline {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String        @db.VarChar(100)
+  stages         Json          @default("[]")
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 4 — Produtos + Mídia
+model Product {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sku            String        @unique @db.VarChar(100)
+  name           String        @db.VarChar(255)
+  description    String?       @db.Text
+  price          Decimal       @default(0) @db.Decimal(10, 2)
+  category       String?       @db.VarChar(100)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+model Media {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fileKey        String?       @db.VarChar(255)
+  url            String?       @db.VarChar(500)
+  type           String        @default("image") @db.VarChar(50)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 5 — Publicador + Calendário
+model Post {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String        @db.VarChar(255)
+  body           String?       @db.Text
+  status         String        @default("draft") @db.VarChar(50)
+  publishAt      DateTime?     @db.Timestamp(6)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+model CalendarEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String        @db.VarChar(255)
+  eventDate      DateTime      @db.Date
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 6 — Vídeo
+model Video {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String?       @db.VarChar(500)
+  duration       Int           @default(0)
+  status         String        @default("processing") @db.VarChar(50)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 8 — Central de Mensagens
+model Message {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  body           String?       @db.Text
+  fromChannel    String        @default("whatsapp") @db.VarChar(50)
+  toContact      String?       @db.VarChar(255)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}
+
+// FASE 9 — Campanhas de tráfego pago (simuladas via mock adapters)
+// FASE 10 — IA Central (simulada via mock adapter)
+// FASE 11 — Relatórios
+model Report {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportType     String        @db.VarChar(100)
+  data           Json          @default("{}")
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  @@index([organizationId])
+}

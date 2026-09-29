@@ -1,0 +1,28 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+
+# Configurações locais do Claude Code
+.claude/
+
+# Artefatos locais do TypeScript
+*.tsbuildinfo
+
+# Arquivos auxiliares locais e backups
+_diagnosticos/
+*.bak
+*.pre-supabase.bak
+*.bak.*
+*.txt
+
+# Configurações específicas da máquina
+*.code-workspace
+
+# Ferramentas auxiliares de desenvolvimento
+.agents/
+.cursor/
+.devin/

@@ -39,37 +39,33 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Visual mockup */}
-          <div className="mt-14 rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl shadow-indigo-900/10 backdrop-blur p-6 md:p-8">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="h-3 w-3 rounded-full bg-rose-400" />
-              <span className="h-3 w-3 rounded-full bg-amber-400" />
-              <span className="h-3 w-3 rounded-full bg-emerald-400" />
-              <span className="ml-3 text-xs text-slate-400 font-mono">revolutionx.com.br — dashboard</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-xl bg-slate-950 border border-slate-800 p-5 shadow-inner">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">CRM</h3>
-                <div className="space-y-2">
-                  <div className="h-2 w-3/4 rounded bg-indigo-500/70" />
-                  <div className="h-2 w-1/2 rounded bg-slate-700" />
-                  <div className="h-2 w-5/6 rounded bg-indigo-500/40" />
-                </div>
+          {/* Visual mockup 3D — propriedades reais */}
+          <div style={{ perspective: "1200px", marginTop: "2rem", display: "flex", justifyContent: "center" }} aria-label="Mockup 3D futurista">
+            <div style={{ transformStyle: "preserve-3d", transform: "rotateX(8deg) rotateY(-3deg) translateZ(40px)", borderRadius: "1.25rem", background: "linear-gradient(180deg,rgba(10,6,18,0.85),rgba(5,2,10,0.95))", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 40px 80px rgba(109,40,217,0.25)", padding: "1.25rem", width: "100%", maxWidth: "980px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingBottom: "0.75rem", borderBottom: "1px solid rgba(255,255,255,0.08)", fontWeight: 700, fontSize: "0.95rem", color: "#fff" }}>
+                <span className="h-3 w-3 rounded-full bg-rose-400" style={{boxShadow: "0 0 6px #f87171"}}></span>
+                <span className="h-3 w-3 rounded-full bg-amber-400" style={{boxShadow: "0 0 6px #fbbf24"}}></span>
+                <span className="h-3 w-3 rounded-full bg-emerald-400" style={{boxShadow: "0 0 6px #34d399"}}></span>
+                <span style={{ marginLeft: 12, fontSize: "0.85rem", color: "#A78BFA", fontFamily: "monospace" }}>revolutionx.com.br — dashboard</span>
               </div>
-              <div className="rounded-xl bg-slate-950 border border-slate-800 p-5 shadow-inner">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Pedidos / Produtos</h3>
-                <div className="space-y-2">
-                  <div className="h-2 w-2/3 rounded bg-cyan-500/70" />
-                  <div className="h-2 w-3/4 rounded bg-slate-700" />
-                  <div className="h-2 w-1/2 rounded bg-ccyan-500/40" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
+                <div style={{ borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", padding: "1rem", transform: "translateZ(20px)", transition: "transform .2s" }}>
+                  <h3 style={{ fontSize: "0.85rem", fontWeight: 600, color: "#E2E8F0", marginBottom: "0.5rem" }}>CRM Real</h3>
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#6D28D9,#8B5CF6)", marginBottom: 6, width: "92%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#6D28D9,#8B5CF6)", marginBottom: 6, width: "70%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#6D28D9,#8B5CF6)", width: "85%" }} />
                 </div>
-              </div>
-              <div className="rounded-xl bg-slate-950 border border-slate-800 p-5 shadow-inner">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Agenda / Pipeline</h3>
-                <div className="space-y-2">
-                  <div className="h-2 w-4/5 rounded bg-violet-500/70" />
-                  <div className="h-2 w-2/3 rounded bg-slate-700" />
-                  <div className="h-2 w-3/4 rounded bg-violet-500/40" />
+                <div style={{ borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", padding: "1rem", transform: "translateZ(30px)", transition: "transform .2s", boxShadow: "0 10px 30px rgba(168,85,247,0.15)" }}>
+                  <h3 style={{ fontSize: "0.85rem", fontWeight: 600, color: "#E2E8F0", marginBottom: "0.5rem" }}>Produtos</h3>
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#8B5CF6,#A855F7)", marginBottom: 6, width: "88%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#8B5CF6,#A855F7)", marginBottom: 6, width: "65%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#8B5CF6,#A855F7)", width: "78%" }} />
+                </div>
+                <div style={{ borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", padding: "1rem", transform: "translateZ(10px)", transition: "transform .2s" }}>
+                  <h3 style={{ fontSize: "0.85rem", fontWeight: 600, color: "#E2E8F0", marginBottom: "0.5rem" }}>Agenda / Pipeline</h3>
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#A855F7,#C084FC)", marginBottom: 6, width: "95%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#A855F7,#C084FC)", marginBottom: 6, width: "72%" }} />
+                  <div style={{ height: 8, borderRadius: 999, background: "linear-gradient(90deg,#A855F7,#C084FC)", width: "60%" }} />
                 </div>
               </div>
             </div>
@@ -151,7 +147,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between"><span className="text-slate-300">TypeScript</span><span className="font-bold text-emerald-400">PASS</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Testes</span><span className="font-bold text-emerald-400">13/13 PASS</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Lint</span><span className="font-bold text-emerald-400">PASS</span></div>
-              <div className="flex items-center justify-between"><span className="text-slate-300">Build</span><span className="font-bold text-amber-400">BLOQUEADO (rede)</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-300">Build</span><span className="font-bold text-emerald-400">PASS</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Migration 004</span><span className="font-bold text-emerald-400">EXECUTADA</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Repositórios</span><span className="font-bold text-emerald-400">4 REAL</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Integrações Meta</span><span className="font-bold text-amber-400">PREPARADAS</span></div>

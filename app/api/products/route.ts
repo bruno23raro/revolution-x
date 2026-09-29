@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateProduct } from '../../../../src/services/productService';
-import { productRepoReal } from '../../../../src/repositories/productRepoReal';
+import { validateProduct } from '../../../src/services/productService';
+import { productRepoReal } from '../../../src/repositories/productRepoReal';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);

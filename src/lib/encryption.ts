@@ -1,9 +1,12 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const KEY = process.env.META_TOKEN_ENCRYPTION_KEY;
+function getKey(): string | undefined {
+  return process.env.META_TOKEN_ENCRYPTION_KEY;
+}
 
 export function encryptToken(plaintext: string): string {
+  const KEY = getKey();
   if (!KEY || KEY.length < 32) throw new Error('META_TOKEN_ENCRYPTION_KEY missing');
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(KEY.slice(0, 32)), iv);
@@ -14,6 +17,7 @@ export function encryptToken(plaintext: string): string {
 }
 
 export function decryptToken(ciphertext: string): string {
+  const KEY = getKey();
   if (!KEY || KEY.length < 32) throw new Error('META_TOKEN_ENCRYPTION_KEY missing');
   const parts = ciphertext.split(':');
   if (parts.length !== 3) throw new Error('invalid ciphertext');

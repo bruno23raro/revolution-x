@@ -2,22 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { sanitizeWebhookPayload } from '@/integrations/meta/webhooks/handler';
-import crypto2 from 'crypto';
 
 // Webhook Meta — verificação oficial + assinatura HMAC-SHA256
-// Nunca registrar access_token/app_secret/Authorization
+// META_APP_SECRET: NUNCA exposto no código/log
+// META_WEBHOOK_VERIFY_TOKEN: usado exclusivamente para GET hub.verify_token
 
 const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
-const META_WEBHOOK_SECRET = process.env.META_WEBHOOK_SECRET;
+const META_APP_SECRET = process.env.META_APP_SECRET;
+const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN;
 
 function timingSafeEqual(a: Buffer, b: Buffer): boolean {
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
 
-function verifySignature(payload: string, signature: string, secret: string): boolean {
-  const expected = crypto2
-    .createHmac('sha256', secret)
+function verifySignature(payload: string, signature: string): boolean {
+  if (!META_APP_SECRET) return false;
+  const expected = crypto
+    .createHmac('sha256', META_APP_SECRET)
     .update(payload, 'utf8')
     .digest('hex');
   const sig = signature.startsWith('sha256=') ? signature.slice(7) : signature;
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get('hub.challenge');
 
   if (mode === 'subscribe' && token && challenge) {
-    if (META_WEBHOOK_SECRET && token === META_WEBHOOK_SECRET) {
+    if (META_WEBHOOK_VERIFY_TOKEN && token === META_WEBHOOK_VERIFY_TOKEN) {
       return new NextResponse(challenge, { status: 200 });
     }
   }
@@ -57,12 +59,12 @@ export async function POST(req: NextRequest) {
 
   // Validar assinatura X-Hub-Signature-256
   const signature = req.headers.get('X-Hub-Signature-256');
-  if (!signature || !META_WEBHOOK_SECRET) {
+  if (!signature || !META_APP_SECRET) {
     return NextResponse.json({ error: 'signature_missing' }, { status: 401 });
   }
 
   const payloadText = await req.text();
-  if (!verifySignature(payloadText, signature, META_WEBHOOK_SECRET)) {
+  if (!verifySignature(payloadText, signature)) {
     return NextResponse.json({ error: 'signature_invalid' }, { status: 401 });
   }
 
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase();
       const { data: existing } = await supabase
         .from('webhook_events')
-        .select('id')
+        .select('event_id')
         .eq('meta_event_id', metaEventId)
         .maybeSingle();
 
@@ -104,7 +106,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('webhook_events').insert({
         meta_event_id: metaEventId,
         event_type: eventType,
-        payload_hash: crypto2.createHash('sha256').update(payloadText).digest('hex'),
+        payload_hash: crypto.createHash('sha256').update(payloadText).digest('hex'),
         processed_at: new Date().toISOString(),
       });
     }

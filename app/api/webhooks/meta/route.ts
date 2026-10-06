@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { sanitizeWebhookPayload } from '@/integrations/meta/webhooks/handler';
+import { sanitizeWebhookPayload, processWhatsAppPayload } from '@/integrations/meta';
+import { prisma } from '@/lib/prisma';
 
 // Webhook Meta — verificação oficial + assinatura HMAC-SHA256
 // META_APP_SECRET: NUNCA exposto no código/log
@@ -98,8 +99,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Processar evento (futuro: delegar para handler específico por tipo)
+  // Processar evento
   const eventType = extractEventType(payload);
+
+  // Persistir webhook_event (idempotência)
   try {
     if (metaEventId) {
       const supabase = getSupabase();
@@ -111,7 +114,39 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (err) {
-    console.error('[meta-webhook] db insert error:', err);
+    console.error('[meta-webhook] db insert error:', (err as Error).message);
+  }
+
+  // Processar mensagens WhatsApp → CRM
+  try {
+    const p = payload as { entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string } } }> }> };
+    const phoneNumberId = p?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+
+    if (phoneNumberId) {
+      // Resolver tenant via meta_integrations (Supabase — tabela não está no Prisma)
+      let organizationId: string | null = null;
+      try {
+        const supabase = getSupabase();
+        const { data: integration } = await supabase
+          .from('meta_integrations')
+          .select('organization_id')
+          .eq('phone_number_id', phoneNumberId)
+          .maybeSingle();
+        organizationId = (integration as { organization_id?: string } | null)?.organization_id ?? null;
+      } catch {
+        // Lookup falhou — não persistir mensagens sem tenant
+        organizationId = null;
+      }
+
+      if (organizationId) {
+        await processWhatsAppPayload(payload, organizationId, prisma);
+      } else {
+        console.warn('[meta-webhook] tenant não identificado — phone_number_id:', phoneNumberId);
+      }
+    }
+  } catch (err) {
+    // Falha no processor não impede 200 (Meta re-tenta se não receber 200 rápido)
+    console.error('[meta-webhook] processor error:', (err as Error).message);
   }
 
   return NextResponse.json({ status: 'accepted' }, { status: 200 });
@@ -121,14 +156,28 @@ function extractEventId(payload: unknown): string {
   const p = payload as Record<string, unknown>;
   if (typeof p.entry === 'object' && Array.isArray(p.entry) && p.entry.length > 0) {
     const entry = p.entry[0] as Record<string, unknown>;
-    if (typeof entry.id === 'string') return entry.id;
-    if (typeof entry.messaging) {
+
+    // WhatsApp Cloud API: priorizar ID da mensagem específica
+    if (Array.isArray(entry.changes) && entry.changes.length > 0) {
+      const change = entry.changes[0] as Record<string, unknown>;
+      const value = change?.value as Record<string, unknown> | undefined;
+      if (Array.isArray(value?.messages) && value.messages.length > 0) {
+        const msg = value.messages[0] as Record<string, unknown>;
+        if (typeof msg.id === 'string' && msg.id) return msg.id;
+      }
+    }
+
+    // Instagram / Messenger messaging
+    if (Array.isArray(entry.messaging) && entry.messaging.length > 0) {
       const msgs = entry.messaging as Array<Record<string, unknown>>;
       if (msgs[0] && typeof (msgs[0] as Record<string, unknown>).message === 'object') {
-      const msgObj = (msgs[0] as Record<string, unknown>).message as Record<string, unknown>;
-      if (msgObj.mid) return String(msgObj.mid);
+        const msgObj = (msgs[0] as Record<string, unknown>).message as Record<string, unknown>;
+        if (msgObj.mid) return String(msgObj.mid);
+      }
     }
-    }
+
+    // Fallback: ID do evento ou da página (usar com cuidado)
+    if (typeof entry.id === 'string') return entry.id;
   }
   return '';
 }

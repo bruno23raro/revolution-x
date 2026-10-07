@@ -27,7 +27,7 @@ export const contactRepoReal: ContactRepo = {
     const row = await prisma.contact.create({
       data: {
         organizationId: data.organizationId,
-        email: data.email || null,
+        email: data.email ?? null,
         name: data.name,
         phone: data.phone ?? null,
       },

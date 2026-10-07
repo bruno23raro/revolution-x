@@ -5,7 +5,7 @@
 export interface Contact {
   id: string;
   organizationId: string;
-  email: string;
+  email?: string;
   name: string;
   phone?: string;
   createdAt: string;

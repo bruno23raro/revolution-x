@@ -1,8 +1,6 @@
 // FASE 4 — REPOSITORY REAL — products (Migration 004 executada e confirmada)
 import { Product } from '../models/product';
-import { Pool } from 'pg';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { prisma } from '../lib/prisma';
 
 export interface ProductRepo {
   findByOrganization(orgId: string): Promise<Product[]>;
@@ -11,42 +9,45 @@ export interface ProductRepo {
 
 export const productRepoReal: ProductRepo = {
   async findByOrganization(orgId: string): Promise<Product[]> {
-    const res = await pool.query('SELECT * FROM products WHERE organization_id = $1', [orgId]);
-    return res.rows.map((r: any) => ({
+    const rows = await prisma.product.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((r) => ({
       id: r.id,
-      organizationId: r.organization_id,
+      organizationId: r.organizationId,
       name: r.name,
-      description: r.description || null,
+      description: r.description ?? undefined,
       price: r.price !== null ? Number(r.price) : undefined,
-      category: r.category || null,
-      active: r.active ?? true,
-      createdAt: r.created_at ? r.created_at.toISOString() : new Date().toISOString(),
-      updatedAt: r.updated_at ? r.updated_at.toISOString() : new Date().toISOString(),
+      category: r.category ?? undefined,
+      active: true,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.createdAt.toISOString(),
     }));
   },
+
   async create(data: Partial<Product> & { organizationId: string }): Promise<Product> {
-    const res = await pool.query(
-      'INSERT INTO products (organization_id, name, description, price, category, active) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [
-        data.organizationId,
-        data.name,
-        data.description || null,
-        data.price !== undefined && data.price !== null ? data.price : null,
-        data.category || null,
-        data.active !== undefined ? data.active : true,
-      ]
-    );
-    const r = res.rows[0];
+    const row = await prisma.product.create({
+      data: {
+        organizationId: data.organizationId,
+        // Generate a deterministic SKU if not provided
+        sku: `sku-${Date.now()}`,
+        name: data.name!,
+        description: data.description ?? null,
+        price: data.price ?? 0,
+        category: data.category ?? null,
+      },
+    });
     return {
-      id: r.id,
-      organizationId: r.organization_id,
-      name: r.name,
-      description: r.description || null,
-      price: r.price !== null ? Number(r.price) : undefined,
-      category: r.category || null,
-      active: r.active ?? true,
-      createdAt: r.created_at ? r.created_at.toISOString() : new Date().toISOString(),
-      updatedAt: r.updated_at ? r.updated_at.toISOString() : new Date().toISOString(),
+      id: row.id,
+      organizationId: row.organizationId,
+      name: row.name,
+      description: row.description ?? undefined,
+      price: row.price !== null ? Number(row.price) : undefined,
+      category: row.category ?? undefined,
+      active: true,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.createdAt.toISOString(),
     };
   },
 };

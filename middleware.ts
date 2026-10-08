@@ -1,4 +1,4 @@
-﻿import { createServerClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
@@ -31,7 +31,33 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return response;
+  }
+
+  // Fetch user's organization from database
+  try {
+    const { data: member } = await supabase
+      .from('OrganizationMember')
+      .select('organizationId')
+      .eq('userId', user.id)
+      .maybeSingle();
+
+    if (member?.organizationId) {
+      response.cookies.set('x-organization-id', member.organizationId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+    }
+  } catch {
+    // Ignore errors fetching org
+  }
 
   return response;
 }

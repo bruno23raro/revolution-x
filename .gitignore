@@ -6,7 +6,7 @@ node_modules/
 coverage/
 *.log
 
-# Configurações locais do Claude Code
+# Configuraï¿½ï¿½es locais do Claude Code
 .claude/
 
 # Artefatos locais do TypeScript
@@ -19,10 +19,20 @@ _diagnosticos/
 *.bak.*
 *.txt
 
-# Configurações específicas da máquina
+# Configuraï¿½ï¿½es especï¿½ficas da mï¿½quina
 *.code-workspace
 
 # Ferramentas auxiliares de desenvolvimento
 .agents/
 .cursor/
 .devin/
+
+# graft's local graph cache â€” regenerable, not committed (run `graft build`).
+/graft/
+
+# Supabase CLI metadata â€” auto-generated, local to each environment
+supabase/.temp/
+
+# MCP configuration â€” local per user
+.mcp.json
+.metamcp/

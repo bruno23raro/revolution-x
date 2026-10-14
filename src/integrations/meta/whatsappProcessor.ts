@@ -8,6 +8,12 @@
 //   Message.externalId — WAMID ou outro identificador da mensagem Meta
 //   Message.direction — 'inbound' | 'outbound'
 //   Message.status    — 'received' | 'sent' | 'delivered' | 'read'
+//
+// SECURITY: this processor receives a Prisma.TransactionClient that has already
+// had app.current_org set inside a transaction. It must NOT fall back to the
+// global singleton — that would bypass RLS when the production connection role
+// is later switched to a restricted non-BYPASSRLS user.
+import type { Prisma } from '@prisma/client';
 
 export interface WhatsAppMessageResult {
   success: boolean;
@@ -22,12 +28,12 @@ export interface WhatsAppMessageResult {
  *
  * @param payload - Payload já validado (estrutura Meta)
  * @param organizationId - Tenant já resolvido (viola multi-tenant se ausente)
- * @param prisma - PrismaClient (injetado para permitir mocks em testes)
+ * @param tx - Prisma.TransactionClient com app.current_org configurado pela transação外层
  */
 export async function processWhatsAppPayload(
   payload: unknown,
   organizationId: string,
-  prisma: any
+  tx: Prisma.TransactionClient
 ): Promise<WhatsAppMessageResult[]> {
   const results: WhatsAppMessageResult[] = [];
 
@@ -76,7 +82,7 @@ export async function processWhatsAppPayload(
         let contactId: string | null = null;
 
         try {
-          let contact = await prisma.contact.findFirst({
+          let contact = await tx.contact.findFirst({
             where: {
               organizationId,
               waId,
@@ -86,7 +92,7 @@ export async function processWhatsAppPayload(
 
           if (!contact) {
             const name = profileName || `WhatsApp ${waId}`;
-            contact = await prisma.contact.create({
+            contact = await tx.contact.create({
               data: {
                 organizationId,
                 name,
@@ -107,7 +113,7 @@ export async function processWhatsAppPayload(
 
         // --- Persistir Message ---
         try {
-          const createdMessage = await prisma.message.create({
+          const createdMessage = await tx.message.create({
             data: {
               organizationId,
               contactId,

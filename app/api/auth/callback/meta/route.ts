@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { encryptToken } from '@/lib/encryption';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
+import { withUserContext } from '@/lib/prisma';
 import type { MetaConnectionStatus } from '@/integrations/meta/types';
 
 // OAuth Meta callback — arquitetura existente respeitada
 // META_APP_SECRET: NUNCA exposto no código/cliente/Git
-
-function getSupabase() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY missing');
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
 
 // Timing-safe state comparison
 function secureCompare(a: string, b: string): boolean {
@@ -38,19 +32,32 @@ export async function GET(req: NextRequest) {
     return redirectError(req, 'state_invalid');
   }
 
-  // Obter org do cookie de sessão
-  const sessionCookie = req.cookies.get('session')?.value;
-  if (!sessionCookie) return redirectError(req, 'not_authenticated');
+  // Autenticação robusta: validação via Supabase Auth (anon key → RLS sujeito)
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  let userId: string;
-  let organizationId: string;
-  try {
-    const sessionData = JSON.parse(Buffer.from(sessionCookie, 'base64').toString('utf8'));
-    userId = sessionData.userId;
-    organizationId = sessionData.organizationId;
-  } catch {
+  if (!user) {
     return redirectError(req, 'not_authenticated');
   }
+
+  // Buscar membership do usuário no banco para validar a organização.
+  // Wrapped in withUserContext so the "User_self" RLS policy is satisfied.
+  // (Currently BYPASSRLS ignores this, but future-proof for role migration.)
+  const dbUser = await withUserContext(user.id, async (tx) =>
+    tx.user.findUnique({
+      where: { id: user.id },
+      include: { organizationMembers: true },
+    })
+  );
+
+  if (!dbUser || dbUser.organizationMembers.length === 0) {
+    return redirectError(req, 'not_authenticated');
+  }
+
+  // Usa a primeira (primary) organização do usuário
+  const organizationId = dbUser.organizationMembers[0].organizationId;
 
   // Token exchange — servidor, META_APP_ID/SECRET do .env.local
   // NUNCA expor token na response/redirect
@@ -113,14 +120,14 @@ export async function GET(req: NextRequest) {
     return redirectError(req, 'encryption_failed');
   }
 
-  // Persistir integração no banco
+  // Persistir integração no banco via service_role (único caminho que precisa de privileged access)
   try {
-    const supabase = getSupabase();
+    const serviceSupabase = createServiceRoleClient();
     const expiresAt = expiresIn > 0
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : null;
 
-    const { error: upsertErr } = await supabase
+    const { error: upsertErr } = await serviceSupabase
       .from('meta_integrations')
       .upsert(
         {

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { withTenantContext } from '@/lib/prisma';
 import { sanitizeWebhookPayload, processWhatsAppPayload } from '@/integrations/meta';
-import { prisma } from '@/lib/prisma';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 // Webhook Meta — verificação oficial + assinatura HMAC-SHA256
 // META_APP_SECRET: NUNCA exposto no código/log
@@ -25,14 +25,6 @@ function verifySignature(payload: string, signature: string): boolean {
     .digest('hex');
   const sig = signature.startsWith('sha256=') ? signature.slice(7) : signature;
   return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(sig, 'hex'));
-}
-
-function getSupabase() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY missing');
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
 }
 
 // GET: webhook verification (Meta Developers Console)
@@ -79,12 +71,12 @@ export async function POST(req: NextRequest) {
   // Sanitizar antes de qualquer log/processamento
   const safe = sanitizeWebhookPayload(payload);
 
-  // Idempotência: verificar se evento já foi processado
+  // Idempotência: verificar se evento já foi processado (service_role para não depender de RLS)
   const metaEventId = extractEventId(payload);
   if (metaEventId) {
     try {
-      const supabase = getSupabase();
-      const { data: existing } = await supabase
+      const svc = createServiceRoleClient();
+      const { data: existing } = await svc
         .from('webhook_events')
         .select('event_id')
         .eq('meta_event_id', metaEventId)
@@ -94,62 +86,74 @@ export async function POST(req: NextRequest) {
         // Evento duplicado — evitar reprocessamento
         return NextResponse.json({ status: 'already_processed' }, { status: 200 });
       }
-    } catch {
-      // Idempotência falhou — processar mesmo assim
+    } catch (err) {
+      // Idempotência falhou — processar mesmo assim (não bloquear o webhook)
+      console.warn('[meta-webhook] idempotency check failed:', (err as Error).message);
     }
   }
 
   // Processar evento
   const eventType = extractEventType(payload);
 
-  // Persistir webhook_event (idempotência)
-  try {
-    if (metaEventId) {
-      const supabase = getSupabase();
-      await supabase.from('webhook_events').insert({
-        meta_event_id: metaEventId,
-        event_type: eventType,
-        payload_hash: crypto.createHash('sha256').update(payloadText).digest('hex'),
-        processed_at: new Date().toISOString(),
-      });
-    }
-  } catch (err) {
-    console.error('[meta-webhook] db insert error:', (err as Error).message);
+  // Resolver tenant via meta_integrations (service_role — tabela sensível com tokens criptografados)
+  const phoneNumberId = (payload as { entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string } } }> }> })
+    ?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+
+  if (!phoneNumberId) {
+    console.warn('[meta-webhook] phone_number_id missing from payload');
+    return NextResponse.json({ status: 'accepted' }, { status: 200 });
   }
 
-  // Processar mensagens WhatsApp → CRM
+  let organizationId: string | null = null;
   try {
-    const p = payload as { entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string } } }> }> };
-    const phoneNumberId = p?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
-
-    if (phoneNumberId) {
-      // Resolver tenant via meta_integrations (Supabase — tabela não está no Prisma)
-      let organizationId: string | null = null;
-      try {
-        const supabase = getSupabase();
-        const { data: integration } = await supabase
-          .from('meta_integrations')
-          .select('organization_id')
-          .eq('phone_number_id', phoneNumberId)
-          .maybeSingle();
-        organizationId = (integration as { organization_id?: string } | null)?.organization_id ?? null;
-      } catch {
-        // Lookup falhou — não persistir mensagens sem tenant
-        organizationId = null;
-      }
-
-      if (organizationId) {
-        await processWhatsAppPayload(payload, organizationId, prisma);
-      } else {
-        console.warn('[meta-webhook] tenant não identificado — phone_number_id:', phoneNumberId);
-      }
-    }
+    const svc = createServiceRoleClient();
+    const { data: integration } = await svc
+      .from('meta_integrations')
+      .select('organization_id')
+      .eq('phone_number_id', phoneNumberId)
+      .maybeSingle();
+    organizationId = (integration as { organization_id?: string } | null)?.organization_id ?? null;
   } catch (err) {
-    // Falha no processor não impede 200 (Meta re-tenta se não receber 200 rápido)
+    console.error('[meta-webhook] integration lookup failed:', (err as Error).message);
+  }
+
+  if (!organizationId) {
+    console.warn('[meta-webhook] tenant não identificado — phone_number_id:', phoneNumberId);
+    return NextResponse.json({ status: 'accepted' }, { status: 200 });
+  }
+
+  // TODO: persistir webhook_event na transação (require RLS habilitada em webhook_events)
+  // Agora apenas processamos as mensagens com contexto de tenant
+  try {
+    // A transação garante que app.current_org esteja definido para todas as operações
+    const results = await withTenantContext(organizationId, async (tx) => {
+      // Primeiro, gravar evento de webhook (dentro da transação, com contexto de tenant)
+      if (metaEventId) {
+        await tx.$executeRaw`
+          INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
+          VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, sha256(${payloadText}::text), NOW())
+          ON CONFLICT (meta_event_id) DO NOTHING
+        `;
+      }
+
+      // Processar mensagens WhatsApp com o transaction client (tenant-aware)
+      return await processWhatsAppPayload(payload, organizationId, tx);
+    });
+
+    // Verificar se houve algum erro nas mensagens
+    const hasErrors = results.some((r) => !r.success);
+    if (hasErrors) {
+      const errors = results.filter((r) => r.error).map((r) => r.error);
+      console.warn('[meta-webhook] partial processing errors:', errors);
+    }
+
+    return NextResponse.json({ status: 'accepted' }, { status: 200 });
+  } catch (err) {
+    // Falha no processor — logging sem expor dados sensíveis
     console.error('[meta-webhook] processor error:', (err as Error).message);
+    // Meta espera 200 rápido; falhas internas são logadas, não retornam erro
+    return NextResponse.json({ status: 'accepted' }, { status: 200 });
   }
-
-  return NextResponse.json({ status: 'accepted' }, { status: 200 });
 }
 
 function extractEventId(payload: unknown): string {

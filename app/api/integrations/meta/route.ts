@@ -1,39 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { decryptToken } from '@/lib/encryption';
+import { getAuthenticatedUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 
 // GET /api/integrations/meta — status da integração Meta (informações não sensíveis)
 // NUNCA retornar: access_token, ciphertext, encryption key, Authorization, refresh token
 
 export async function GET(req: NextRequest) {
-  // Autenticação via sessão
-  const sessionCookie = req.cookies.get('session')?.value;
-  if (!sessionCookie) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-
-  let organizationId: string;
-  try {
-    const sessionData = JSON.parse(
-      Buffer.from(sessionCookie, 'base64').toString('utf8')
-    );
-    organizationId = sessionData.organizationId;
-  } catch {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  // Autenticação robusta: validação via Supabase Auth + membership no banco
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Usa o client com anon key (sujeito a RLS) — nunca service_role em rotas autenticadas
+    const supabase = await createClient();
 
     const { data: integrations, error } = await supabase
       .from('meta_integrations')
       .select(
         'id, provider, meta_page_id, instagram_account_id, whatsapp_business_account_id, phone_number_id, token_expires_at, connected_at, disconnected_at, status, last_error'
       )
-      .eq('organization_id', organizationId)
+      .eq('organization_id', user.organizationId)
       .maybeSingle();
 
     if (error || !integrations) {
@@ -65,29 +53,21 @@ export async function GET(req: NextRequest) {
 
 // DELETE /api/integrations/meta — desconectar integração
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('session')?.value;
-  if (!sessionCookie) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
-
-  let organizationId: string;
-  try {
-    const sessionData = JSON.parse(
-      Buffer.from(sessionCookie, 'base64').toString('utf8')
-    );
-    organizationId = sessionData.organizationId;
-  } catch {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  // Autenticação robusta: validação via Supabase Auth + membership no banco
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
   const provider = searchParams.get('provider');
+  if (!provider) {
+    return NextResponse.json({ error: 'provider_missing' }, { status: 400 });
+  }
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Usa o client com anon key (sujeito a RLS) — nunca service_role em rotas autenticadas
+    const supabase = await createClient();
 
     await supabase
       .from('meta_integrations')
@@ -95,7 +75,7 @@ export async function DELETE(req: NextRequest) {
         status: 'DISCONNECTED',
         disconnected_at: new Date().toISOString(),
       })
-      .eq('organization_id', organizationId)
+      .eq('organization_id', user.organizationId)
       .eq('provider', provider);
 
     return NextResponse.json({ disconnected: true });

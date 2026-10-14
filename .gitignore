@@ -36,3 +36,15 @@ supabase/.temp/
 # MCP configuration — local per user
 .mcp.json
 .metamcp/
+
+# External/unrelated content — not project code
+agency-agents/
+
+# One-off dev tools, not portable
+cleanup.sql
+install-codebase-memory.ps1
+
+# User-specific, transient and Copilot placeholders
+.github/
+.claude-memory/
+phase*_verification_report.json

@@ -1,6 +1,6 @@
-// src/tests/auth-security.test.ts — Security tests for auth routes
+// src/tests/auth-security.test.ts -- Security tests for auth routes
 // Tests cover: enumeration prevention, token validation, middleware edge cases.
-// @ts-nocheck — deeply-nested jest.fn() chains cause TS "never" inference issues
+// @ts-nocheck -- jest.fn() chain returns: never[] inference issues; needs dedicated typing pass
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
 // ── crypto mock (deterministic tokens in tests) ──────────────────────────────

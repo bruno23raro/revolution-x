@@ -42,11 +42,23 @@
    - Verify email → EmailVerificationToken user-scoped
    - Resend verification → regeração de token
 
-6. **Testar webhook Meta**
+6. **Aplicar migration 009 em staging** (B4 RLS correction: Session + BillingEvent)
+   ```bash
+   supabase migration up --staging-db-url
+   ```
+   **Correção crítica de segurança (B4):**
+   - `Session` re-escopada para usuário (app.current_user_id) -- elimina leak
+     cross-tenant onde sessões com organizationId=NULL eram visíveis a todos.
+   - `BillingEvent` escopo estrito por tenant (app.current_org) -- eventos órfãos
+     (organizationId=NULL após DELETE da org) fecham fail-closed em vez de abrir.
+   - `Role` inalterado (NULL-permissivo, intencional para roles globais).
+   - Validar com `src/tests/b4-rls.test.ts` antes de prosseguir.
+
+7. **Testar webhook Meta**
    - Configurar integração Meta em staging
    - Simular webhook e verificar processamento
 
-7. **Validar middleware**
+8. **Validar middleware**
    - Usuário autenticado recebe cookie x-organization-id
    - Usuário sem membership não recebe cookie
 

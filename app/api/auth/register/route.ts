@@ -12,11 +12,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
     }
     const supabase = await createClient();
+    const host = request.headers.get('host') ?? 'localhost:3000';
+    const isLocalhost = host.includes('localhost');
+    const siteOrigin = `${isLocalhost ? 'http' : 'https'}://${host}`;
+    const emailRedirectTo = `${siteOrigin}/auth/callback?next=/verify-email`;
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: normalizedPassword,
       options: {
-        emailRedirectTo: "http://localhost:3000/auth/callback?next=/verify-email",
+        emailRedirectTo,
         data: { name: String(name ?? '').trim() }
         // ATENÇÃO (skill supabase): user_metadata / raw_user_meta_data é editável pelo usuário.
         // Dados de autorização devem vir de app_metadata; não usar raw_user_meta_data em políticas RLS.

@@ -227,6 +227,7 @@ describe('POST /api/auth/reset-password', () => {
           }),
         }),
       }),
+      auth: { admin: { updateUserById: jest.fn().mockResolvedValue(null) } },
     });
     const { POST } = require('@/api/auth/reset-password/route');
     const req = new Request('http://localhost/api/auth/reset-password', {

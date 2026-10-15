@@ -47,7 +47,17 @@ export async function POST(request: NextRequest) {
 
     const userId = validToken.userId;
 
-    // Hash new password and update user
+    // Hash new password and update user in Supabase Auth FIRST
+    // before updating Prisma, so that the login credential is fixed
+    // before the app-record credential. If this fails, token stays
+    // unconsumed for retry (no partial state).
+    const supaSvc = createServiceRoleClient();
+    const authResult = await supaSvc.auth.admin.updateUserById(userId, {
+      password: rawPassword,
+    });
+
+    // Hash new password for Prisma (kept for app-record consistency;
+    // Supabase Auth change already took effect above)
     const passwordHash = await hashPassword(rawPassword);
 
     // Use withUserContext to satisfy User_self_write RLS policy
@@ -56,7 +66,7 @@ export async function POST(request: NextRequest) {
         where: { id: userId },
         data: { passwordHash },
       });
-      // Mark token as used
+      // Mark token as used — only after Prisma update succeeded
       await tx.passwordResetToken.update({
         where: { id: validToken.id },
         data: { usedAt: now },

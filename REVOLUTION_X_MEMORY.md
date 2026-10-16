@@ -8,23 +8,49 @@ REVOLVER
 
 Checkpoint persistente. Não inventar. Não expor secrets.
 
-## ESTADO ATUAL
+## COMO RETOMAR
 
-- Build Hostinger `01a11d99` (commit `e45ac49`): **PASS**
-- Página de login funcional: **PASS**
-- Supabase Auth: **BLOCKED** — GoTrue retorna 500/Invalid credentials.
-- Isolamento multi-tenant: **NOT TESTED** (depende de Auth).
-- Meta/WhatsApp webhook: **BLOCKED** (placeholder).
+1. Ler `CLAUDE.md` (regras de autonomia + limites de segurança).
+2. Ler `docs/EXECUTION_STATE.md` (fase atual, bloqueios, próximo passo).
+3. Ler `docs/EXECUTION_LOG.md` (histórico cronológico).
+4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
+5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## DIAGNÓSTICO SUPABASE AUTH
+## ESTADO ATUAL (2026-10-15)
 
-- `auth.users` tem RLS habilitado com 0 políticas.
-- GoTrue falha ao consultar schema (`Database error querying schema`).
-- Inserções SQL manuais para contornar auth estão sendo bloqueadas ou falhando (GoTrue não reconhece bcrypt comum, precisa `crypt()`).
-- Requer intervenção administrativa no Dashboard para configurar `auth.users` ou corrigir GoTrue.
+- **Auth Supabase: FUNCIONAL** (registro/login/reset). O estado antigo de
+  "GoTrue 500" está SUPERADO — a falha histórica de `auth.users` foi
+  superada pela criação de `public."User"` + `Organization` +
+  `OrganizationMember` no registro (commit `adc4c2b`) e pelo fluxo
+  completo de Mission 5g/6.
+- **Testes**: jest **15 suítes / 135 testes PASS** (base anterior à
+  expansão de `roots` para `app/`); `tsc` 0 erros; build **37 páginas**.
+- **RLS**: 007/008/009 **em produção** desde 2026-10-15 (staging-first,
+  41/41; snapshot de rollback em `backups/rls-*-007-009_*.json`).
+- **Migration 014** (FASE AGENT: Task/TaskStep/TaskEvent/AgentMemory):
+  validada staging-first **10/10**; promoção a produção **AUTORIZADA**
+  pela missão de 2026-10-15 (gated: verificar identidade do destino,
+  pré-requisitos 005–009 e rollback antes de executar).
+- **Segurança (Mission 5g)**: 21 testes de segurança + 4 rotas de auth
+  implementadas; `generateState` agora CSPRNG; `dotenv` declarado.
+- **Credencial de banco**: a senha do banco Supabase (role `postgres`)
+  foi exposta em 2026-10-14 — **ROTAÇÃO PENDENTE** (dashboard Supabase,
+  procedimento em `docs/PROJECT_HANDOFF.md`).
 
-## PENDÊNCIAS
+## PENDÊNCIAS (2026-10-15)
 
-1. **Supabase Auth**: Corrigir configuração no Dashboard (Authentication -> Settings -> Email ou RLS policies).
-2. **Meta/WhatsApp Webhooks**: Restaurar valores reais de variáveis no Hostinger.
-3. **Validação**: Testar login em produção e validar isolamento multi-tenant.
+1. **Rotação da senha do banco de produção** — usuário executa no
+   dashboard Supabase (Settings → Database → Change Database Password),
+   depois atualiza `DATABASE_URL`/`DIRECT_URL` no Hostinger e locais.
+2. **Migration 014 em produção** — executar após verificação do destino
+   (procedimento em `docs/STAGING_ROLLOUT_PLAN.md` §FASE AGENT +
+   `docs/EXECUTION_STATE.md`).
+3. **Credenciais ausentes em produção** (usuário fornece, sem passar
+   pelo chat): `META_APP_ID`/`META_APP_SECRET`/`META_WEBHOOK_VERIFY_TOKEN`,
+   `EMAIL_PROVIDER=resend` + `EMAIL_API_KEY` + `EMAIL_FROM` (domínio
+   verificado), `OMNIROUTER_BASE_URL` + `OMNIROUTER_API_KEY`
+   (alternativa `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`).
+4. **Testes das rotas `/api/admin/*`** (G1) e **guard de idempotência
+   do webhook Meta** (`Message.externalId`, G3) — fases C da missão.
+5. **claude-mem**: observer deslogado desde 2026-10-08 — rodar
+   `/login` no Claude Code para restaurar a memória entre sessões.

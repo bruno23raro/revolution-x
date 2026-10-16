@@ -9,10 +9,31 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: revolution_x_rls_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # Disposable CI test database (service container, NEVER production).
+      # ADMIN role = postgres/BYPASSRLS: preparation + scoped cleanup only.
+      # RLS role = revx_test (NOSUPERUSER NOBYPASSRLS): all RLS assertions.
+      # These are set as process env, so the test suites' dotenv load of
+      # .env.test does not override them (dotenv never overrides process.env).
+      TEST_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/revolution_x_rls_test
+      TEST_RLS_DATABASE_URL: postgres://revx_test:revx_test@127.0.0.1:5432/revolution_x_rls_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/revolution_x_rls_test
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node
@@ -24,6 +45,22 @@ jobs:
         run: npm ci
       - name: Generate Prisma Client
         run: npx prisma generate
+      - name: Provision isolated test database (RLS suites)
+        # Idempotent chain, in order:
+        #   1. apply-rls-setup.mjs    -> revx_test role + "Organization"/"Contact"
+        #                                (FORCE RLS, fail-closed tenant policies,
+        #                                least-privilege grants)
+        #   2. apply-token-rls-setup.mjs -> "User"/token tables + 008 policies +
+        #                                revx_test grants
+        #   3. provision-ci-test-db.mjs -> revx_test password synced with
+        #                                TEST_RLS_DATABASE_URL + migration 014
+        #                                (Task/TaskStep/TaskEvent/AgentMemory +
+        #                                FORCE RLS + guarded revx_test grants)
+        # 009 is self-applied by the b4-rls suite's beforeAll.
+        run: |
+          node scripts/apply-rls-setup.mjs
+          node scripts/apply-token-rls-setup.mjs
+          node scripts/provision-ci-test-db.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

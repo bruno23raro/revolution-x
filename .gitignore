@@ -32,6 +32,15 @@ _diagnosticos/
 
 # Supabase CLI metadata — auto-generated, local to each environment
 supabase/.temp/
+.supabase/
+
+# Private key / certificate material — never commit
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+*.gpg
 
 # MCP configuration — local per user
 .mcp.json
@@ -45,7 +54,9 @@ cleanup.sql
 install-codebase-memory.ps1
 
 # User-specific, transient and Copilot placeholders
-.github/
+# (workflows stay tracked: CI pipeline lives in .github/workflows/)
+.github/*
+!.github/workflows/
 .claude-memory/
 phase*_verification_report.json
 

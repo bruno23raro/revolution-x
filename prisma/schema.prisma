@@ -46,6 +46,9 @@ model User {
   sessions         Session[]
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  // FASE AGENT (Phase 2 — Centro Administrativo com IA)
+  tasks        Task[]
+  agentMemories AgentMemory[]
 }
 
 // Modelo 3: organização (tenant)
@@ -77,6 +80,9 @@ model Organization {
   reports      Report[]
   metaIntegrations MetaIntegration[]
   pipelines    Pipeline[]
+  // FASE AGENT (Phase 2 — Centro Administrativo com IA)
+  tasks        Task[]
+  agentMemories AgentMemory[]
 }
 
 // Modelo 4: membro de organização
@@ -388,4 +394,90 @@ model WebhookEvent {
   createdAt        DateTime      @default(now()) @db.Timestamp(6)
   metaIntegration  MetaIntegration? @relation(fields: [integrationId], references: [id])
   @@map("webhook_events")
+}
+
+// ============================================================
+// FASE AGENT — Centro Administrativo Inteligente (Phase 2)
+// Fila persistente de tarefas + memória de projeto/tenant.
+//
+// Task      — uma tarefa de agente (IA ou agente local), com estado
+//             e progresso real (0–100) recalculado a cada etapa.
+// TaskStep  — etapas ordenadas; o progresso deriva do estado real
+//             dos passos (jamais estimado).
+// TaskEvent — log append-only (mudanças de estado, mensagens,
+//             uso de tokens, esperas de humano).
+// AgentMemory — memória persistente do tenant/usuário
+//             (decisões, lições, preferências) consumida pelo chat.
+//
+// Estados da Task (máquina de estados):
+//   queued → running → waiting_human → running → completed
+//                                   ↘ failed / canceled
+// ============================================================
+
+model Task {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String       @db.VarChar(300)
+  status         String       @default("queued") @db.VarChar(30)
+  progress       Int          @default(0)
+  inputJson      Json         @default("{}")
+  resultJson     Json?
+  errorText      String?      @db.Text
+  modelUsed      String?      @db.VarChar(100)
+  usageJson      Json?
+  waitingReason  String?      @db.VarChar(300)
+  createdAt      DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @updatedAt
+  completedAt    DateTime?    @db.Timestamp(6)
+  steps          TaskStep[]
+  events         TaskEvent[]
+  @@index([organizationId, status])
+  @@index([userId])
+}
+
+model TaskStep {
+  id             String    @id @default(uuid()) @db.Uuid
+  taskId         String    @db.Uuid
+  organizationId String    @db.Uuid
+  seq            Int
+  name           String    @db.VarChar(200)
+  status         String    @default("pending") @db.VarChar(30)
+  detailJson     Json?
+  startedAt      DateTime? @db.Timestamp(6)
+  finishedAt     DateTime? @db.Timestamp(6)
+  createdAt      DateTime  @default(now()) @db.Timestamp(6)
+  task           Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  @@index([taskId, seq])
+  @@index([organizationId])
+}
+
+model TaskEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  taskId         String   @db.Uuid
+  organizationId String   @db.Uuid
+  type           String   @db.VarChar(60)
+  payloadJson    Json     @default("{}")
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  @@index([taskId])
+  @@index([organizationId])
+}
+
+model AgentMemory {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           String       @db.VarChar(40)
+  memoryKey      String       @db.VarChar(200)
+  valueJson      Json
+  supersededAt   DateTime?    @db.Timestamp(6)
+  createdAt      DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @updatedAt
+  @@unique([organizationId, userId, kind, memoryKey])
+  @@index([organizationId, userId])
 }

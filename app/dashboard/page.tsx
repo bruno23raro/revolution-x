@@ -112,6 +112,24 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* FASE AGENT — entrada do Centro Administrativo com IA (acesso admin/owner) */}
+      <div className="mt-6 max-w-3xl">
+        <Link
+          href="/admin/chat"
+          className="flex items-center justify-between gap-4 p-4 bg-[#0D0915] border border-white/10 rounded-2xl hover:border-purple-500/40 transition"
+        >
+          <div>
+            <div className="text-sm font-semibold text-gray-200">Centro Administrativo com IA</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Descreva a tarefa em linguagem natural · acompanhe o progresso real das tarefas ·
+              acesso restrito a admin/owner
+            </div>
+          </div>
+          <span className="text-purple-400 shrink-0">abrir →</span>
+        </Link>
+      </div>
+
       {cards.every((c) => (c.value ?? 0) === 0) && (
         <p className="text-sm text-gray-500 mt-6">
           Ainda não há registros. Comece adicionando{' '}

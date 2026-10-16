@@ -226,3 +226,14 @@ Aplicado:
 - **Docs**: MD0xx auto-fixado nos 5 docs de missão (`markdownlint-cli`
   com MD012/MD022/MD031/MD032/MD060; docs PHASE* legados intencionalmente
   não tocados).
+- **Cerrada da FASE H — `ccd88c3` fix(ui)** (2026-10-15): painel de status
+  da página `/` corrigido (185/185, build 39/39, RLS 007–015 "EM
+  PRODUÇÃO", E-mail "PREPARADO" — antes dizia "real Resend" — e
+  "Integrações Meta PREPARADAS"); + `app/icon.svg` (favicon RX, resolve o
+  único 404 do console). `next build` passou (39 págs). Push
+  `8d84786..ccd88c3` → re-deploy automático do hpanel confirmado:
+  `GET /icon.svg` 404 → **200** (~90 s). Smoke final: `/`, `/login`,
+  `/admin/chat` → 200; `GET /api/admin/chat` → 200 `{"routerConfigured":
+  false}` (item E pendente, honesto); `GET /api/admin/tasks` e
+  `/api/admin/memory` sem sessão → **401** (gates intactos). FASE H
+  concluída até o limite autônomo.

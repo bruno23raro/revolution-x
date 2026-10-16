@@ -12,8 +12,9 @@
 
 ## Estado de referência (2026-10-15, pós-release)
 
-- Git `main @ 6492f5a` — 5 commits da missão; `origin/main` sincronizado
-  (push `58491e6..6492f5a`).
+- Git `main @ ccd88c3` — 7 commits (5 da missão + `8d84786` docs da
+  FASE H + `ccd88c3` fix/ui com favicon `app/icon.svg`); `origin/main`
+  sincronizado (push final `8d84786..ccd88c3`).
 - jest 18 suítes / 185 testes PASS; tsc 0; build 39 páginas; next lint 0.
 - 007/008/009/014/015 **em produção** (41/41 + 10/10 validados staging-first;
   015 = índice único `uq_webhook_events_meta_event_id`, comprovado em `pg_index`).
@@ -58,8 +59,9 @@ Observer deslogado desde 2026-10-08. Correção: rodar `/login` no Claude Code
 O hpanel do Hostinger tem **Git integration** conectada a
 `bruno23raro/revolution-x` (branch `main`): `git push origin main` →
 clona, roda build, sobe em ~1-2 min. Comprovado nesta missão: o push
-`6492f5a` colocou a build da FASE AGENT no ar (baseline `/api/admin/chat`
-404 → 200 `routerConfigured:false`). O CI do GitHub é apenas gate de
+`8d84786` colocou a build da FASE AGENT no ar (baseline `/api/admin/chat`
+404 → 200 `routerConfigured:false`); `ccd88c3` (favicon) re-deployou em
+~90 s (`/icon.svg` 404 → 200). O CI do GitHub é apenas gate de
 build+test, **não** faz deploy. Migrations de schema seguem por
 `supabase db query --linked` (banco separado do app).
 

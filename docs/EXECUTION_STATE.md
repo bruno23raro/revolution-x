@@ -6,11 +6,13 @@
 ## Etapa atual
 
 FASES A/B/C/D/F/G **concluídas**. **FASE H concluída até o limite
-autônomo** (2026-10-15): 5 commits lógicos + push `58491e6..6492f5a`;
-**deploy automático via Git integration do Hostinger hpanel** (build
-nova no ar em ~60 s após o push); smoke pós-deploy com evidência real
-(`/api/admin/chat` 200 `routerConfigured:false` honesto; `/api/admin/tasks`
-401 sem sessão; baseline anterior 404). Detalhes: `docs/EXECUTION_LOG.md`
+autônomo** (2026-10-15/16): 7 commits (5 da missão + `8d84786` docs
+FASE H + `ccd88c3` fix/ui com favicon), push final
+`8d84786..ccd88c3`; **deploy automático via Git integration do
+Hostinger hpanel** (build nova no ar em ~60-90 s após o push); smoke
+pós-deploy com evidência real (`/icon.svg` 200; `/api/admin/chat` 200
+`routerConfigured:false` honesto; `/api/admin/tasks` 401 sem sessão;
+baseline anterior 404). Detalhes: `docs/EXECUTION_LOG.md`
 §FASE H. Restam [HUMANO]: sessão admin no navegador (fecha fila 014 em
 produção), credenciais E (Meta/Resend/OmniRouter no Hostinger), rotação
 do banco (item 1 do handoff), verificação do CI no GitHub (repo privado).

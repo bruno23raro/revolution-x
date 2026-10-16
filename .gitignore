@@ -48,3 +48,11 @@ install-codebase-memory.ps1
 .github/
 .claude-memory/
 phase*_verification_report.json
+
+# Local drafts and local artifacts — never commit
+/backups/
+/backup-pre-rls-007-009.sql
+/send.js
+/test-whatsapp.js
+/test-zernio.js
+/zernio-tudo.js

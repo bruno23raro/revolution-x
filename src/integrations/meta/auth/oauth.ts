@@ -1,4 +1,5 @@
 // FASE META — AUTH / OAUTH FLUXO (seção 6, 8, 9, 10, 21, 11)
+import crypto from 'crypto';
 import { MetaAuthConfig, MetaConnectionStatus, OAuthState } from '../types';
 
 export class MetaOAuthError extends Error {
@@ -12,7 +13,8 @@ export function buildMetaAuthUrl(config: MetaAuthConfig, state: string, provider
 }
 
 export function generateState(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  // CSPRNG: Math.random é previsível — state OAuth exige aleatoriedade segura.
+  return crypto.randomBytes(24).toString('base64url');
 }
 
 export function validateOAuthCallback(query: URLSearchParams, expectedState: string, organizationId: string): { code: string; state: string } {

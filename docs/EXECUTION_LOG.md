@@ -237,3 +237,64 @@ Aplicado:
   false}` (item E pendente, honesto); `GET /api/admin/tasks` e
   `/api/admin/memory` sem sessão → **401** (gates intactos). FASE H
   concluída até o limite autônomo.
+
+## 2026-10-16 — Repo público + CI verde (FASE I)
+
+- Usuário publicou `bruno23raro/revolution-x` (API confirma `private:false`;
+  default `main` = `902d25b`, pushed 2026-10-16). Consequências tratadas
+  nesta etapa: (a) runs do CI agora verificáveis anonimamente; (b) auditoria
+  de segredos da árvore + histórico (regra §6); (c) endurecimento do
+  `.gitignore`.
+- **Auditoria de árvore/.gitignore**: nenhum segredo real rastreado em HEAD
+  (`.env.example` é template com valores vazios; `re_...` é placeholder
+  documentado; o único JWT em `src/tests/meta-idor.test.ts` é o fictício de
+  sufixo `.test`). Lacunas do `.gitignore` fechadas no `2d9136d`: `*.pem`,
+  `*.key`, `*.p12`, `*.jks`, `id_rsa*`, `*.gpg`, `.supabase/`; e a regra
+  ampla `.github/` foi estreitada para `.github/*` + `!.github/workflows/`
+  (o workflow de CI permanece rastreado — exigência do CI).
+- **Varredura do histórico git** (33 commits de main + refs laterais,
+  varredura por padrão de credencial):
+  - `main` (público): **nenhuma credencial utilizável**. Só identificadores
+    (ref do projeto Supabase, host pooler **sem senha**, slug da org) em
+    `supabase/.temp/*` de commits antigos — os arquivos foram removidos do
+    HEAD em `fbd8214`, mas permanecem no histórico (baixo risco: não
+    abrem acesso por si só).
+  - Refs **locais apenas** (`refs/stash` + `refs/agents/.../checkpoints`,
+    commit `fe69880`, nunca publicados): 2 senhas reais do banco Supabase
+    (pooler + padrão default `sbpg-project-<ref>`). Risco operacional: um
+    `git push` desses refs publicaria os valores → **não empurrar refs de
+    stash/agents**; a rotação do banco de produção [HUMANO] cobre a
+    exposição.
+- **Causa-raiz do CI vermelho** (todos os runs desde `d99d9bf` de
+  2026-10-09 falham no passo `Test`; typecheck/lint passam): as 5 suítes de
+  integração (`rls`, `b4-rls`, `token-rls`, `task-queue-rls`,
+  `prisma-tenant`) exigem Postgres real + `TEST_ADMIN_DATABASE_URL` /
+  `TEST_RLS_DATABASE_URL` + schema isolado com a role restrita `revx_test`
+  — o workflow não provisionava nada.
+- **Fix no `2d9136d`**: service `postgres:17` descartável (NUNCA produção,
+  jamais credencial real de banco) + env de job `TEST_ADMIN_` /
+  `TEST_RLS_` / `TEST_DATABASE_URL` + passo "Provision isolated test
+  database" em cadeia idempotente: `apply-rls-setup.mjs` (role `revx_test`
+  e `Organization`/`Contact`, políticas fail-closed, grants least-privilege)
+  → `apply-token-rls-setup.mjs` (`User`/tokens + 008) →
+  novo `scripts/provision-ci-test-db.mjs` (senha do `revx_test`
+  sincronizada com `TEST_RLS_DATABASE_URL` + migration 014
+  `Task`/`TaskStep`/`TaskEvent`/`AgentMemory` + FORCE RLS + grants
+  guardados + verificação). O 009 é auto-aplicado pelo `beforeAll` da
+  suíte b4-rls (cria as tabelas e aplica o arquivo real da migration).
+- **Validação local pré-push (evidência real)**: criada DB vazia
+  `revx_ci_sim` (espelha o container do CI) → cadeia completa executou
+  (`revx_test grants: t_sel/t_ins/a_sel = true`, 4 tabelas FORCE, 4
+  policies 014) → **suítes de integração 51/51 PASS (2,7s)**; suíte
+  completa **185/185 PASS**; `tsc --noEmit` 0.
+- **Nota de incidente (transparência §6)**: durante a simulação local, um
+  erro de parse de URL imprimiu no terminal a senha do **admin do Postgres
+  local (localhost)** — credencial de máquina, não de produção. O valor não
+  está em repo, log, relatório, memória nem neste documento. Não requer
+  ação além da rotação do banco de produção já pendente [HUMANO].
+- **Run do CI sobre `2d9136d` — VERDE (evidência real)**: run
+  `38973999041` (head `2d9136d`) = **success**, todos os passos green,
+  incluindo "Provision isolated test database (RLS suites)", Test e Build
+  (`github.com/bruno23raro/revolution-x/actions`). Causa-raiz confirmada e
+  sanada: as 5 suítes de integração rodam no CI contra o Postgres
+  descartável do service container.

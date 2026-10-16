@@ -10,33 +10,53 @@
 4. Rodar `git status` + `git log --oneline -5` e conferir com o checkpoint acima.
 5. Rodar `npm test` e `npm run typecheck` para re-validar a base.
 
-## Estado de referência (2026-10-15, pós-release)
+## Estado de referência (2026-10-16, pós-FASE I)
 
-- Git `main @ ccd88c3` — 7 commits (5 da missão + `8d84786` docs da
-  FASE H + `ccd88c3` fix/ui com favicon `app/icon.svg`); `origin/main`
-  sincronizado (push final `8d84786..ccd88c3`).
+- Git `main @ 2d9136d` — 9 commits da missão (`5918263` … `902d25b`
+  mais `2d9136d` CI provisionamento); `origin/main` sincronizado.
+- **Repositório `bruno23raro/revolution-x` agora PÚBLICO**
+  (`private:false` confirmado via API em 2026-10-16). Runs do CI são
+  verificáveis anonimamente.
+- **CI VERDE**: Actions run `38973999041` (head `2d9136d`) = success em
+  todos os passos (provision do Postgres de teste, Typecheck, Lint,
+  Test, Build). O workflow usa service `postgres:17` descartável +
+  `scripts/provision-ci-test-db.mjs` (014) — nenhuma suíte de
+  integração roda contra produção.
 - jest 18 suítes / 185 testes PASS; tsc 0; build 39 páginas; next lint 0.
-- 007/008/009/014/015 **em produção** (41/41 + 10/10 validados staging-first;
-  015 = índice único `uq_webhook_events_meta_event_id`, comprovado em `pg_index`).
-- **FASE AGENT no ar no Hostinger** (git integration do hpanel detectou o
-  push): `GET /api/admin/chat` → 200 `{"routerConfigured":false}` (honesto,
-  sem `OMNIROUTER_*` no servidor); `GET /api/admin/tasks` → 401 sem sessão.
+- 007/008/009/014/015 **em produção** (41/41 + 10/10 validados
+  staging-first; 015 = índice único `uq_webhook_events_meta_event_id`).
+- **FASE AGENT no ar no Hostinger** (git integration do hpanel):
+  `GET /api/admin/chat` → 200 `{"routerConfigured":false}` (honesto,
+  sem `OMNIROUTER_*`); `GET /api/admin/tasks` → 401 sem sessão.
+- **ATENÇÃO — refs locais com segredos**: `refs/stash` e
+  `refs/agents/.../checkpoints/turn/*` (commit `fe69880`) contêm
+  **senhas reais do banco Supabase** que **NUNCA** foram publicadas.
+  Nunca empurrar esses refs ao GitHub (`git push origin main` continua
+  seguro — só `main` deve ser publicada).
 - Briefing completo: `docs/BRIEFING_ANALISE_PROJETO.md`.
 
 ## Passos para intervenções humanas (quando o fluxo parar)
 
-### 1. Rotação da senha do banco de produção (Supabase)
+### 1. Rotação da senha do banco de produção (Supabase) — PRIORITÁRIA
 
-A senha do banco (role de conexão `postgres`) foi exposta acidentalmente em 2026-10-14
-(saída de comando no terminal). Procedimento:
+A senha do banco (role de conexão `postgres`) foi exposta acidentalmente em
+2026-10-14 (saída de comando no terminal) e, com o repositório tornado
+público em 2026-10-16, os identificadores do projeto (ref Supabase
+`ardpabjoepzhkpmkgwgu`, host do pooler) também ficaram públicos — isso
+aumenta a prioridade da rotação. Procedimento:
 
-1. Dashboard Supabase (projeto de produção) → **Settings → Database → Change Database Password**.
-2. Gerar senha forte; atualizar `DATABASE_URL` e `DIRECT_URL` no env do servidor Hostinger
-   e nos `.env` locais (não versionar os novos valores).
-3. Testar: app continua funcionando (`GET /` 200; login funciona) — o app usa
-   `postgres`/`BYPASSRLS`, então a rotação não afeta o RLS.
-4. (Opcional) Validar que a senha antiga falhou antes da rotação não é mais possível
-   post-rotação — registrar no log a hora da rotação.
+1. Dashboard Supabase → projeto `ardpabjoepzhkpmkgwgu`
+   ("Revolution X", sa-east-1) → **Settings → Database →
+   Change Database Password**.
+2. Gerar senha forte; atualizar `DATABASE_URL` e `DIRECT_URL` em
+   **3 alvos**: (a) env do servidor Hostinger (hpanel), (b) `.env.local`
+   local, (c) **GitHub → repo `revolution-x` → Settings → Secrets and
+   variables → Actions** (o segredo `DATABASE_URL` usado pelo CI, se
+   existir). Não versionar os novos valores.
+3. Testar: app continua funcionando (`GET /` 200; login funciona) — o
+   app usa `postgres`/`BYPASSRLS`, então a rotação não afeta o RLS.
+4. Registrar no log a hora da rotação (a senha antiga não pode ser
+   revalidada depois).
 
 ### 2. Credenciais Meta / Resend / OmniRouter (env do servidor Hostinger)
 
@@ -61,9 +81,14 @@ O hpanel do Hostinger tem **Git integration** conectada a
 clona, roda build, sobe em ~1-2 min. Comprovado nesta missão: o push
 `8d84786` colocou a build da FASE AGENT no ar (baseline `/api/admin/chat`
 404 → 200 `routerConfigured:false`); `ccd88c3` (favicon) re-deployou em
-~90 s (`/icon.svg` 404 → 200). O CI do GitHub é apenas gate de
-build+test, **não** faz deploy. Migrations de schema seguem por
-`supabase db query --linked` (banco separado do app).
+~90 s (`/icon.svg` 404 → 200). O CI do GitHub roda **build+test+integração** e **não** faz deploy.
+Desde `2d9136d` (2026-10-16) ele provisiona um Postgres `17`
+descartável (service do GitHub Actions) + role `revx_test` +
+migrations 008/014 — as 5 suítes de integração rodam nesse banco,
+nunca contra produção; run de referência verde: `38973999041`. Com o
+repo **público**, os runs são verificáveis anonimamente em
+`github.com/bruno23raro/revolution-x/actions`. Migrations de schema
+seguem por `supabase db query --linked` (banco separado do app).
 
 ## Regras que NUNCA são passadas
 

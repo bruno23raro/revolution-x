@@ -5,17 +5,30 @@
 
 ## Etapa atual
 
-FASES A/B/C/D/F/G **concluídas**. **FASE H concluída até o limite
-autônomo** (2026-10-15/16): 7 commits (5 da missão + `8d84786` docs
-FASE H + `ccd88c3` fix/ui com favicon), push final
-`8d84786..ccd88c3`; **deploy automático via Git integration do
-Hostinger hpanel** (build nova no ar em ~60-90 s após o push); smoke
-pós-deploy com evidência real (`/icon.svg` 200; `/api/admin/chat` 200
-`routerConfigured:false` honesto; `/api/admin/tasks` 401 sem sessão;
-baseline anterior 404). Detalhes: `docs/EXECUTION_LOG.md`
-§FASE H. Restam [HUMANO]: sessão admin no navegador (fecha fila 014 em
-produção), credenciais E (Meta/Resend/OmniRouter no Hostinger), rotação
-do banco (item 1 do handoff), verificação do CI no GitHub (repo privado).
+FASES A/B/C/D/F/G **concluídas**. **FASE H concluída** (close-out em
+`902d25b`; deploy automático + smoke pós-deploy com evidência real).
+**FASE I (repo público + CI verde) concluída até o limite autônomo**
+(2026-10-16): commit `2d9136d` (provisionamento do Postgres de teste no
+CI + `scripts/provision-ci-test-db.mjs` + endurecimento do `.gitignore`),
+push `902d25b..2d9136d`. O repositório ficou **PÚBLICO** (`private:false`
+confirmado via API) — runs do CI agora verificáveis anonimamente.
+**Causa-raiz do CI vermelho sanada**: as 5 suítes de integração exigiam
+Postgres real + `TEST_*_DATABASE_URL` + role `revx_test`, e o workflow
+não provisionava nada. Fix: service `postgres:17` descartável + env de
+job + cadeia idempotente `apply-rls-setup` → `apply-token-rls-setup` →
+`provision-ci-test-db` (014; o 009 é auto-aplicado pela suíte b4-rls).
+**Evidências**: simulação local em DB nova (`revx_ci_sim`: 51/51
+integração, 185/185 geral, tsc 0) + **Actions run `38973999041` (head
+`2d9136d`) = success em todos os passos** (provision, Test, Build).
+Auditoria §6 (árvore + histórico): nenhuma credencial utilizável no
+histórico público — só identificadores (ref Supabase, host pooler sem
+senha, slug da org); senhas reais existem apenas em refs **locais**
+(`refs/stash`, `refs/agents/...`, commit `fe69880`, nunca publicados) →
+**não empurrar esses refs**. Restam [HUMANO]: rotação da senha do banco
+de produção (agora PRIORITÁRIA — exposição 14/10 + identificadores
+públicos), sessão admin no navegador, credenciais E
+(Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
+`docs/EXECUTION_LOG.md` §FASE I.
 
 ## Checklist de fases
 
@@ -83,24 +96,27 @@ do banco (item 1 do handoff), verificação do CI no GitHub (repo privado).
 
 | Bloqueio | Dependência | O que já foi preparado |
 | --- | --- | --- |
-| Smoke de sessão admin em produção | Login no navegador (usuário) | Fila 014 validada em dev contra o mesmo banco; rotas no ar (401 sem sessão) |
-| CI do GitHub (repo privado) | Login GitHub (usuário) | Push `6492f5a`; workflow roda typecheck+lint+test+build |
+| Rotação da senha do banco Supabase (exposta 14/10; identificadores agora públicos) | Dashboard Supabase (usuário) | Passos exatos em `PROJECT_HANDOFF.md` (3 alvos: hpanel, `.env.local`, secrets do Actions) |
+| Smoke de sessão admin em produção | Login no navegador (usuário) | Fila 014 validada em dev E em CI (run 38973999041); rotas no ar (401 sem sessão) |
 | Credenciais Meta/Resend/OmniRouter | Env no hpanel Hostinger (usuário) | Nomes documentados; `/api/admin/chat` 200 `routerConfigured:false` |
-| Rotação da senha do banco Supabase (exposta 14/10) | Dashboard Supabase (usuário) | Passos exatos em `PROJECT_HANDOFF.md` |
-| claude-mem observer deslogado (~7 dias) | `/login` no Claude Code (usuário) | Diagnóstico registrado no log |
+| claude-mem observer deslogado (~8 dias) | `/login` no Claude Code (usuário) | Diagnóstico registrado no log |
 
 ## Próximo comando lógico
 
-FASE H chegou ao limite autônomo (deploy + smoke sem sessão feitos).
-Próximos passos, todos [HUMANO], na ordem de impacto:
+FASE I chegou ao limite autônomo (repo público auditado, CI verde
+comprovado, .gitignore endurecido). Próximos passos, todos [HUMANO], na
+ordem de impacto:
 
-1. **Sessão admin no navegador** → `GET /api/admin/tasks` 200
-   `{count:0}` (fecha a fila 014 em produção);
+1. **Supabase dashboard** → rotação da senha do banco de produção
+   (exposta 14/10; agora PRIORITÁRIA por causa dos identificadores
+   públicos — item 1 do handoff; atualizar os 3 alvos: hpanel,
+   `.env.local`, secrets do Actions);
 2. **Hostinger hpanel** → definir `META_*`, `EMAIL_*`, `OMNIROUTER_*`
    (item E — integrações reais; o chat admin passa a `routerConfigured:true`);
-3. **Supabase dashboard** → rotação da senha do banco (exposta 14/10 —
-   item 1 do handoff) + atualizar `DATABASE_URL`/`DIRECT_URL` no hpanel;
-4. **GitHub (repo privado)** → conferir o run do CI sobre `6492f5a`.
+3. **Sessão admin no navegador** → `GET /api/admin/tasks` 200
+   `{count:0}` (fecha a fila 014 em produção);
+4. Claude Code `/login` (claude-mem observer deslogado ~8 dias).
 
-Novas releases: **basta commit + push** (git integration do hpanel
-detecta e deploya em ~1-2 min — comprovado nesta missão).
+Novas releases: **basta commit + push** — CI verde em todo push (run
+`38973999041` = evidência) + deploy automático (git integration do hpanel
+em ~1-2 min, comprovado 3×).

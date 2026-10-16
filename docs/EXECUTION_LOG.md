@@ -183,3 +183,46 @@ Aplicado:
 - **Pendências cosméticas (nota p/ FASE H)**: página `/` exibe
   estatísticas antigas hardcoded ("100/100 · 36 pág.") vs. base real
   (185/185 · 39 pág.); falta `favicon.ico`.
+
+### FASE H (Release) — commits + push + investigação do deploy (2026-10-15)
+
+- **Commits (5)** — tree limpa, todos com `Co-Authored-By: Claude Code`:
+  1. `5918263` fix(security): PL/pgSQL 007-009 + mocks de teste;
+  2. `adaeca3` feat(agent): Centro de Agente (UI/API/fila/omniRouter + 014);
+  3. `187c890` fix(webhook): claim atômico + 015 + 45 testes (11 webhook + 34 admin);
+  4. `7ccf847` chore: jest roots, dotenv, CSPRNG, onboarding, gitignore;
+  5. `6492f5a` docs: persistência da missão (log/estado/handoff/matriz/rollout).
+- **Push**: `git push origin main` → `58491e6..6492f5a` (GitHub Actions CI
+  dispara no push; repositório **privado** → runs não verificáveis sem
+  auth; usuário pode checar em `github.com/bruno23raro/revolution-x/actions`).
+- **Investigação do mecanismo de deploy** (agente dedicado, 26 tool calls):
+  **não existe pipeline de deploy versionado no repo** (sem
+  scripts/Dockerfile/PM2/rsync/nginx; CI para em `next build`).
+  Produção = Hostinger hpanel (headers `hcdn`, `platform: hostinger`,
+  `panel: hpanel` — `PRODUCTION_CHECKPOINT_REPORT.md:26-30`). Caminhos:
+  (A) Git integration do hpanel conectada ao repositório (o push já
+  dispararia) ou (B) upload manual do build. Nenhum é acionável daqui
+  → **[HUMANO]** (hpanel).
+- **Baseline de produção pré-deploy** (evidência real): `GET /api/admin/chat`
+  → **404**; `GET /admin/chat` → **404**; `GET /` → 200. Confirma: a build
+  em produção ainda é anterior à FASE AGENT.
+- **Deploy (AUTOMÁTICO — Git integration do Hostinger ativa)**: o push
+  `6492f5a` disparou o deploy no hpanel; a build nova estava no ar em
+  ~60 s (poll 2 de 12). O "caminho A" (git integration) era o efetivo —
+  para releases futuros basta commit + push.
+- **Smoke pós-deploy (evidência real)**:
+  - `GET /api/admin/chat` → **200** `{"routerConfigured":false,"model":null,
+    "baseUrl":null}` — **honesto**: sem `OMNIROUTER_*` no env do Hostinger
+    (item E) → roteador declara ausente (não simula);
+  - `GET /admin/chat` → **200** (UI nova no ar; baseline era 404);
+  - `GET /` → 200; `GET /login` → 200;
+  - `POST /api/auth/login` (sem credenciais) → **401** (gate intacto);
+  - `GET /api/admin/tasks` (sem sessão) → **401** (gates admin intactos;
+    baseline era 404 → rotas da FASE AGENT existem na produção).
+- **Sessão admin (único resíduo autônomo-impossível da FASE H)**:
+  `GET /api/admin/tasks` com sessão admin → 200 `{count:0}` — [HUMANO]
+  (login no navegador; a mesma fila 014 foi validada em dev contra o
+  mesmo banco na FASE F).
+- **Docs**: MD0xx auto-fixado nos 5 docs de missão (`markdownlint-cli`
+  com MD012/MD022/MD031/MD032/MD060; docs PHASE* legados intencionalmente
+  não tocados).

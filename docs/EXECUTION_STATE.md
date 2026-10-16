@@ -5,16 +5,15 @@
 
 ## Etapa atual
 
-FASE A concluída e verificada (140/140 → depois 185/185); FASE B
-(revalidação RLS via suítes reais) concluída; **FASE D concluída —
-migration 014 APLICADA EM PRODUÇÃO e comprovada por query**;
-**FASE C CONCLUÍDA — G1 (34 testes admin) + G3 (claim atômico de
-idempotência) + migration 015 APLICADA E COMPROVADA EM PRODUÇÃO**
-(`uq_webhook_events_meta_event_id` presente em `pg_index`, 0 linhas,
-destino verificado = projeto linked `ardpabjoepzhkpmkgwgu` "Revolution X").
-Detalhes: `docs/STAGING_ROLLOUT_PLAN.md` §015 + `docs/EXECUTION_LOG.md`.
-Em seguida: FASE F (preview), G (matriz), H (release: commits + deploy +
-smoke pós-deploy).
+FASES A/B/C/D/F/G **concluídas**. **FASE H concluída até o limite
+autônomo** (2026-10-15): 5 commits lógicos + push `58491e6..6492f5a`;
+**deploy automático via Git integration do Hostinger hpanel** (build
+nova no ar em ~60 s após o push); smoke pós-deploy com evidência real
+(`/api/admin/chat` 200 `routerConfigured:false` honesto; `/api/admin/tasks`
+401 sem sessão; baseline anterior 404). Detalhes: `docs/EXECUTION_LOG.md`
+§FASE H. Restam [HUMANO]: sessão admin no navegador (fecha fila 014 em
+produção), credenciais E (Meta/Resend/OmniRouter no Hostinger), rotação
+do banco (item 1 do handoff), verificação do CI no GitHub (repo privado).
 
 ## Checklist de fases
 
@@ -66,28 +65,40 @@ smoke pós-deploy).
   API a pedido do usuário; valor entregue 1x no chat, **não**
   documentada em lugar nenhum). Único resíduo: `favicon.ico` 404
   (cosmético, nota p/ H).
-- [ ] **G — Matriz de requisitos**: `PROJECT_REQUIREMENTS_MATRIX.md`
-  criado (esboço 2026-10-15) — preencher estados após C/F/H.
-- [ ] **H — Release**: validações (done em A), scan de segredos, commits
-  (com `Co-Authored-By: Claude Code`), push, **deploy do build com FASE
-  AGENT** (hoje produção não tem as rotas admin), post-deploy smoke
-  (`GET /api/admin/tasks` admin → 200 `[]`; sem sessão → 401;
-  `GET /api/admin/chat` → `routerConfigured` honesto).
+- [x] **G — Matriz de requisitos**: `PROJECT_REQUIREMENTS_MATRIX.md`
+  criado e reconciliado com evidência (G1–G12 com estado + prova;
+  §A/§B atualizados após C/F/H; MD0xx auto-fixado).
+- [x] **H — Release**: validações (185/185 · tsc 0 · build 39 pág. ·
+  next lint 0); scan de segredos limpo; 5 commits com
+  `Co-Authored-By: Claude Code`; push `origin/main`; **deploy
+  automático (hpanel git integration)**; smoke pós-deploy
+  (`/api/admin/chat` 200 `routerConfigured:false`; `/api/admin/tasks`
+  401 sem sessão; baseline 404 → agora 200). **Resíduo [HUMANO]**:
+  `/api/admin/tasks` com sessão admin (login no navegador) +
+  credenciais E + rotação do banco.
 
 ## Bloqueios ativos
 
 | Bloqueio | Dependência | O que já foi preparado |
 | --- | --- | --- |
+| Smoke de sessão admin em produção | Login no navegador (usuário) | Fila 014 validada em dev contra o mesmo banco; rotas no ar (401 sem sessão) |
+| CI do GitHub (repo privado) | Login GitHub (usuário) | Push `6492f5a`; workflow roda typecheck+lint+test+build |
+| Credenciais Meta/Resend/OmniRouter | Env no hpanel Hostinger (usuário) | Nomes documentados; `/api/admin/chat` 200 `routerConfigured:false` |
 | Rotação da senha do banco Supabase (exposta 14/10) | Dashboard Supabase (usuário) | Passos exatos em `PROJECT_HANDOFF.md` |
-| Credenciais Meta/Resend/OmniRouter | Usuário fornece | Nomes de variáveis canônicos documentados |
 | claude-mem observer deslogado (~7 dias) | `/login` no Claude Code (usuário) | Diagnóstico registrado no log |
-| Smoke admin em produção (FASE H) | Deploy + login admin (usuário) | Rotas criadas e testadas localmente; build 39 pág. |
 
 ## Próximo comando lógico
 
-FASE F: dev server + navegador integrado (VS Code) — `/`, `/login`,
-`/dashboard`, CRM, `/admin/chat`, `/onboarding/*` com captura de
-evidência real (console/HTTP); em páginas de auth, indicar ao usuário
-exatamente onde autenticar e aguardar login. Depois FASE G (matriz) e
-FASE H (validação + scan de segredos + commits com
-`Co-Authored-By: Claude Code` + push + deploy + smoke pós-deploy).
+FASE H chegou ao limite autônomo (deploy + smoke sem sessão feitos).
+Próximos passos, todos [HUMANO], na ordem de impacto:
+
+1. **Sessão admin no navegador** → `GET /api/admin/tasks` 200
+   `{count:0}` (fecha a fila 014 em produção);
+2. **Hostinger hpanel** → definir `META_*`, `EMAIL_*`, `OMNIROUTER_*`
+   (item E — integrações reais; o chat admin passa a `routerConfigured:true`);
+3. **Supabase dashboard** → rotação da senha do banco (exposta 14/10 —
+   item 1 do handoff) + atualizar `DATABASE_URL`/`DIRECT_URL` no hpanel;
+4. **GitHub (repo privado)** → conferir o run do CI sobre `6492f5a`.
+
+Novas releases: **basta commit + push** (git integration do hpanel
+detecta e deploya em ~1-2 min — comprovado nesta missão).

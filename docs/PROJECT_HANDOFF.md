@@ -10,14 +10,16 @@
 4. Rodar `git status` + `git log --oneline -5` e conferir com o checkpoint acima.
 5. Rodar `npm test` e `npm run typecheck` para re-validar a base.
 
-## Estado de referência (2026-10-15)
+## Estado de referência (2026-10-15, pós-release)
 
-- Git `main @ 58491e6` (sincronizado com origin/main) + trabalho local não commitado
-  (FASE AGENT inteira + correções de 007/008/009 + FASE A desta missão).
-- jest 15 suítes / 135 testes PASS (antes da expansão de `roots`); tsc 0 erros; build 37 páginas.
-- 007/008/009 (RLS) **em produção** desde 2026-10-15 (41/41 validado; snapshot em `backups/`).
-- 014 (FASE AGENT) validada staging-first (10/10); **promoção a produção autorizada**
-  (missão de 2026-10-15) — ver FASE D em `EXECUTION_STATE.md`.
+- Git `main @ 6492f5a` — 5 commits da missão; `origin/main` sincronizado
+  (push `58491e6..6492f5a`).
+- jest 18 suítes / 185 testes PASS; tsc 0; build 39 páginas; next lint 0.
+- 007/008/009/014/015 **em produção** (41/41 + 10/10 validados staging-first;
+  015 = índice único `uq_webhook_events_meta_event_id`, comprovado em `pg_index`).
+- **FASE AGENT no ar no Hostinger** (git integration do hpanel detectou o
+  push): `GET /api/admin/chat` → 200 `{"routerConfigured":false}` (honesto,
+  sem `OMNIROUTER_*` no servidor); `GET /api/admin/tasks` → 401 sem sessão.
 - Briefing completo: `docs/BRIEFING_ANALISE_PROJETO.md`.
 
 ## Passos para intervenções humanas (quando o fluxo parar)
@@ -50,6 +52,16 @@ Após definir: `GET /api/admin/chat` → `{"routerConfigured":true,...}`.
 Observer deslogado desde 2026-10-08. Correção: rodar `/login` no Claude Code
 (não reiniciar o worker). A memória de fallback (esta pasta `docs/` +
 `REVOLUTION_X_MEMORY.md` + memory dir) continua funcionando independentemente.
+
+### 4. Deploy (mecanismo confirmado 2026-10-15 — nada a fazer)
+
+O hpanel do Hostinger tem **Git integration** conectada a
+`bruno23raro/revolution-x` (branch `main`): `git push origin main` →
+clona, roda build, sobe em ~1-2 min. Comprovado nesta missão: o push
+`6492f5a` colocou a build da FASE AGENT no ar (baseline `/api/admin/chat`
+404 → 200 `routerConfigured:false`). O CI do GitHub é apenas gate de
+build+test, **não** faz deploy. Migrations de schema seguem por
+`supabase db query --linked` (banco separado do app).
 
 ## Regras que NUNCA são passadas
 

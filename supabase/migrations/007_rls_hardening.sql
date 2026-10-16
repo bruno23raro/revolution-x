@@ -40,36 +40,36 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Organization_tenant" ON "Organization"';
     EXECUTE 'CREATE POLICY "Organization_tenant" ON "Organization"
       FOR ALL
-      USING ("id" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid)
-      WITH CHECK ("id" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid)';
+      USING ("id" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid)
+      WITH CHECK ("id" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid)';
   END IF;
 
   -- Standard tenant tables: key = "organizationId" (NOT NULL in schema)
   FOR t IN SELECT unnest(orgid_tables) LOOP
-    IF to_regclass(t) IS NOT NULL THEN
+    IF to_regclass(quote_ident(t)) IS NOT NULL THEN
       EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
-      EXECUTE format('DROP POLICY IF EXISTS %I_tenant ON %I', t, t);
+      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', t || '_tenant', t);
       EXECUTE format(
-        'CREATE POLICY %I_tenant ON %I
+        'CREATE POLICY %I ON %I
           FOR ALL
-          USING ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid)
-          WITH CHECK ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid)',
-        t, t
+          USING ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid)
+          WITH CHECK ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid)',
+        t || '_tenant', t
       );
     END IF;
   END LOOP;
 
   -- Tables whose "organizationId" may be NULL (global-ish rows stay visible)
   FOR t IN SELECT unnest(orgid_nullable) LOOP
-    IF to_regclass(t) IS NOT NULL THEN
+    IF to_regclass(quote_ident(t)) IS NOT NULL THEN
       EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
-      EXECUTE format('DROP POLICY IF EXISTS %I_tenant ON %I', t, t);
+      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', t || '_tenant', t);
       EXECUTE format(
-        'CREATE POLICY %I_tenant ON %I
+        'CREATE POLICY %I ON %I
           FOR ALL
-          USING ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid OR "organizationId" IS NULL)
-          WITH CHECK ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '')::uuid OR "organizationId" IS NULL)',
-        t, t
+          USING ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid OR "organizationId" IS NULL)
+          WITH CHECK ("organizationId" = NULLIF(current_setting(''app.current_org'', TRUE), '''')::uuid OR "organizationId" IS NULL)',
+        t || '_tenant', t
       );
     END IF;
   END LOOP;
@@ -136,7 +136,7 @@ DECLARE
   grant_tables TEXT[] := ARRAY['Organization','Contact','meta_integrations','webhook_events'];
 BEGIN
   FOR t IN SELECT unnest(grant_tables) LOOP
-    IF to_regclass(t) IS NOT NULL THEN
+    IF to_regclass(quote_ident(t)) IS NOT NULL THEN
       EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON %I TO authenticated, service_role', t);
     END IF;
   END LOOP;

@@ -120,13 +120,13 @@ BEGIN
   END LOOP;
 
   -- Restricted RLS test role
-  IF to_regclass('"Session"') IS NOT NULL THEN
+  IF to_regclass('"Session"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON "Session" TO revx_test';
   END IF;
-  IF to_regclass('"BillingEvent"') IS NOT NULL THEN
+  IF to_regclass('"BillingEvent"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON "BillingEvent" TO revx_test';
   END IF;
-  IF to_regclass('"Role"') IS NOT NULL THEN
+  IF to_regclass('"Role"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON "Role" TO revx_test';
   END IF;
 END

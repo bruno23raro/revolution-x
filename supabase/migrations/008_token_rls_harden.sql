@@ -93,13 +93,13 @@ BEGIN
     END;
   END LOOP;
   -- Always grant to revx_test for local test validation
-  IF to_regclass('"PasswordResetToken"') IS NOT NULL THEN
+  IF to_regclass('"PasswordResetToken"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON "PasswordResetToken" TO revx_test';
   END IF;
-  IF to_regclass('"EmailVerificationToken"') IS NOT NULL THEN
+  IF to_regclass('"EmailVerificationToken"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON "EmailVerificationToken" TO revx_test';
   END IF;
-  IF to_regclass('"User"') IS NOT NULL THEN
+  IF to_regclass('"User"') IS NOT NULL AND to_regrole('revx_test') IS NOT NULL THEN
     EXECUTE 'GRANT SELECT ON "User" TO revx_test';
   END IF;
 END

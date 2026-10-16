@@ -4,13 +4,17 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
 // ── crypto mock (deterministic tokens in tests) ──────────────────────────────
-jest.mock('crypto', () => ({
-  createHash: jest.fn().mockReturnValue({
-    update: jest.fn().mockReturnValue({ digest: jest.fn().mockReturnValue('mock-hash') }),
-  }),
-  randomBytes: jest.fn().mockReturnValue({ toString: jest.fn().mockReturnValue('mock-token-raw') }),
-  randomUUID: jest.fn().mockReturnValue('mock-uuid'),
-}));
+jest.mock('crypto', () => {
+  const actual = jest.requireActual('crypto');
+  return {
+    ...actual,
+    createHash: jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({ digest: jest.fn().mockReturnValue('mock-hash') }),
+    }),
+    randomBytes: jest.fn().mockReturnValue({ toString: jest.fn().mockReturnValue('mock-token-raw') }),
+    randomUUID: jest.fn().mockReturnValue('mock-uuid'),
+  };
+});
 
 // ── Supabase service-role client mock ────────────────────────────────────────
 jest.mock('@/lib/supabase/server', () => ({

@@ -122,28 +122,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'accepted' }, { status: 200 });
   }
 
-  // TODO: persistir webhook_event na transação (require RLS habilitada em webhook_events)
-  // Agora apenas processamos as mensagens com contexto de tenant
+  // Claim atômico de idempotência: INSERT ... ON CONFLICT (meta_event_id)
+  // DO NOTHING RETURNING — exige índice único simples em meta_event_id
+  // (migration 015). Se a fila ainda está em 015-absente, o claim lança
+  // erro e a entrega segue (degradação honesta, nunca perda de evento).
+  // Se o claim retorna vazio → evento já registrado por outra entrega →
+  // duplicado, não reprocessamos. O fast-path acima (service_role) é
+  // otimização; o claim é a garantia.
   try {
-    // A transação garante que app.current_org esteja definido para todas as operações
-    const results = await withTenantContext(organizationId, async (tx) => {
-      // Primeiro, gravar evento de webhook (dentro da transação, com contexto de tenant)
+    const outcome = await withTenantContext(organizationId, async (tx) => {
       if (metaEventId) {
-        await tx.$executeRaw`
-          INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
-          VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, sha256(${payloadText}::text), NOW())
-          ON CONFLICT (meta_event_id) DO NOTHING
-        `;
+        try {
+          const claimed = await tx.$queryRaw`
+            INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
+            VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, sha256(${payloadText}::text), NOW())
+            ON CONFLICT (meta_event_id) DO NOTHING
+            RETURNING event_id
+          ` as Array<{ event_id: string }>;
+          if (claimed.length === 0) {
+            return { kind: 'duplicate' as const };
+          }
+        } catch (claimErr) {
+          // 015 ainda não aplicada / índice ausente → não bloquear entrega
+          console.warn('[meta-webhook] claim de idempotência falhou, processando mesmo assim:', (claimErr as Error).message);
+        }
       }
 
-      // Processar mensagens WhatsApp com o transaction client (tenant-aware)
-      return await processWhatsAppPayload(payload, organizationId, tx);
+      const results = await processWhatsAppPayload(safe, organizationId, tx);
+      return { kind: 'processed' as const, results };
     });
 
-    // Verificar se houve algum erro nas mensagens
-    const hasErrors = results.some((r) => !r.success);
+    if (outcome.kind === 'duplicate') {
+      return NextResponse.json({ status: 'duplicate_skipped' }, { status: 200 });
+    }
+
+    const hasErrors = outcome.results.some((r) => !r.success);
     if (hasErrors) {
-      const errors = results.filter((r) => r.error).map((r) => r.error);
+      const errors = outcome.results.filter((r) => r.error).map((r) => r.error);
       console.warn('[meta-webhook] partial processing errors:', errors);
     }
 

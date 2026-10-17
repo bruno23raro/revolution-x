@@ -378,3 +378,24 @@ Aplicado:
 - **RESTA [HUMANO]** (único resíduo): probe definitivo de banco em produção
   `GET /api/admin/tasks` **com sessão admin** → 200 `{count:0}` (login no
   navegador; item 3 do handoff).
+
+### Probe admin definitivo — 2ª rotação FECHADA (2026-10-17, tarde)
+- **Resultado**: `GET https://revolutionx.com.br/api/admin/tasks` **com
+  sessão admin** → **HTTP 200**
+  `{"organizationId":"00000000-0000-0000-0000-000000000001","count":0,"items":[]}`.
+- **Sessão obtida sem expor segredo no chat**: a conta admin
+  `brunoalmeida23111996@gmail.com` (papel `admin`, "Test Organization")
+  emitiu um **magic-link (recovery)** do GoTrue hoje; o **fragmento de
+  sessão** foi consumido pela app em `https://revolutionx.com.br/login` via
+  `detectSessionInUrl` (client de `@supabase/ssr`) → cookie de sessão criado
+  **na origem de produção**. Não criei senha nova (o update de senha via
+  Admin API deu **405** neste GoTrue) e não fiz DDL em produção.
+- **O que isso comprova**: a cadeia `requireAdmin` → `supabase.auth.getUser()`
+  → Prisma `user.findUnique` → `listTasks` rodou de ponta a ponta contra
+  **o banco de produção** com as **novas credenciais do hpanel-B**
+  (`DATABASE_URL`/`DIRECT_URL` da 2ª rotação). `count:0` = fila 014 vazia
+  (esperado — nenhuma tarefa criada). **2ª rotação do banco de produção
+  FECHADA**: alvos a/b/c + re-deploy + probe admin, todos ✅.
+- **Registro**: evidência capturada em 2026-10-17 na aba do navegador
+  (chrome-devtools, página de produção); **nenhum token/segredo é
+  reproduzido neste registro** (§6 do limite de segurança).

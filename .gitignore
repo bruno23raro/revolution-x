@@ -45,6 +45,8 @@ id_rsa*
 # MCP configuration — local per user
 .mcp.json
 .metamcp/
+# Browser-MCP local a11y snapshots (can capture live env URLs) — never commit
+.playwright-mcp/
 
 # External/unrelated content — not project code
 agency-agents/

@@ -37,13 +37,26 @@
 
 ## Passos para intervenções humanas (quando o fluxo parar)
 
-### 1. Rotação da senha do banco de produção (Supabase) — PRIORITÁRIA
+### 1. Rotação da senha do banco de produção (Supabase)
+
+**STATUS 2026-10-17 — CONCLUÍDA até o limite autônomo:**
+
+- **(a) hpanel ✅**: `DATABASE_URL` + `DIRECT_URL` na nova senha
+  (40 chars hex, valor não versionado — §6), **persistência verificada**.
+  Senha antiga revogada no Supabase.
+- **(b) `.env.local` ✅**: `DATABASE_URL`/`DIRECT_URL` já na nova senha
+  (topologia pooler); `TEST_*` intocados.
+- **Re-deploy disparado ✅**: `git push origin main` → git integration do
+  hpanel (~1-2 min) re-injeta o `.env` do hpanel no processo em produção.
+- **RESTA [HUMANO/UI]**: **(c) secrets do GitHub** `DATABASE_URL`
+  (e `DIRECT_URL`, se houver) na UI — mesma nova senha; e o **probe final**
+  `GET /api/admin/tasks` com sessão admin → 200 `{count:0}` em produção.
 
 A senha do banco (role de conexão `postgres`) foi exposta acidentalmente em
 2026-10-14 (saída de comando no terminal) e, com o repositório tornado
 público em 2026-10-16, os identificadores do projeto (ref Supabase
 `ardpabjoepzhkpmkgwgu`, host do pooler) também ficaram públicos — isso
-aumenta a prioridade da rotação. Procedimento:
+aumenta a prioridade da rotação. Procedimento original:
 
 1. Dashboard Supabase → projeto `ardpabjoepzhkpmkgwgu`
    ("Revolution X", sa-east-1) → **Settings → Database →

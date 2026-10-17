@@ -24,11 +24,28 @@ Auditoria §6 (árvore + histórico): nenhuma credencial utilizável no
 histórico público — só identificadores (ref Supabase, host pooler sem
 senha, slug da org); senhas reais existem apenas em refs **locais**
 (`refs/stash`, `refs/agents/...`, commit `fe69880`, nunca publicados) →
-**não empurrar esses refs**. Restam [HUMANO]: rotação da senha do banco
-de produção (agora PRIORITÁRIA — exposição 14/10 + identificadores
-públicos), sessão admin no navegador, credenciais E
-(Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
+**não empurrar esses refs**. Restam [HUMANO]: rotação do banco de
+produção (ver bloco **2026-10-17** abaixo), sessão admin no navegador,
+credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
 `docs/EXECUTION_LOG.md` §FASE I.
+
+## 2026-10-17 — Rotação do banco de produção (CONCLUÍDA até o limite autônomo)
+
+- **Alvo (a) hpanel** ✅: `DATABASE_URL` + `DIRECT_URL` atualizados para a
+  nova senha (40 chars hex; valor **não versionado** — §6) e **persistência
+  verificada** (editor reaberto, valor lido de volta). Senha antiga revogada
+  no Supabase.
+- **Alvo (b) `.env.local`** ✅: `DATABASE_URL`/`DIRECT_URL` já na nova
+  senha (topologia pooler); `TEST_*` intocados.
+- **Credencial comprovada** em conexão real: pooler OK (217 ms); host
+  direto da máquina local dá timeout de egress (não é falha de auth).
+- **Re-deploy do hpanel disparado** via este commit + `git push origin main`
+  (git integration ~1-2 min) → o processo em produção passa a carregar a
+  nova senha do `.env` do hpanel.
+- **Alvo (c) secrets do GitHub** (`DATABASE_URL`/`DIRECT_URL`): **pendente
+  na UI** (sem `gh` CLI nesta sessão) — `PROJECT_HANDOFF.md` item 1.
+- Confirmação final de banco em produção = probe `GET /api/admin/tasks`
+  com sessão admin → 200 `{count:0}` ([HUMANO], item 3 do handoff).
 
 ## Checklist de fases
 
@@ -96,7 +113,7 @@ públicos), sessão admin no navegador, credenciais E
 
 | Bloqueio | Dependência | O que já foi preparado |
 | --- | --- | --- |
-| Rotação da senha do banco Supabase (exposta 14/10; identificadores agora públicos) | Dashboard Supabase (usuário) | Passos exatos em `PROJECT_HANDOFF.md` (3 alvos: hpanel, `.env.local`, secrets do Actions) |
+| Rotação da senha do banco Supabase (exposta 14/10; ident. públicos) | **Resolvida 2026-10-17**: hpanel ✅ + `.env.local` ✅ + re-deploy disparado ✅ | Restante: (c) secrets do GitHub na UI + probe admin `GET /api/admin/tasks` → 200 `{count:0}` em produção ([HUMANO]) |
 | Smoke de sessão admin em produção | Login no navegador (usuário) | Fila 014 validada em dev E em CI (run 38973999041); rotas no ar (401 sem sessão) |
 | Credenciais Meta/Resend/OmniRouter | Env no hpanel Hostinger (usuário) | Nomes documentados; `/api/admin/chat` 200 `routerConfigured:false` |
 | claude-mem observer deslogado (~8 dias) | `/login` no Claude Code (usuário) | Diagnóstico registrado no log |
@@ -107,10 +124,10 @@ FASE I chegou ao limite autônomo (repo público auditado, CI verde
 comprovado, .gitignore endurecido). Próximos passos, todos [HUMANO], na
 ordem de impacto:
 
-1. **Supabase dashboard** → rotação da senha do banco de produção
-   (exposta 14/10; agora PRIORITÁRIA por causa dos identificadores
-   públicos — item 1 do handoff; atualizar os 3 alvos: hpanel,
-   `.env.local`, secrets do Actions);
+1. **Rotação do banco (2026-10-17)**: hpanel ✅ + `.env.local` ✅ +
+   re-deploy disparado ✅; **restam**: (c) secrets do GitHub na UI
+   (mesma nova senha, ver `PROJECT_HANDOFF.md` item 1) e o probe admin
+   `GET /api/admin/tasks` → 200 `{count:0}` em produção;
 2. **Hostinger hpanel** → definir `META_*`, `EMAIL_*`, `OMNIROUTER_*`
    (item E — integrações reais; o chat admin passa a `routerConfigured:true`);
 3. **Sessão admin no navegador** → `GET /api/admin/tasks` 200

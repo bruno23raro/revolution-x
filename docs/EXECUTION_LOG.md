@@ -298,3 +298,60 @@ Aplicado:
   (`github.com/bruno23raro/revolution-x/actions`). Causa-raiz confirmada e
   sanada: as 5 suítes de integração rodam no CI contra o Postgres
   descartável do service container.
+
+## 2026-10-17 — Rotação da senha do banco Supabase de produção (PRIORITÁRIA → CONCLUÍDA)
+
+### Alvo (a) — Hostinger hpanel (CONCLUÍDO + VERIFICADO)
+- `DATABASE_URL` e `DIRECT_URL` atualizados em
+  `hpanel.hostinger.com/websites/revolutionx.com.br/environment-variables`,
+  **preservando a topologia de host direto do hpanel**
+  (`db.ardpabjoepzhkpmkgwgu.supabase.co:5432`, user `postgres`), trocando
+  a senha antiga (revogada no Supabase) pela nova (**40 chars hex; valor
+  exato NUNCA versionado** — regra §6).
+- Verificação de persistência: editor de cada variável reaberto e valor
+  lido de volta → nova presente, antiga ausente (`hasNew=true,
+  hasOld=false`).
+- A senha antiga `B23b…` foi **revogada no dashboard Supabase** (reset) →
+  qualquer processo ainda carregando ela perde o acesso ao banco; o
+  processo em produção precisava de um **re-deploy** para pegar a nova.
+
+### Alvo (b) — `.env.local` (CONCLUÍDO)
+- `DATABASE_URL`/`DIRECT_URL` já apontam para a nova senha (topologia
+  **pooler** `aws-0-sa-east-1.pooler.supabase.com:5432`, user
+  `postgres.ardpabjoepzhkpmkgwgu`). Confirmado por leitura; as aspas do
+  `DIRECT_URL` preservadas.
+- `TEST_DATABASE_URL`/`TEST_*_DATABASE_URL` (Postgres local isolado)
+  **intocados** — regra: nunca usar credencial de produção como fallback de
+  teste.
+
+### Prova da credencial (conexão real — `scripts/db-conn-test.mjs`, NUNCA imprime a senha)
+- Host **direto** `db.…:5432`/`postgres` → **FAIL (timeout de conexão)**:
+  é bloqueio de egress da máquina local ao 5432 direto do Supabase, **não**
+  falha de autenticação.
+- **Pooler** `aws-0-sa-east-1.pooler.supabase.com:5432`/
+  `postgres.ardpabjoepzhkpmkgwgu` → **OK (217 ms)**, `user=postgres`,
+  `db=postgres`. A senha do banco do Supabase é **compartilhada entre as
+  topologias** (direta e pooler) → o valor novo é válido para as duas.
+
+### Re-deploy do Hostinger (git integration)
+- `git push origin main` (este commit de registro) → o hpanel clona, roda
+  `npm run build` e sobe em ~1-2 min, **re-injetando o `.env` atual do
+  hpanel** (a nova senha) no processo. A rotação só vira efetiva em produção
+  nesse re-deploy.
+- Smoke pós-re-deploy (verificar após ~90s–2min): `GET /` 200; `GET
+  /api/admin/chat` 200 `routerConfigured:false` (resíduo E — `OMNIROUTER_*`
+  ausente, **esperado**, não é problema de banco). Confirmação definitiva
+  de banco em produção = probe da fila 014 `GET /api/admin/tasks` com
+  sessão admin → 200 `{count:0}` ([HUMANO] — item 3 do handoff).
+
+### Alvo (c) — secrets do GitHub Actions (PENDENTE — UI/`[HUMANO]`)
+- `secrets.DATABASE_URL` (usado na linha 26 do `ci.yml`) e, se existir,
+  `DIRECT_URL`. As 5 suítes de integração usam **SOMENTE** os
+  `TEST_*_DATABASE_URL` isolados (service `postgres:17`) — `b4-rls.test.ts`
+  diz literalmente "Never DATABASE_URL/DIRECT_URL" — logo a rotação **não
+  afeta os testes**. O único consumidor potencial é o passo `Build`.
+- Para manter o CI verde pós-rotação, rotacionar o segredo `DATABASE_URL`
+  (e `DIRECT_URL`, se houver) para a **mesma topologia de host direto do
+  hpanel** em `github.com/bruno23raro/revolution-x → Settings → Secrets and
+  variables → Actions`. Sem `gh` CLI nesta sessão → executar no navegador
+  (login no GitHub). Não versionar o valor novo.

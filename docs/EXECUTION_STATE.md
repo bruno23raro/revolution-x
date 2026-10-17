@@ -51,6 +51,21 @@ abaixo), credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
 - Confirmação final de banco em produção = probe `GET /api/admin/tasks`
   **com sessão admin** → 200 `{count:0}` ([HUMANO], item 3 do handoff).
 
+## 2026-10-17 (tardio) — 2ª rotação: a 1ª senha re-expostou (chat + claude-mem P268)
+
+- A senha da 1ª rotação (`02588aef…`; **valor completo não reproduzido aqui**) ficou **no
+  chat e no índice do claude-mem (P268)** → passa a ser tratada como **exposta** de novo.
+- **Preparado:** `docs/DB_ROTATION_RUNBOOK.md` (roteiro seguro, **0 valor de segredo**).
+  A **fonte Supabase revoga na hora**; o usuário preenche a `NOVA_SENHA` **só nos campos
+  seguros** (hpanel `DATABASE_URL`/`DIRECT_URL` + `.env.local` x2; os outros `.env*`
+  locais invalidam sozinhos); eu deito o **re-deploy** + **smoke** + **probe admin** sem
+  imprimir segredo. Commit local `8222889` (**push segurado**, anda junto com o registro).
+- **PENDENTE [HUMANO]:** o usuário roda o runbook (gerar + aplicar a `NOVA_SENHA` em
+  Supabase/hpanel/`.env.local`) e avisa "rotação feita" → eu re-deploy + smoke + abro o
+  login; depois **login admin + `CONTINUE`** → `GET /api/admin/tasks` 200 `{count:0}`
+  (prova de banco em produção). A `02588aef…` fica **revogada na fonte** (inofensiva
+  mesmo que continue em transcrições/índices).
+
 ## Checklist de fases
 
 - [x] **A — Quick wins**: jest `roots` agora cobre `src` + `app`; `dotenv`

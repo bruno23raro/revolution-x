@@ -65,7 +65,11 @@ export async function POST(request: NextRequest) {
     await svc.from('EmailVerificationToken')
       .insert({ userId: userRow.id, tokenHash, expiresAt });
 
-    const verifyLink = `${request.nextUrl.origin}/verify-email?token=${tokenRaw}`;
+    // Prefer NEXT_PUBLIC_SITE_URL (set by operator to the public origin);
+    // fall back to request.nextUrl.origin only when the operator did not
+    // configure it (some hosts return 0.0.0.0:3000 internally).
+    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim() || request.nextUrl.origin;
+    const verifyLink = `${siteOrigin}/verify-email?token=${tokenRaw}`;
 
     try {
       await getMailProvider().send({

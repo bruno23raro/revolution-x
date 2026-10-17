@@ -77,7 +77,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Build reset link (token is in the URL — not in the DB)
-    const resetLink = `${request.nextUrl.origin}/reset-password?token=${tokenRaw}`;
+    // Prefer NEXT_PUBLIC_SITE_URL (set by operator to the public origin);
+    // fall back to request.nextUrl.origin only when the operator did not
+    // configure it (some hosts return 0.0.0.0:3000 internally).
+    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim() || request.nextUrl.origin;
+    const resetLink = `${siteOrigin}/reset-password?token=${tokenRaw}`;
 
     // Send email (pluggable; may be no-op until provider wired)
     try {

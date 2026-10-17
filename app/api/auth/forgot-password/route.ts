@@ -77,10 +77,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Build reset link (token is in the URL — not in the DB)
-    // Prefer NEXT_PUBLIC_SITE_URL (set by operator to the public origin);
-    // fall back to request.nextUrl.origin only when the operator did not
-    // configure it (some hosts return 0.0.0.0:3000 internally).
-    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim() || request.nextUrl.origin;
+    // Use the operator-configured public origin when available;
+    // otherwise hard-fallback to the known production domain.
+    // Hostinger's internal request object can yield 0.0.0.0:3000,
+    // so we never silently use request.nextUrl.origin without a
+    // verified origin above.
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+      || (request.nextUrl.origin !== 'http://0.0.0.0:3000' && request.nextUrl.origin !== 'https://0.0.0.0')
+        ? request.nextUrl.origin
+        : 'https://revolutionx.com.br';
     const resetLink = `${siteOrigin}/reset-password?token=${tokenRaw}`;
 
     // Send email (pluggable; may be no-op until provider wired)

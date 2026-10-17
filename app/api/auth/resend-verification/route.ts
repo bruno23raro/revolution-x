@@ -66,9 +66,13 @@ export async function POST(request: NextRequest) {
       .insert({ userId: userRow.id, tokenHash, expiresAt });
 
     // Prefer NEXT_PUBLIC_SITE_URL (set by operator to the public origin);
-    // fall back to request.nextUrl.origin only when the operator did not
-    // configure it (some hosts return 0.0.0.0:3000 internally).
-    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim() || request.nextUrl.origin;
+    // otherwise use request.nextUrl.origin only when it is not the
+    // internal Hostinger address (0.0.0.0:3000); hard-fallback to the
+    // known production domain.
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+      || (request.nextUrl.origin !== 'http://0.0.0.0:3000' && request.nextUrl.origin !== 'https://0.0.0.0')
+        ? request.nextUrl.origin
+        : 'https://revolutionx.com.br';
     const verifyLink = `${siteOrigin}/verify-email?token=${tokenRaw}`;
 
     try {

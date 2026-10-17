@@ -35,16 +35,17 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   implementadas; `generateState` agora CSPRNG; `dotenv` declarado.
 - **Credencial de banco**: a senha do banco Supabase (role `postgres`)
   exposta em 2026-10-14 — **ROTAÇÃO CONCLUÍDA 2026-10-17** (hpanel ✅ +
-  `.env.local` ✅ + re-deploy disparado; resta o segredo `DATABASE_URL` do
-  GitHub na UI + probe admin em produção — `docs/PROJECT_HANDOFF.md`
-  item 1 / `docs/EXECUTION_LOG.md`).
+  `.env.local` ✅ + re-deploy CONFIRMADO [Concluído, commit `77a9696`,
+  smoke público 200] + alvo (c) GitHub = N/A [repo sem secrets, decisão:
+  não criar segredo]). Resta só o probe admin `GET /api/admin/tasks` em
+  produção — `docs/PROJECT_HANDOFF.md` item 1 / `docs/EXECUTION_LOG.md`.
 
 ## PENDÊNCIAS (2026-10-15)
 
 1. **Rotação da senha do banco de produção** — **CONCLUÍDA 2026-10-17**
-   (hpanel + `.env.local` prontos; re-deploy disparado via push). **Resta**:
-   segredo `DATABASE_URL`/`DIRECT_URL` do GitHub na UI + probe admin
-   `GET /api/admin/tasks` → 200 `{count:0}` em produção.
+   (hpanel + `.env.local` + re-deploy CONFIRMADO [`77a9696`]; alvo (c)
+   GitHub = N/A, repo sem secrets). **Resta só**: probe admin
+   `GET /api/admin/tasks` → 200 `{count:0}` em produção (sessão admin).
 2. **Migration 014 em produção** — executar após verificação do destino
    (procedimento em `docs/STAGING_ROLLOUT_PLAN.md` §FASE AGENT +
    `docs/EXECUTION_STATE.md`).

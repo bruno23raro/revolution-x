@@ -39,18 +39,25 @@
 
 ### 1. Rotação da senha do banco de produção (Supabase)
 
-**STATUS 2026-10-17 — CONCLUÍDA até o limite autônomo:**
+**STATUS 2026-10-17 — CONCLUÍDA (restam só confirmações [HUMANO]):**
 
 - **(a) hpanel ✅**: `DATABASE_URL` + `DIRECT_URL` na nova senha
   (40 chars hex, valor não versionado — §6), **persistência verificada**.
   Senha antiga revogada no Supabase.
 - **(b) `.env.local` ✅**: `DATABASE_URL`/`DIRECT_URL` já na nova senha
   (topologia pooler); `TEST_*` intocados.
-- **Re-deploy disparado ✅**: `git push origin main` → git integration do
-  hpanel (~1-2 min) re-injeta o `.env` do hpanel no processo em produção.
-- **RESTA [HUMANO/UI]**: **(c) secrets do GitHub** `DATABASE_URL`
-  (e `DIRECT_URL`, se houver) na UI — mesma nova senha; e o **probe final**
-  `GET /api/admin/tasks` com sessão admin → 200 `{count:0}` em produção.
+- **Re-deploy CONFIRMADO ✅**: hpanel → *Última implantação: Concluído*,
+  commit `77a9696` (08:38, 1m 43s, `main`) → `.env` novo re-injetado.
+  Smoke público pós-deploy: `GET /` 200 · `GET /api/admin/chat` 200
+  `routerConfigured:false` · `GET /api/admin/tasks` 401 (sem sessão).
+- **(c) secrets do GitHub = N/A**: `Settings → Secrets and variables →
+  Actions` mostra **zero secrets** ("This repository has no secrets"). Nada
+  a rotacionar — a senha exposta nunca esteve no GitHub e o CI é verde com
+  `secrets.DATABASE_URL` vazio (integrações usam `TEST_*` isolados).
+  **Decisão: NÃO criar** segredo de banco em repo público (superfície extra
+  de exposição, sem uso funcional).
+- **RESTA [HUMANO]**: **probe final** `GET /api/admin/tasks` com sessão
+  admin → 200 `{count:0}` em produção (login no navegador).
 
 A senha do banco (role de conexão `postgres`) foi exposta acidentalmente em
 2026-10-14 (saída de comando no terminal) e, com o repositório tornado

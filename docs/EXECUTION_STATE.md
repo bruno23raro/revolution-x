@@ -24,12 +24,12 @@ Auditoria §6 (árvore + histórico): nenhuma credencial utilizável no
 histórico público — só identificadores (ref Supabase, host pooler sem
 senha, slug da org); senhas reais existem apenas em refs **locais**
 (`refs/stash`, `refs/agents/...`, commit `fe69880`, nunca publicados) →
-**não empurrar esses refs**. Restam [HUMANO]: rotação do banco de
-produção (ver bloco **2026-10-17** abaixo), sessão admin no navegador,
-credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
+**não empurrar esses refs**. Restam [HUMANO]: **probe admin** da rotação do
+banco de produção (sessão admin no navegador; ver bloco **2026-10-17**
+abaixo), credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
 `docs/EXECUTION_LOG.md` §FASE I.
 
-## 2026-10-17 — Rotação do banco de produção (CONCLUÍDA até o limite autônomo)
+## 2026-10-17 — Rotação do banco de produção (CONCLUÍDA; resta só confirmação admin [HUMANO])
 
 - **Alvo (a) hpanel** ✅: `DATABASE_URL` + `DIRECT_URL` atualizados para a
   nova senha (40 chars hex; valor **não versionado** — §6) e **persistência
@@ -39,13 +39,17 @@ credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
   senha (topologia pooler); `TEST_*` intocados.
 - **Credencial comprovada** em conexão real: pooler OK (217 ms); host
   direto da máquina local dá timeout de egress (não é falha de auth).
-- **Re-deploy do hpanel disparado** via este commit + `git push origin main`
-  (git integration ~1-2 min) → o processo em produção passa a carregar a
-  nova senha do `.env` do hpanel.
-- **Alvo (c) secrets do GitHub** (`DATABASE_URL`/`DIRECT_URL`): **pendente
-  na UI** (sem `gh` CLI nesta sessão) — `PROJECT_HANDOFF.md` item 1.
+- **Re-deploy do hpanel CONFIRMADO** (commit `77a9696`): hpanel →
+  *Última implantação: Concluído* (08:38, 1m 43s, `main`) → `.env` novo
+  re-injetado. Smoke público pós-deploy: `GET /` 200 · `GET
+  /api/admin/chat` 200 `routerConfigured:false` · `GET /api/admin/tasks`
+  401 (sem sessão).
+- **Alvo (c) secrets do GitHub = N/A** (verificado no navegador): repo tem
+  **zero secrets** ("This repository has no secrets"); `secrets.DATABASE_URL`
+  resolve vazio e o CI segue verde. **Decisão: não criar** segredo de banco
+  em repo público.
 - Confirmação final de banco em produção = probe `GET /api/admin/tasks`
-  com sessão admin → 200 `{count:0}` ([HUMANO], item 3 do handoff).
+  **com sessão admin** → 200 `{count:0}` ([HUMANO], item 3 do handoff).
 
 ## Checklist de fases
 
@@ -113,7 +117,7 @@ credenciais E (Meta/Resend/OmniRouter), claude-mem `/login`. Detalhes:
 
 | Bloqueio | Dependência | O que já foi preparado |
 | --- | --- | --- |
-| Rotação da senha do banco Supabase (exposta 14/10; ident. públicos) | **Resolvida 2026-10-17**: hpanel ✅ + `.env.local` ✅ + re-deploy disparado ✅ | Restante: (c) secrets do GitHub na UI + probe admin `GET /api/admin/tasks` → 200 `{count:0}` em produção ([HUMANO]) |
+| Rotação da senha do banco Supabase (exposta 14/10; ident. públicos) | **Resolvida 2026-10-17**: hpanel ✅ + `.env.local` ✅ + re-deploy CONFIRMADO ✅ + (c) GitHub = N/A (repo sem secrets) | Restante [HUMANO]: probe admin `GET /api/admin/tasks` → 200 `{count:0}` em produção (sessão admin) |
 | Smoke de sessão admin em produção | Login no navegador (usuário) | Fila 014 validada em dev E em CI (run 38973999041); rotas no ar (401 sem sessão) |
 | Credenciais Meta/Resend/OmniRouter | Env no hpanel Hostinger (usuário) | Nomes documentados; `/api/admin/chat` 200 `routerConfigured:false` |
 | claude-mem observer deslogado (~8 dias) | `/login` no Claude Code (usuário) | Diagnóstico registrado no log |
@@ -124,10 +128,11 @@ FASE I chegou ao limite autônomo (repo público auditado, CI verde
 comprovado, .gitignore endurecido). Próximos passos, todos [HUMANO], na
 ordem de impacto:
 
-1. **Rotação do banco (2026-10-17)**: hpanel ✅ + `.env.local` ✅ +
-   re-deploy disparado ✅; **restam**: (c) secrets do GitHub na UI
-   (mesma nova senha, ver `PROJECT_HANDOFF.md` item 1) e o probe admin
-   `GET /api/admin/tasks` → 200 `{count:0}` em produção;
+1. **Rotação do banco (2026-10-17) — quase fechada**: hpanel ✅ +
+   `.env.local` ✅ + re-deploy CONFIRMADO ✅ (Concluído, `77a9696`, smoke
+   200); (c) GitHub = N/A (repo sem secrets, decisão: não criar). **Resta
+   só** o probe admin `GET /api/admin/tasks` → 200 `{count:0}` em produção
+   (sessão admin, item 3);
 2. **Hostinger hpanel** → definir `META_*`, `EMAIL_*`, `OMNIROUTER_*`
    (item E — integrações reais; o chat admin passa a `routerConfigured:true`);
 3. **Sessão admin no navegador** → `GET /api/admin/tasks` 200

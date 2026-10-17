@@ -344,14 +344,37 @@ Aplicado:
   de banco em produção = probe da fila 014 `GET /api/admin/tasks` com
   sessão admin → 200 `{count:0}` ([HUMANO] — item 3 do handoff).
 
-### Alvo (c) — secrets do GitHub Actions (PENDENTE — UI/`[HUMANO]`)
-- `secrets.DATABASE_URL` (usado na linha 26 do `ci.yml`) e, se existir,
-  `DIRECT_URL`. As 5 suítes de integração usam **SOMENTE** os
+### Alvo (c) — secrets do GitHub Actions (RESOLVIDO = N/A — não há segredo a rotacionar)
+- `secrets.DATABASE_URL` (linha 26 do `ci.yml`) é **referenciado, mas não
+  existe**: as 5 suítes de integração usam **SOMENTE** os
   `TEST_*_DATABASE_URL` isolados (service `postgres:17`) — `b4-rls.test.ts`
-  diz literalmente "Never DATABASE_URL/DIRECT_URL" — logo a rotação **não
-  afeta os testes**. O único consumidor potencial é o passo `Build`.
-- Para manter o CI verde pós-rotação, rotacionar o segredo `DATABASE_URL`
-  (e `DIRECT_URL`, se houver) para a **mesma topologia de host direto do
-  hpanel** em `github.com/bruno23raro/revolution-x → Settings → Secrets and
-  variables → Actions`. Sem `gh` CLI nesta sessão → executar no navegador
-  (login no GitHub). Não versionar o valor novo.
+  diz literalmente "Never DATABASE_URL/DIRECT_URL". O `prisma generate` e o
+  `next build` toleram `DATABASE_URL` vazio. Logo a rotação **não afeta os
+  testes** e o CI não depende de segredo de banco.
+
+### Confirmação da rotação em produção (2026-10-17, pós-push `77a9696`)
+- **Re-deploy do hpanel CONFIRMADO** (hpanel → revolutionx.com.br → Painel
+  de controle): *Última implantação → Estado: **Concluído***; repositório
+  `revolution-x`, filial `main`, commit `77a9696e` (este registro),
+  **desdobrado 2026-10-17 08:38 em 1m 43s** → o git integration clonou o
+  `77a9696`, rodou `npm run build` e **re-injetou o `.env` atual do hpanel**
+  (nova `DATABASE_URL`/`DIRECT_URL`) no processo em produção. A nova senha
+  está viva no app de produção.
+- **Smoke público pós-re-deploy** (read-only contra `revolutionx.com.br`):
+  - `GET /` → **200** (0,34 s).
+  - `GET /api/admin/chat` → **200** `{"routerConfigured":false,"model":null,"baseUrl":null}`
+    (rota da FASE AGENT no ar; `routerConfigured:false` = resíduo E
+    `OMNIROUTER_*` ausente, **não** é problema de banco — esperado).
+  - `GET /api/admin/tasks` **sem sessão** → **401** (fila 014 no ar; exige
+    sessão admin).
+  - Idêntico ao baseline documentado → processo de produção saudável.
+- **Alvo (c) confirmado N/A**: `Settings → Secrets and variables → Actions`
+  (GitHub, via navegador) → **Environment secrets = none** e **Repository
+  secrets = "This repository has no secrets."** → NÃO existe segredo
+  `DATABASE_URL`/`DIRECT_URL`. A senha exposta **nunca esteve** no GitHub;
+  o `secrets.DATABASE_URL` resolve para **vazio** e o CI segue verde
+  (run `38973999041`). **Decisão de segurança: NÃO criar** segredo de banco
+  em repo **público** (superfície extra de exposição; o CI não o usa).
+- **RESTA [HUMANO]** (único resíduo): probe definitivo de banco em produção
+  `GET /api/admin/tasks` **com sessão admin** → 200 `{count:0}` (login no
+  navegador; item 3 do handoff).

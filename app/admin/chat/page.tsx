@@ -6,6 +6,7 @@
 // a interface mostra o motivo exato (eventos error/warning da API).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import AppNav from '@/components/AppNav';
 
 // ------------------------------------------------------------------
 // Tipos (espelho dos contratos das rotas /api/admin/*)
@@ -306,8 +307,10 @@ export default function AdminChatPage() {
   const chatDisabled = busy || !input.trim() || (router !== null && !router.routerConfigured);
 
   return (
-    <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
-      {/* Cabeçalho */}
+    <>
+      <AppNav />
+      <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
+        {/* Cabeçalho */}
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 max-w-6xl">
         <h1 className="text-2xl font-bold text-white">Centro Administrativo com IA</h1>
         <p className="text-sm text-gray-500">
@@ -527,5 +530,6 @@ export default function AdminChatPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import AppNav from '@/components/AppNav';
 
 type Lead = { id: string; status?: string; source?: string; createdAt?: string };
 
@@ -65,16 +66,21 @@ export default function LeadsPage() {
 
   if (unauthorized) {
     return (
+      <>
+      <AppNav />
       <main className="min-h-screen p-8 bg-[#05020A]">
         <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
         <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
           Faça login para ver os leads da sua organização. <Link href="/login" className="text-purple-400">Entrar</Link>
         </div>
       </main>
+      </>
     );
   }
 
   return (
+    <>
+    <AppNav />
     <main className="min-h-screen p-8 bg-[#05020A]">
       <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
       <h1 className="text-2xl font-bold text-white mb-6 mt-4">Leads</h1>
@@ -128,6 +134,7 @@ export default function LeadsPage() {
         </form>
       </section>
     </main>
+    </>
   );
 }
 

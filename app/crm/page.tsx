@@ -1,9 +1,12 @@
 // FASE 3/6 — Tela CRM (REAL, navegável, isolada por tenant)
 import Link from 'next/link';
+import AppNav from '@/components/AppNav';
 
 export default function CRMPage() {
   return (
-    <main className="min-h-screen p-8 bg-[#05020A]">
+    <>
+      <AppNav />
+      <main className="min-h-screen p-8 bg-[#05020A]">
       <h1 className="text-2xl font-bold text-white mb-2">CRM</h1>
       <p className="text-gray-400 mb-6">
         Contatos, leads e deals da sua organização. Cada tenant só vê os próprios dados (RLS).
@@ -32,5 +35,6 @@ export default function CRMPage() {
         </Link>
       </nav>
     </main>
+    </>
   );
 }

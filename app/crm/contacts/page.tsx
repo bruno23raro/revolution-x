@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import AppNav from '@/components/AppNav';
 
 type Contact = {
   id: string;
@@ -73,16 +74,21 @@ export default function ContactsPage() {
 
   if (unauthorized) {
     return (
+      <>
+      <AppNav />
       <main className="min-h-screen p-8 bg-[#05020A]">
         <BackToCRM />
         <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
           Faça login para ver os contatos da sua organização. <Link href="/login" className="text-purple-400">Entrar</Link>
         </div>
       </main>
+      </>
     );
   }
 
   return (
+    <>
+    <AppNav />
     <main className="min-h-screen p-8 bg-[#05020A]">
       <BackToCRM />
       <h1 className="text-2xl font-bold text-white mb-6">Contatos</h1>
@@ -131,6 +137,7 @@ export default function ContactsPage() {
         </form>
       </section>
     </main>
+    </>
   );
 }
 

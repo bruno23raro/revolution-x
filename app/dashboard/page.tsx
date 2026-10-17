@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import AppNav from '@/components/AppNav';
 
 type Counts = {
   loading: boolean;
@@ -55,15 +56,20 @@ export default function DashboardPage() {
 
   if (state.loading) {
     return (
+      <>
+      <AppNav />
       <main className="min-h-screen p-8 bg-[#05020A] text-gray-400">
         <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
         Carregando seus dados…
       </main>
+      </>
     );
   }
 
   if (state.unauthorized) {
     return (
+      <>
+      <AppNav />
       <main className="flex min-h-screen items-center justify-center p-4 bg-[#05020A]">
         <div className="max-w-md p-8 text-center space-y-4 bg-[#0D0915] border border-white/10 rounded-2xl">
           <h1 className="text-xl font-semibold text-white">Área protegida</h1>
@@ -73,11 +79,14 @@ export default function DashboardPage() {
           </Link>
         </div>
       </main>
+      </>
     );
   }
 
   if (state.error) {
     return (
+      <>
+      <AppNav />
       <main className="min-h-screen p-8 bg-[#05020A]">
         <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
         <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">
@@ -85,6 +94,7 @@ export default function DashboardPage() {
           Supabase estão configurados.
         </div>
       </main>
+      </>
     );
   }
 
@@ -95,6 +105,8 @@ export default function DashboardPage() {
   ];
 
   return (
+    <>
+    <AppNav />
     <main className="min-h-screen p-8 bg-[#05020A]">
       <h1 className="text-2xl font-bold text-white mb-2">Dashboard</h1>
       <p className="text-gray-400 mb-8">Visão geral da sua organização (dados reais, isolados por tenant).</p>
@@ -137,5 +149,6 @@ export default function DashboardPage() {
         </p>
       )}
     </main>
+    </>
   );
 }

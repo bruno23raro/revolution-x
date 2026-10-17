@@ -1,11 +1,12 @@
-// FASE AGENT — Phase 2: chat administrativo com IA + fila persistente.
+// FASE AGENT — Phase 2: chat administrativo + fila persistente.
 //
 // POST /api/admin/chat  → fluxo SSE (Server-Sent Events) em JSON.
 //   1. autentica via Supabase (getAuthenticatedUser) e exige papel admin;
 //   2. cria uma Task persistente (degrada com aviso se a fila não existe
 //      no ambiente — nunca simula progresso);
-//   3. injeta memória persistente do tenant/usuário no system prompt;
-//   4. executa chatCompletion no OmniRouter (client real);
+//   3. registra memória persistente do tenant/usuário;
+//   4. executa chatCompletion via OmniRouter quando configurado;
+//      caso contrário, responde com mensagem informativa clara.
 //   5. registra uso de tokens (custo real) e o estado final da Task.
 //
 // O stream emite eventos `data: {json}\n\n` do tipo:
@@ -108,21 +109,8 @@ export async function POST(req: NextRequest) {
       try {
         emit({ type: 'start', at: new Date().toISOString() });
 
-        if (!cfg) {
-          // Nunca simulamos: sem roteador, a tarefa não executa.
-          emit({
-            type: 'error',
-            code: 'router_not_configured',
-            detail:
-              'OmniRouter não configurado (OMNIROUTER_BASE_URL/ANTHROPIC_BASE_URL + chave ausentes). ' +
-              'Defina no ambiente do backend para habilitar o chat com IA.',
-          });
-          emit({ type: 'done', ok: false });
-          return;
-        }
-
         // 1) Tarefa persistente (com degradação honesta)
-        const STEPS = ['preparar-contexto', 'gerar-resposta', 'registrar-tarefa'];
+        const STEPS = ['preparar-contexto', 'processar-solicitacao', 'registrar-tarefa'];
         let taskId: string | null = null;
         let queueAvailable = false;
         const created = await safe(async () => {
@@ -140,28 +128,11 @@ export async function POST(req: NextRequest) {
           emit({ type: 'task', taskId, status: 'running', progress: 0, steps: STEPS });
         }
 
-        // 2) Memória persistente do tenant/usuário (§7)
+        // 2) Memória persistente do tenant/usuário
         const memory = await safe(async () => listMemory(prisma, scope, 20));
         if (memory && memory.length > 0) {
           emit({ type: 'memory', count: memory.length });
         }
-
-        const sysMessages: ChatMessage[] = [
-          {
-            role: 'system',
-            content:
-              'Você é o assistente do Centro Administrativo do REVOLUTION X. ' +
-              'Responda em português, de forma concisa e acionável. ' +
-              'Trabalhe apenas com fatos; se algo não puder ser executado, diga o motivo exato. ' +
-              (context ? `Contexto do usuário:\n${context}\n\n` : '') +
-              (memory && memory.length > 0
-                ? `Memória persistente do projeto (referência):\n${memory
-                    .map((m) => `- [${m.kind}] ${m.key}: ${JSON.stringify(m.value)}`)
-                    .join('\n')}\n\n`
-                : ''),
-          },
-          { role: 'user', content: message },
-        ];
 
         // 3) Etapa 1 — contexto preparado
         if (taskId && queueAvailable) {
@@ -173,54 +144,91 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // 4) LLM real via OmniRouter
-        emit({ type: 'step', step: 'gerar-resposta' });
+        // 4) IA: usar OmniRouter quando disponível; senão, resposta informativa
+        emit({ type: 'step', step: 'processar-solicitacao' });
         let text = '';
         let modelUsed: string | null = null;
         let usage: OmniRouterUsage | null = null;
-        try {
-          const res = await chatCompletion(sysMessages, { maxTokens: 2048, temperature: 0.4 }, cfg);
-          text = res.text;
-          modelUsed = res.model ?? cfg.model;
-          usage = res.usage ?? null;
-        } catch (e) {
-          const errMsg = e instanceof Error ? e.message : String(e);
-          if (taskId && queueAvailable) {
-            await safe(async () => {
-              await markStep(prisma, scope, taskId, 1, 'failed', { error: errMsg });
-              await failTask(prisma, scope, taskId, `Falha na geração: ${errMsg}`, {
-                modelUsed: modelUsed ?? undefined,
+
+        if (cfg) {
+          // Roteador configurado → LLM real
+          const sysMessages: ChatMessage[] = [
+            {
+              role: 'system',
+              content:
+                'Você é o assistente do Centro Administrativo do REVOLUTION X. ' +
+                'Responda em português, de forma concisa e acionável. ' +
+                'Trabalhe apenas com fatos; se algo não puder ser executado, diga o motivo exato. ' +
+                (context ? `Contexto do usuário:\n${context}\n\n` : '') +
+                (memory && memory.length > 0
+                  ? `Memória persistente do projeto (referência):\n${memory
+                      .map((m) => `- [${m.kind}] ${m.key}: ${JSON.stringify(m.value)}`)
+                      .join('\n')}\n\n`
+                  : ''),
+            },
+            { role: 'user', content: message },
+          ];
+          try {
+            const res = await chatCompletion(sysMessages, { maxTokens: 2048, temperature: 0.4 }, cfg);
+            text = res.text;
+            modelUsed = res.model ?? cfg.model;
+            usage = res.usage ?? null;
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            if (taskId && queueAvailable) {
+              await safe(async () => {
+                await markStep(prisma, scope, taskId, 1, 'failed', { error: errMsg });
+                await failTask(prisma, scope, taskId, `Falha na geração: ${errMsg}`, {
+                  modelUsed: modelUsed ?? undefined,
+                });
               });
-            });
+            }
+            emit({ type: 'error', code: 'generation_failed', detail: errMsg });
+            emit({ type: 'done', ok: false, taskId });
+            controller.close();
+            return;
           }
-          emit({ type: 'error', code: 'generation_failed', detail: errMsg });
-          emit({ type: 'done', ok: false, taskId });
-          return;
+        } else {
+          // Sem roteador: resposta informativa que explica o status atual
+          text = [
+            `Sua solicitação foi recebida: "${message.slice(0, 100)}".`,
+            '',
+            'O Centro Administrativo está **operacional** (fila de tarefas ativa).',
+            'No entanto, o módulo de IA (OmniRouter) **não está configurado** neste ambiente.',
+            '',
+            'Para habilitar o chat com IA, defina no servidor:',
+            '- `OMNIROUTER_BASE_URL` (ex.: https://api.openai.com ou proxy compatível)',
+            '- `OMNIROUTER_API_KEY` (sua chave de API)',
+            '',
+            'Até lá, você pode usar as outras ferramentas administrativas:',
+            '- **Tarefas**: acompanhe o progresso real das requisições',
+            '- **Memória**: registros persistentes do projeto',
+            '- **Configurações**: verifique o estado dos subsistemas',
+            '',
+            'Se precisar de ajuda para configurar, contate o administrador do sistema.',
+          ].join('\n');
         }
 
-        // 5) Etapas 2 e 3 + uso real de tokens
+        // 5) Etapas finais + uso real de tokens
         if (taskId && queueAvailable) {
-          // uso como JSON puro (JsonValue) para a fila; null quando não há contagem.
-          const usageJson: Prisma.JsonValue | undefined =
-            usage === null ? undefined : (JSON.parse(JSON.stringify(usage)) as Prisma.JsonValue);
           await safe(async () => {
             const p2 = await markStep(prisma, scope, taskId, 1, 'done', {
               model: modelUsed,
-              usage: usageJson,
+              usage: usage ? (JSON.parse(JSON.stringify(usage)) as Prisma.JsonValue) : undefined,
             });
             emit({ type: 'progress', pct: p2.progress, step: 1, total: STEPS.length });
             const p3 = await markStep(prisma, scope, taskId, 2, 'done');
             emit({ type: 'progress', pct: p3.progress, step: 2, total: STEPS.length });
             await completeTask(prisma, scope, taskId, {
-              result: { textLength: text.length, model: modelUsed },
-              usage: usageJson,
+              result: { textLength: text.length, model: modelUsed, routerConfigured: cfg !== null },
+              usage: usage === null ? undefined : (JSON.parse(JSON.stringify(usage)) as Prisma.JsonValue),
               modelUsed: modelUsed ?? undefined,
             });
           });
         }
 
         if (usage) emit({ type: 'usage', usage });
-        emit({ type: 'message', text, model: modelUsed, usage });
+        emit({ type: 'message', text, model: modelUsed, usage, routerConfigured: cfg !== null });
         emit({ type: 'done', ok: true, taskId });
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);

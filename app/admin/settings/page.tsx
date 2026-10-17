@@ -5,8 +5,8 @@
 // sessão/papel). Nada é inventado: quando um subsistema está indisponível no
 // ambiente, a tela mostra o motivo exato.
 
-import AppNav from '@/components/AppNav';
 import { useEffect, useState } from 'react';
+import AppNav from '@/components/AppNav';
 
 interface RouterState {
   ok: boolean;
@@ -56,6 +56,13 @@ export default function AdminSettingsPage() {
   const [memory, setMemory] = useState<MemoryState | null>(null);
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Configuração manual de IA (persistida em localStorage)
+  const [aiBaseUrl, setAiBaseUrl] = useState('');
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiModel, setAiModel] = useState('');
+  const [aiSaved, setAiSaved] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +121,55 @@ export default function AdminSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  // Carregar configuração manual de IA do localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('rx_ai_config');
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        setAiBaseUrl(cfg.baseUrl ?? '');
+        setAiApiKey(cfg.apiKey ?? '');
+        setAiModel(cfg.model ?? '');
+      }
+    } catch {
+      /* configuração inválida — ignora */
+    }
+  }, []);
+
+  const saveAiConfig = () => {
+    const base = aiBaseUrl.trim();
+    const key = aiApiKey.trim();
+    const model = aiModel.trim();
+    setAiError(null);
+
+    if (!base || !key) {
+      setAiError('Base URL e API Key são obrigatórios.');
+      return;
+    }
+
+    // Validação básica de URL
+    try {
+      new URL(base);
+    } catch {
+      setAiError('Base URL precisa ser uma URL válida (ex: https://api.openai.com).');
+      return;
+    }
+
+    // Persistir em localStorage (cliente apenas — o servidor usa variáveis de ambiente)
+    const cfg = { baseUrl: base, apiKey: key, model: model || undefined };
+    localStorage.setItem('rx_ai_config', JSON.stringify(cfg));
+    setAiSaved(true);
+    setTimeout(() => setAiSaved(false), 3000);
+  };
+
+  const clearAiConfig = () => {
+    localStorage.removeItem('rx_ai_config');
+    setAiBaseUrl('');
+    setAiApiKey('');
+    setAiModel('');
+    setAiSaved(false);
+  };
 
   if (loading) {
     return (
@@ -183,13 +239,23 @@ export default function AdminSettingsPage() {
                   v: !router.authorized ? (
                     <span className="text-amber-400">exige admin</span>
                   ) : router.configured ? (
-                    <span className="text-green-400">configurado</span>
+                    <span className="text-green-400">configurado via env</span>
                   ) : (
                     <span className="text-amber-400">não configurado</span>
                   ),
                 },
                 { k: 'Modelo', v: router.model ?? '—' },
                 { k: 'Origem', v: router.baseUrl ?? '—' },
+                {
+                  k: 'Configuração manual',
+                  v: router.configured ? (
+                    <span className="text-gray-500">usando env do servidor</span>
+                  ) : (
+                    <a href="#ai-config" className="text-purple-400 hover:underline">
+                      configurar abaixo ↓
+                    </a>
+                  ),
+                },
               ],
               router.authorized ? (router.configured ? 'ok' : 'warn') : 'muted',
             )}
@@ -209,7 +275,10 @@ export default function AdminSettingsPage() {
                   ),
                 },
                 { k: 'Tarefas', v: queue.count !== null ? String(queue.count) : '—' },
-                { k: 'Observação', v: queue.detail ?? (queue.count !== null ? `contando ${queue.count} registro(s)` : 'ok') },
+                {
+                  k: 'Observação',
+                  v: queue.detail ?? (queue.count !== null ? `contando ${queue.count} registro(s)` : 'ok'),
+                },
               ],
               queue.authorized ? (queue.available ? 'ok' : 'warn') : 'muted',
             )}
@@ -240,21 +309,102 @@ export default function AdminSettingsPage() {
               [
                 {
                   k: 'Autenticado',
-                  v: session.authorized ? <span className="text-green-400">sim</span> : <span className="text-red-400">não</span>,
+                  v: session.authorized ? (
+                    <span className="text-green-400">sim</span>
+                  ) : (
+                    <span className="text-red-400">não</span>
+                  ),
                 },
                 { k: 'Papel', v: session.role ?? '—' },
-                { k: 'Organização', v: session.organizationId ? (
-                  <span title={session.organizationId} className="truncate">{session.organizationId.slice(0, 12)}…</span>
-                ) : '—' },
+                {
+                  k: 'Organização',
+                  v: session.organizationId ? (
+                    <span
+                      title={session.organizationId}
+                      className="truncate"
+                    >
+                      {session.organizationId.slice(0, 12)}…
+                    </span>
+                  ) : (
+                    '—'
+                  ),
+                },
               ],
               session.authorized ? 'ok' : 'muted',
             )}
         </div>
 
+        {/* Configuração manual de IA */}
+        <div id="ai-config" className="mt-6 max-w-4xl p-4 bg-[#0D0915] border border-purple-500/20 rounded-2xl">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="h-2 w-2 rounded-full bg-purple-400" />
+            <h2 className="text-sm font-semibold text-gray-200">Configuração manual de IA</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            Se o roteador não estiver configurado no servidor, você pode adicionar uma chave de API
+            manualmente abaixo. A configuração é salva localmente no navegador e usada pelo chat
+            quando o backend permitir.
+          </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Base URL</label>
+              <input
+                type="url"
+                value={aiBaseUrl}
+                onChange={(e) => setAiBaseUrl(e.target.value)}
+                placeholder="https://api.openai.com"
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">API Key</label>
+              <input
+                type="password"
+                value={aiApiKey}
+                onChange={(e) => setAiApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Modelo</label>
+              <input
+                type="text"
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                placeholder="gpt-4o (opcional)"
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
+          {aiError && (
+            <p className="mt-2 text-xs text-red-400">{aiError}</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={saveAiConfig}
+              className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+            >
+              {aiSaved ? '✓ Salvo!' : 'Salvar configuração'}
+            </button>
+            <button
+              onClick={clearAiConfig}
+              className="px-4 py-2 text-sm text-gray-400 border border-white/10 rounded-lg hover:bg-white/5 focus:outline-none"
+            >
+              Limpar
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-600">
+            ⚠ Esta configuração fica apenas no seu navegador. Para ativação global, configure as
+            variáveis de ambiente <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
+            <code className="text-purple-300">OMNIROUTER_API_KEY</code> no servidor.
+          </p>
+        </div>
+
         <p className="text-xs text-gray-600 mt-6 max-w-4xl">
-          Se o roteador ou a fila estiverem &ldquo;indisponível&rdquo;, normalmente falta credencial no ambiente
-          do servidor (ex.: chave do OmniRouter) ou a migration da fila ainda não foi aplicada.
-          Nenhuma chave ou segredo é exibido nesta tela.
+          Se o roteador ou a fila estiverem &ldquo;indisponível&rdquo;, normalmente falta credencial
+          no ambiente do servidor (ex.: chave do OmniRouter) ou a migration da fila ainda não foi
+          aplicada. Nenhuma chave ou segredo é exibido nesta tela.
         </p>
       </main>
     </>

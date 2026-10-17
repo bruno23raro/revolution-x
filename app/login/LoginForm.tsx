@@ -28,8 +28,8 @@ export default function LoginForm() {
         throw new Error(data.error || 'Erro ao entrar');
       }
 
-      // Sucesso - redirecionar para dashboard ou home
-      router.push('/');
+      // Sucesso - redirecionar para o dashboard (area logada)
+      router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
       setError(err.message === 'invalid_credentials' ? 'E-mail ou senha inválidos' : err.message);

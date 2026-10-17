@@ -52,9 +52,9 @@ export default function ResetForm() {
   return done ? (
     <div className="space-y-4">
       <div className="p-3 text-sm text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg">
-        Senha atualizada com sucesso.{' '}
-        <a href="/login" className="text-purple-400">Entrar</a>.
+        Senha atualizada com sucesso. Redirecionando para o login…
       </div>
+      <script dangerouslySetInnerHTML={{ __html: `setTimeout(()=>window.location.href='/login',1500)` }} />
     </div>
   ) : (
     <form onSubmit={handleSubmit} className="space-y-4">

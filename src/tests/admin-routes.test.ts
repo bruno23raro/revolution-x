@@ -534,19 +534,21 @@ describe('POST /api/admin/chat (SSE)', () => {
     expect(completeUpd[0].data.usageJson).toEqual({ inputTokens: 10, outputTokens: 5 });
   });
 
-  it('router não configurado → error router_not_configured + done(ok:false)', async () => {
+  it('router não configurado → resposta informativa com ok:true (chat funciona sem IA)', async () => {
     asNoAdmin();
+    // wireHappyTaskLifecycle faz createTask/startTask/markStep/completeTask bem-sucedidos.
+    wireHappyTaskLifecycle();
     (resolveOmniRouterConfig as jest.Mock).mockReturnValue(null);
     const res = await chatPOST(adminReq('/api/admin/chat', { method: 'POST', body: { message: 'oi' } }));
     const events = await readSse(res);
     const types = events.map((e) => e.type);
     expect(types[0]).toBe('start');
-    expect(types).toContain('error');
+    expect(types).toContain('message');
     expect(types).toContain('done');
-    expect(events.find((e) => e.type === 'error').code).toBe('router_not_configured');
-    expect(events[events.length - 1]).toMatchObject({ type: 'done', ok: false });
-    // sem fila criada
-    expect(prisma.task.create).not.toHaveBeenCalled();
+    const msg = events.find((e) => e.type === 'message');
+    expect(msg.text).toContain('não está configurado'); // mensagem informativa sobre o router
+    expect(msg.routerConfigured).toBe(false);
+    expect(events[events.length - 1]).toMatchObject({ type: 'done', ok: true });
   });
 
   it('fila indisponível → warning queue_unavailable, chat segue e done(ok:true)', async () => {

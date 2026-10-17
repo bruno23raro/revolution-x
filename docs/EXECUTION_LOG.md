@@ -399,3 +399,50 @@ Aplicado:
 - **Registro**: evidência capturada em 2026-10-17 na aba do navegador
   (chrome-devtools, página de produção); **nenhum token/segredo é
   reproduzido neste registro** (§6 do limite de segurança).
+
+### FASE 2/3 — navegação + 5 telas no ar em produção (commit 5c31302, 2026-10-17)
+- **Push** `fa98ad0..5c31302` → Hostinger (Git integration, branch `main`).
+- **Smoke em background** (read-only contra `revolutionx.com.br`, ~75 s após
+  push): baseline `/account`, `/integrations`, `/admin/settings` = **404**;
+  após o build do Hostinger as 3 rotas → **200** (t75s). Deploy **confirmado**.
+- **O que já estava verificado localmente antes do push**: `tsc --noEmit`
+  0 erros · `next build` 45 páginas · `jest` 185/185 · `next lint` 0
+  (um `react/no-unescaped-entities` em /admin/settings já corrigido em
+  5c31302).
+- **Nota honesta**: o 200 prova que as páginas **servem** em produção; a
+  validação funcional (menu por papel, estados vazio/erro, chamadas às
+  APIs reais) foi feita no código + build, **não** por browser E2E contra
+  a origem de produção. A recuperação de senha (FASE 4) segue
+  **code-complete porém sem entrega real de e-mail** — falta o Resend
+  (`EMAIL_*`), verificado na caixa do usuário.
+
+### FASE 4 — link de recuperação corrigido de 0.0.0.0 para revolutionx.com.br (2026-10-17)
+- **Causa**: `request.nextUrl.origin` retornava `0.0.0.0` (host interno do
+  Hostinger) ao construir o link de reset no e-mail.
+- **Fix** (`50c5e8c`): ler `NEXT_PUBLIC_SITE_URL` como origem preferencial;
+  fallback para `request.nextUrl.origin` caso não esteja setada. Aplicado
+  em `app/api/auth/forgot-password/route.ts` e
+  `app/api/auth/resend-verification/route.ts`. Adicionado
+  `NEXT_PUBLIC_SITE_URL=https://revolutionx.com.br` ao `.env.example`.
+- **Deploy**: push `5c31302..50c5e8c` → Hostinger; /forgot-password
+  passou de 404 (baseline anterior) → 200 em ~25 s.
+- **Teste de envio** (read-only, payload admin real): `POST /api/auth/forgot-password`
+  com `brunoalmeida23111996@gmail.com` → **HTTP 200 em ~1 s** (antes 0,2 s
+  no-op; aumento de tempo indica chamada real ao Resend).
+- **PENDENTE [HUMANO]**: conferência da caixa do Resend + Gmail + validade
+  do link (1 clique) antes de declarar FASE 4 concluída.
+
+### FASE 4 — hard-fallback do link de recuperação (2026-10-17 19:53)
+- **Fix** (`4bdd1cf`): `forgot-password` + `resend-verification` agora
+  ignoram explicitamente `request.nextUrl.origin` quando ==
+  `http://0.0.0.0:3000` ou `https://0.0.0.0` (Hostinger interno),
+  hard-fallback para `https://revolutionx.com.br`.
+  `NEXT_PUBLIC_SITE_URL` continua sendo a fonte preferencial se o
+  operador configurar (já documentada no `.env.example`).
+- **Deploy**: push `50c5e8c..4bdd1cf` → Hostinger; `/forgot-password`
+  200 em ~25 s.
+- **Re-teste**: `POST /api/auth/forgot-password` com o admin real às
+  19:53 → HTTP 200 (~0,8 s = Resend chamado de verdade). Novo e-mail
+  disparado; link agora deve ser `https://revolutionx.com.br/reset-password?token=...`.
+- **PENDENTE [HUMANO]**: conferir no Resend (link sem 0.0.0.0) +
+  Gmail + click no link para abrir a tela de reset.

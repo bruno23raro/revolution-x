@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-18) — FASE 2 · slice 1 (Instagram) concluída
+## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–2 (Instagram + Facebook) concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -28,10 +28,21 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   UI `app/instagram/page.tsx` (lilás/preto/branco: conexão real,
   publicar/agendar, "Sem API/Avançado" declarado c/ `RiskBanner`) + link
   **Instagram** no AppNav admin.
-- **Testes**: 16 novos → suíte total **23 suítes / 304 testes PASS**; `tsc`
-  0 erros; `next build` verde (`/instagram` + `/api/instagram/publish`).
-- **P0 [HUMANO]**: `META_*` no hpanel + conta IG vinculada via OAuth; sem isso
-  a rota degrada honestamente (409/503).
+- **FASE 2, slice 2 (Facebook, API oficial):** serviço
+  `src/integrations/meta/facebookPublisher.ts` (1 chamada `POST /{page-id}/feed`,
+  `message`|`link`; agendamento via `published=false` + `scheduled_publish_time`
+  (UNIX s, 10 min–75 d) + `unpublished_content_type=SCHEDULED`; permissão
+  `pages_manage_posts`; **não lança**). Resolver adicionativo
+  `resolveTenantFacebookPageAccess(organizationId)` em `resolveAccess.ts` (lê
+  `meta_page_id`). Rota `POST /api/facebook/publish` (401/400/409 `no_fb_page`/503/502).
+  UI `app/facebook/page.tsx` (publicar/agendar + card "Sem API/Avançado" de
+  Marketplace/grupos — Meta **não expõe** isso pela API oficial; provider
+  `browser_automation` c/ `RiskBanner`) + link **Facebook** no AppNav admin.
+- **Testes**: 16 novos (IG) + 12 novos (FB) → suíte total **24 suítes / 316
+  testes PASS**; `tsc` 0 erros; `next build` verde (`/instagram`, `/facebook` +
+  rotas `/api/{instagram,facebook}/publish`).
+- **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
+  OAuth; sem isso as rotas degradam honestamente (409/503).
 
 ### FASE 1 (backend + UI) — concluída (referência)
 
@@ -53,8 +64,8 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 - **Dependência [HUMANO] (P0)**: `META_APP_ID/SECRET`, `EMAIL_*` (Resend) e
   `OMNIROUTER_*` ainda no hpanel do Hostinger — a UI degrada de forma honesta
   (503) até serem preenchidas; nenhum segredo em localStorage.
-- **Próximo passo autônomo: FASE 2 · slice 2** (Facebook agendamento +
-  Marketplace/grupos) e depois TikTok agendamento; então Fases 3–4 do PROMPT MESTRE.
+- **Próximo passo autônomo: FASE 2 · slice 3** (TikTok: agendamento de posts +
+  tracking via API oficial); então Fases 3–4 do PROMPT MESTRE.
 
 ## ESTADO ANTIGO (2026-10-15)
 

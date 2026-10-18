@@ -114,9 +114,9 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.3b** | Agendamento posts/stories/reels Instagram | ✅ backend+UI (F2) | `instagramPublisher` (criar container → publicar/agendar, 10 min–75 d) + `POST /api/instagram/publish` + UI em `/instagram` |
 | **3.3c** | Automações: seguir seguidores/interações | 🟡 declarado (Sem API/Avançado) | card em `/instagram` + `RiskBanner` (ToS/LGPD); **executor ausente** |
 | **3.3d** | Extrair contatos de seguidores (scraping) | 🟡 declarado (Sem API/Avançado) | idem 3.3c; guardado como método, sem execução não-oficial |
-| **3.4a** | Agendamento posts Facebook | ❌ ausente | — |
-| **3.4b** | Anúncios Marketplace | ❌ ausente | — |
-| **3.4c** | Anúncios em grupos (delay configurável) | ❌ ausente | — |
+| **3.4a** | Agendamento posts Facebook | ✅ backend+UI (F2) | `facebookPublisher` (`POST /{page}/feed` + `scheduled_publish_time`, 10 min–75 d) + `POST /api/facebook/publish` + UI em `/facebook` |
+| **3.4b** | Anúncios Marketplace | 🟡 declarado (Sem API/Avançado) | card em `/facebook` + `RiskBanner` (não há API oficial de Marketplace); **executor ausente** |
+| **3.4c** | Anúncios em grupos (delay configurável) | 🟡 declarado (Sem API/Avançado) | idem 3.4b (automação de navegador declarada, sem executor) |
 | **3.5a** | Agendamento TikTok | ❌ ausente | — |
 | **3.5b** | Tracking campanhas TikTok | ❌ ausente | — |
 | **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ❌ ausente | — |
@@ -167,6 +167,6 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health + status detalhado + início OAuth — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot — **CONCLUÍDO (F1, backend+UI em `/whatsapp`)** | Concluído |
 | **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
-| **P2-8 (§3.3/3.4/3.5)** | Instagram: agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); FB + TikTok pendentes; IG automações declaradas (Sem API/Avançado) | Média (alta para FB/TikTok) |
+| **P2-8 (§3.3/3.4/3.5)** | Instagram agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); Facebook agendamento ✅ (F2, `/api/facebook/publish` + `/facebook`); TikTok pendente; Marketplace/grupos declarados (Sem API/Avançado) | Média (alta p/ TikTok) |
 | **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok) | Alta |
 | **P3 (§3.8)** | Chatbot visual configurável | Alta |

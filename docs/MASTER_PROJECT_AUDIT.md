@@ -571,11 +571,11 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 
 | Bloco real | O que pede | Estado no código (2026-10-18) |
 |---|---|---|
-| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 só WhatsApp (Meta) parcial; IG/FB/TikTok ausentes |
+| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 WhatsApp (Meta) parcial; IG/FB agendamento ✅ (F2); TikTok ausente |
 | **§3.1** Logins por canal | 7-8 métodos de login (API + sem API p/ cada canal) | 🟡 WhatsApp-Meta parcial; demais ❌ |
 | **§3.2** WhatsApp Business | Disparo em massa, templates, grupos, chatbot | 🟡 webhook+processor; UI/templates/chatbot ❌ |
 | **§3.3** Instagram | Disparo em massa, agendamento, automações, scraping | 🟡 agendamento ✅ (F2, `/instagram` + `/api/instagram/publish`); massa/automações/scraping pendentes |
-| **§3.4** Facebook | Agendamento, Marketplace, grupos | ❌ |
+| **§3.4** Facebook | Agendamento, Marketplace, grupos | 🟡 agendamento ✅ (F2, `/facebook` + `/api/facebook/publish`); Marketplace/grupos declarados (Sem API/Avançado) |
 | **§3.5** TikTok | Agendamento + tracking | ❌ |
 | **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | ❌ |
 | **§3.7** Integrações | Meta (obrigatória), n8n, Zapier/Make/webhooks; hub "Integrar" + status | 🟡 Meta parcial; n8n/Zapier/Make ❌ (P2-4) |
@@ -650,6 +650,33 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 - **P0 [HUMANO] permanece:** `META_APP_ID/SECRET` no hpanel + conta IG vinculada via
   OAuth. Sem isso, a rota degrada honestamente (503/409) — nunca finge sucesso.
 
+### O que mudou em 2026-10-18 (FASE 2 — Facebook)
+
+- **FASE 2, slice 2 concluída:** publicação e agendamento de **posts de Página
+  do Facebook pela Graph API oficial da Meta** (1 chamada: `POST /{page-id}/feed`,
+  `message`|`link`; agendamento via `published=false` + `scheduled_publish_time`
+  (UNIX s, 10 min–75 d) + `unpublished_content_type=SCHEDULED`; permissão
+  `pages_manage_posts`). Serviço puro-TS
+  `src/integrations/meta/facebookPublisher.ts` (**não lança** — `ok`/`error`).
+- **Resolver adicionativo** em `resolveAccess.ts`:
+  `resolveTenantFacebookPageAccess(organizationId)` devolve
+  `{accessToken, facebookPageId}` (de `meta_page_id`); degrada em
+  `not_connected`/`no_token`/`decrypt_failed`/`no_fb_page`.
+- **Rota nova** `POST /api/facebook/publish`: auth (401), validação de
+  conteúdo/janela (400), resolução (409/503), publicação (200 com `postId`/
+  `scheduled`).
+- **UI nova** `app/facebook/page.tsx` (lilás + preto + branco): card de conexão
+  (status real da Página), card "Publicar/agendar", e card **"Sem API /
+  Avançado"** para **Marketplace + anúncios em grupos** — a Meta **não expõe**
+  essa criação pela API oficial; o card declara o método (browser automation,
+  provider `browser_automation`) com `RiskBanner` e não executa. Link **Facebook**
+  no AppNav admin.
+- **Testes:** 12 novos em `facebookPublisher.test.ts`. Suíte total **316/316**
+  (24 suítes); `tsc` 0 erros; `next build` verde (`/facebook` 4.47 kB;
+  `/api/facebook/publish` na rota dinâmica).
+- **P0 [HUMANO] permanece:** `META_*` no hpanel + Página FB vinculada via OAuth;
+  sem isso a rota degrada honestamente (409/503).
+
 ---
 
 ## APÊNDICE A — Comandos para Reproduzir
@@ -698,7 +725,9 @@ curl -s -o /dev/null -w "%{http_code}" https://revolutionx.com.br/
 *Auditoria concluída em 2026-10-17. Nenhuma funcionalidade de produção foi modificada por ela. Todos os dados são baseados em evidências executadas ou arquivos lidos.*
 
 **Próximo passo (2026-10-18):** execução autônoma contínua. **FASE 1 (backend + UI)
-concluída**: 8 rotas (7 FASE 1 + `GET /api/auth/meta`) + serviços de integrações/WhatsApp +
-`/integrations` e `/whatsapp`, suíte 288/288, tsc 0, build verde. **A seguir:** FASE 2
-(canais principais: login+agendamento IG/FB/TikTok via API oficial, automações IG,
-agendamento FB + Marketplace, TikTok post), depois Fases 3–4 do PROMPT MESTRE.
+concluída** e **FASE 2, slices 1–2 concluídas**: agendamento/publicação via API oficial
+da Meta para **Instagram** (`/instagram` + `/api/instagram/publish`) e **Facebook**
+(`/facebook` + `/api/facebook/publish`, com Marketplace/grupos declarados "Sem API/
+Avançado"); suíte 316/316, tsc 0, build verde. **A seguir:** FASE 2 · slice 3
+(TikTok: agendamento de posts + tracking via API oficial), depois Fases 3–4 do
+PROMPT MESTRE.

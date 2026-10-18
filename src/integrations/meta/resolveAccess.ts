@@ -9,6 +9,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/encryption';
 import type { TemplatesAccess } from './whatsappTemplates';
 import type { InstagramAccess } from './instagramPublisher';
+import type { FacebookPageAccess } from './facebookPublisher';
 
 /** Linha real da tabela `meta_integrations` (nomes snake_case). */
 export interface MetaIntegrationRow {
@@ -129,5 +130,57 @@ export async function resolveTenantPublisherAccess(
   if (!instagramUserId) return { ok: false, reason: 'no_ig_account' };
 
   const access: InstagramAccess = { accessToken, instagramUserId };
+  return { ok: true, access, row };
+}
+
+// ---------------------------------------------------------------------------
+// FASE 2 — Resolver a credencial para publicar em Página do Facebook.
+// ---------------------------------------------------------------------------
+
+export type ResolveFacebookPageResult =
+  | { ok: true; access: FacebookPageAccess; row: PublisherRow }
+  | {
+      ok: false;
+      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'no_fb_page';
+    };
+
+/**
+ * Resolve o access token + `meta_page_id` de um tenant para publicar/agendar
+ * posts de Página via Graph API oficial. Mesma linha privilegiada
+ * (`meta_integrations`) e descriptografia do WhatsApp; seleciona o ID da
+ * Página. Injetável (`serviceRole`) para testes. Não altera as demais funções.
+ */
+export async function resolveTenantFacebookPageAccess(
+  organizationId: string,
+  deps: ResolveDeps = {},
+): Promise<ResolveFacebookPageResult> {
+  const service = deps.serviceRole ?? createServiceRoleClient();
+  const { data, error } = await service
+    .from('meta_integrations')
+    .select(
+      'id, provider, meta_page_id, instagram_account_id, encrypted_access_token, token_expires_at, status',
+    )
+    .eq('organization_id', organizationId)
+    .in('provider', ['facebook', 'whatsapp'])
+    .neq('status', 'DISCONNECTED')
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return { ok: false, reason: 'not_connected' };
+
+  const row = data as unknown as PublisherRow;
+  if (!row.encrypted_access_token) return { ok: false, reason: 'no_token' };
+
+  let accessToken: string;
+  try {
+    accessToken = decryptToken(row.encrypted_access_token);
+  } catch {
+    return { ok: false, reason: 'decrypt_failed' };
+  }
+
+  const facebookPageId = row.meta_page_id ?? '';
+  if (!facebookPageId) return { ok: false, reason: 'no_fb_page' };
+
+  const access: FacebookPageAccess = { accessToken, facebookPageId };
   return { ok: true, access, row };
 }

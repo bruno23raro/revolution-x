@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–3 (Instagram + Facebook + TikTok) e FASE 3 · slice 1 (tracking de anúncios) concluídas
+## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–3 (Instagram + Facebook + TikTok), FASE 3 · slice 1 (tracking de anúncios) e FASE 3 · slice 2 (chatbot visual + auto-reply) concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -71,17 +71,55 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   (401/400/409/503/502 honestos, sem segredos no corpo). UI: card
   "Anúncios em tempo real (Ad Manager)" em `/facebook` + card TikTok Ads em
   `/tiktok` (lilás, `ApiBadge official`).
+- **FASE 3, slice 2 (chatbot visual completo + auto-reply, §3.8/§3.2h):**
+  - **Motor** (`whatsappChatbot.ts`, aditivo — regras F1 intocadas):
+    `ChatbotStep` (condição opcional; ausente = nó incondicional),
+    `ChatbotConfig.steps/vars`, `DecisionSource` ganhou `'step'`,
+    `ChatbotDecision` ganhou `matchedStepId/quickReplies`. `evaluateSteps`
+    (entrada = 1º nó incondicional/com condição matcheando; avança por
+    `nextStepId` re-checando a condição do destino contra a **mesma**
+    mensagem; `end` encerra; ponteiro quebrado para com honestidade;
+    anti-loop por visitados + `maxHops`; respostas unidas `"\n\n"`).
+    `interpolateVars` ({{nome}}; chave desconhecida permanece).
+    Ordem final: desligado → fora de horário → saudação → **steps** →
+    regras → IA → fallback → nada.
+  - **Quick replies oficiais** (`whatsappSender.ts`): `sendWhatsAppButton`
+    no formato `interactive/button` (Cloud API) — máx. **3 botões**,
+    rótulos ≤ **20 chars**, ids `rx-1..3`; erros
+    `meta_not_configured|invalid_message|http_error|network_error`.
+  - **Auto-reply** (fecha o ciclo da FASE 1, que só guardava as mensagens):
+    `src/integrations/meta/chatbotAutoReply.ts` → `maybeAutoReply` lê a
+    config do tenant (AgentMemory c/ RLS), roda o motor e envia pela Cloud
+    API oficial (botões quando há quickReplies, senão texto). **Nunca
+    lança**: `skipReason = config_unavailable|not_enabled|no_response|
+    send_failed|error`; sem credencial → `meta_not_configured` c/
+    `meta access: <razão>` (sem segredo).
+  - **Processador** (`whatsappProcessor.ts`, aditivo): resultado ganha
+    `waId`, `text`, `firstContact` (1º contato detectado na criação do
+    Contact) — alimenta a saudação do auto-reply.
+  - **Webhook Meta** (`app/api/webhooks/meta/route.ts`): após processar o
+    evento, tenta `maybeAutoReply` por mensagem recebida (try/catch por
+    item — **nunca quebra a entrega 200** da Meta).
+  - **CRUD** (`/api/whatsapp/chatbot`): `normalizeConfig` normaliza
+    `steps` (ids únicos, matchType válido, quickReplies ≤10, nextStepId
+    nulo quando ausente, end bool) e `vars` (≤100, chave ≤64, valor ≤500);
+    POST responde `steps`.
+  - **UI** (`/whatsapp`): editor visual de etapas (condição → padrão/flags
+    → resposta `{{variavel}}` → quick replies → próxima etapa; mover ↑↓,
+    remover, "termina aqui") + seção "Variáveis" no card "Chatbot
+    configurável" (lilás).
 - **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) + 8 novos
-  (Meta Ads) + 12 novos (TikTok Ads) → suíte total **27 suítes / 351
-  testes PASS**; `tsc` 0 erros.
+  (Meta Ads) + 12 novos (TikTok Ads) + **18 novos (fluxo/vars/quickReplies)**
+  + **8 novos (auto-reply)** + **6 novos (botões)** → suíte total
+  **29 suítes / 383 testes PASS**; `tsc` 0 erros; `next build` verde.
 - **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
   OAuth; sem isso as rotas degradam honestamente (409/503). O TikTok usa as
   chaves do AgentMemory (provider `tiktok`) — sem dependência de credencial
   externa de terceiros.
-- **Próximo passo autônomo: FASE 3 restante** (executores "Sem API/Avançado"
-  com aviso de risco — QR/scrapers/browser automation; chatbot visual
-  completo; executores de n8n/Zapier/Make/webhooks de saída), depois FASE 4
-  (fila de
+- **Próximo passo autônomo: FASE 3 restante** (slice 3: executores de
+  **saída** de n8n/Zapier/Make/webhooks; slice 4: executores "Sem API/
+  Avançado" com aviso de risco — QR/scrapers/browser automation, **sem
+  execução não-oficial silenciosa**), depois FASE 4 (fila de
   jobs BullMQ/Inngest, incluindo o executor do agendamento de TikTok, e
   testes de fluxo principal).
 

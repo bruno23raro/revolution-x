@@ -578,8 +578,8 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 | **§3.4** Facebook | Agendamento, Marketplace, grupos | 🟡 agendamento ✅ (F2, `/facebook` + `/api/facebook/publish`); Marketplace/grupos declarados (Sem API/Avançado) |
 | **§3.5** TikTok | Agendamento + tracking | 🟡 publicação imediata + tracking de vídeo ✅ (F2, `/tiktok` + `/api/tiktok/{publish,status,analytics}`); agendamento = intenção persistida (execução F4); Ads ✅ (F3, `/api/tiktok/ads-insights`) |
 | **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | ✅ (F3, slice 1): `GET /api/meta/ads-insights` (Ad Manager) + `GET /api/tiktok/ads-insights` (TikTok Ads) + cards em `/facebook` e `/tiktok`; vídeo orgânico TikTok ✅ (F2) |
-| **§3.7** Integrações | Meta (obrigatória), n8n, Zapier/Make/webhooks; hub "Integrar" + status | 🟡 Meta parcial; n8n/Zapier/Make ❌ (P2-4) |
-| **§3.8** Automações/Chatbot | Chatbot visual configurável + automações gerais | ❌ |
+| **§3.7** Integrações | Meta (obrigatória), n8n, Zapier/Make/webhooks; hub "Integrar" + status | 🟡 Meta ✅ OAuth+webhook+refresh (F1); n8n/Zapier/Make/webhooks: inbound + registry + form "Integrar" ✅ (F1, `/api/webhooks/inbound` + `/api/integrations/config`); **executores de saída** = FASE 3 · slice 3 |
+| **§3.8** Automações/Chatbot | Chatbot visual configurável + automações gerais | 🟡 **chatbot visual ✅ (F3 slice 2)**: fluxo `steps` (condições/variáveis/quick replies) + editor em `/whatsapp` + **auto-reply no webhook Meta** (`maybeAutoReply`, envio oficial texto/botões); automações gerais multi-canal → FASE 3 · slice 4 |
 | **§4** UX 1-clique | Botões grandes, fluxos guiados, separação API vs Sem API, avisos de risco | 🟡 parcial |
 | **§5** Design | lilás+preto+branco, glassmorphism, responsivo | ✅ compatível |
 | **§6** Arquitetura | Next.js+TS+Tailwind+PG+Prisma; fila BullMQ/Inngest; logs/monitor | 🟡 stack ok; fila própria (não BullMQ); sem monitor dedicado |
@@ -770,11 +770,70 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 
 ---
 
+## FASE 3 — slice 2: chatbot visual completo (fluxo de etapas + variáveis + quick replies + auto-reply)
+
+- **Motor** (`src/integrations/meta/whatsappChatbot.ts`, aditivo — regras
+  F1 intocadas): `ChatbotStep` (condição opcional; ausente = nó
+  incondicional), `ChatbotConfig.steps/vars`, `DecisionSource` ganhou
+  `'step'`, `ChatbotDecision` ganhou `matchedStepId/quickReplies`.
+  - `evaluateSteps`: entrada = **primeiro** nó incondicional ou com
+    condição matcheando; avança por `nextStepId` (condição do destino
+    re-chequeada contra a **mesma** mensagem); `end: true` encerra;
+    ponteiro quebrado para com honestidade; anti-loop (visitados +
+    `maxHops`); respostas da cadeia unidas `"\n\n"`.
+  - `interpolateVars`: `{{nome}}` com valores de `vars`; chave
+    desconhecida permanece como está (nunca inventa valor).
+  - Ordem de decisão final: desligado → fora de horário (só fallback) →
+    saudação 1º contato → **fluxo (steps)** → regras → IA → fallback →
+    nada.
+- **Quick replies oficiais** (`whatsappSender.ts`): `sendWhatsAppButton`
+  no formato oficial `interactive/button` (Cloud API) — máx. **3 botões**,
+  rótulos cortados em **20 chars** (limite da Meta), ids `rx-1..3`;
+  erros `meta_not_configured|invalid_message|http_error|network_error`.
+- **Auto-reply** (nova peça que fecha o ciclo da FASE 1):
+  `src/integrations/meta/chatbotAutoReply.ts` → `maybeAutoReply(orgId,
+  waId, text, {firstContact}, deps)` — lê a config do tenant
+  (`getChatbotConfigForOrg`, AgentMemory com RLS), roda o motor e envia
+  pela Cloud API oficial (`sendWhatsAppButton` quando há quick replies,
+  senão `sendWhatsAppText`). **Nunca lança**: skipReason
+  `config_unavailable|not_enabled|no_response|send_failed|error`;
+  credencial ausente → `meta_not_configured` com `meta access: <razão>`
+  (sem segredo).
+- **Processador** (`whatsappProcessor.ts`, aditivo): resultado ganha
+  `waId`, `text`, `firstContact` (1º contato detectado na criação do
+  Contact) — alimenta a saudação do auto-reply.
+- **Webhook Meta** (`app/api/webhooks/meta/route.ts`): após processar o
+  evento, tenta `maybeAutoReply` por mensagem recebida (try/catch por
+  item — **nunca quebra a entrega 200** da Meta).
+- **CRUD** (`/api/whatsapp/chatbot`): `normalizeConfig` agora normaliza
+  `steps` (ids únicos, `matchType` válido, quickReplies ≤10, `nextStepId`
+  nulo quando ausente, `end` bool) e `vars` (≤100, chave ≤64, valor
+  ≤500); POST responde `steps`.
+- **UI** (`/whatsapp`, lilás + preto + branco): editor visual de etapas
+  (condição → padrão/flags → resposta `{{variavel}}` → quick replies →
+  próxima etapa; mover ↑↓, remover, `termina aqui`) + seção
+  "Variáveis" (chave/valor/rename/remover) no card "Chatbot
+  configurável".
+- **Testes:** 3 suítes/32 casos novos —
+  `whatsappChatbot.flow.test.ts` (18: interpolação, entrada, cadeia,
+  branch, quickReplies, loop, `end`, ponteiro quebrado, precedência
+  steps>regras, saudação>steps, fora de horário),
+  `chatbotAutoReply.test.ts` (8: success/not_enabled/no_response/
+  send_failed/config_unavailable/error/credencial ausente) e
+  `sendWhatsAppButton` (6) em `fase1-chatbot-sender.test.ts`.
+  Suíte total **383/383 (29 suítes)**; `tsc` 0; `next build` verde.
+- **Dependências externas:** nenhuma nova — o auto-reply usa a mesma
+  conexão OAuth Meta (token em `meta_integrations` + `meta_integrations`
+  resolve via service_role). Sem credencial → log de `meta access:
+  not_connected` e o webhook segue 200.
+
+---
+
 ## APÊNDICE A — Comandos para Reproduzir
 
 ```bash
 # Testes
-npm test                          # 18 suítes / 185 testes
+npm test                          # 29 suítes / 383 testes
 npm test -- --testPathPattern=rls # só RLS tenant (11)
 npm test -- --testPathPattern=token-rls  # token RLS (19)
 npm test -- --testPathPattern=b4-rls   # Session/BillingEvent (8)
@@ -824,9 +883,14 @@ declarados "Sem API/Avançado") e **TikTok** (`/tiktok` +
 vídeo; agendamento persiste intenção, execução na FASE 4). **FASE 3 · slice 1
 concluída**: tracking de anúncios em tempo real — Meta Ad Manager
 (`/api/meta/ads-insights`) + TikTok Ads (`/api/tiktok/ads-insights`),
-providers `meta_ads`/`tiktok_ads` no hub; suíte 351/351, tsc 0. **A
-seguir:** FASE 3 restante (executores "Sem API/Avançado" com aviso de
-risco — QR, scrapers e browser automation; chatbot visual completo;
-executores de n8n/Zapier/Make/webhooks de saída), depois a
-FASE 4 (fila de jobs: BullMQ/Inngest — incluindo o executor do
-agendamento de TikTok — e testes de fluxo principal).
+providers `meta_ads`/`tiktok_ads` no hub. **FASE 3 · slice 2 concluída**:
+**chatbot visual completo (§3.8/§3.2h)** — fluxo de etapas (condições,
+variáveis `{{nome}}`, quick replies em botões oficiais, ponteiros
+`nextStepId`/`end`, anti-loop) + editor em `/whatsapp` + **auto-reply no
+webhook Meta** (`maybeAutoReply`, nunca quebra a entrega 200); suíte
+**383/383 (29 suítes)**, `tsc` 0, `next build` verde. **A
+seguir:** FASE 3 restante (slice 3: executores de **saída** de
+n8n/Zapier/Make/webhooks; slice 4: executores "Sem API/Avançado" com aviso de
+risco — QR, scrapers e browser automation, sem execução não-oficial
+silenciosa), depois a FASE 4 (fila de jobs: BullMQ/Inngest — incluindo o
+executor do agendamento de TikTok — e testes de fluxo principal).

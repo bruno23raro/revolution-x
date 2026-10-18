@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { withTenantContext } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { sanitizeWebhookPayload, processWhatsAppPayload } from '@/integrations/meta';
+import { maybeAutoReply } from '@/integrations/meta/chatbotAutoReply';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 // Webhook Meta — verificação oficial + assinatura HMAC-SHA256
@@ -160,6 +162,34 @@ export async function POST(req: NextRequest) {
     if (hasErrors) {
       const errors = outcome.results.filter((r) => r.error).map((r) => r.error);
       console.warn('[meta-webhook] partial processing errors:', errors);
+    }
+
+    // FASE 3 · slice 2 — Chatbot visual: resposta automática.
+    // Lê a config do tenant (AgentMemory) e envia pela Cloud API oficial.
+    // Nunca quebra o webhook: bot desligado, Meta não conectada ou falha
+    // de envio → loga e segue devolvendo 200.
+    for (const r of outcome.results) {
+      if (!r.success || !r.waId) continue;
+      try {
+        const auto = await maybeAutoReply(
+          organizationId,
+          r.waId,
+          r.text ?? '',
+          { firstContact: r.firstContact === true },
+          { client: prisma },
+        );
+        if (auto.replied) {
+          console.log(`[meta-webhook] chatbot replied (source=${auto.source}) to ${r.waId}`);
+        } else if (auto.skipReason === 'send_failed') {
+          console.warn(
+            '[meta-webhook] chatbot send failed:',
+            auto.send?.error,
+            auto.send?.errorDetail,
+          );
+        }
+      } catch (e) {
+        console.warn('[meta-webhook] chatbot auto-reply error:', (e as Error).message);
+      }
     }
 
     return NextResponse.json({ status: 'accepted' }, { status: 200 });

@@ -4,7 +4,9 @@
 //
 //  • Disparo em massa (Cloud API oficial da Meta): números → /api/whatsapp/send.
 //  • Templates oficiais: listagem + criação (/api/whatsapp/templates).
-//  • Chatbot configurável (motor de regras puro): /api/whatsapp/chatbot.
+//  • Chatbot configurável (motor de regras puro + fluxo visual de etapas,
+//    variáveis {{nome}} e quick replies — FASE 3 · slice 2): /api/whatsapp/chatbot.
+//    O webhook Meta dispara a resposta automática (chatbotAutoReply).
 //  • "Sem API / Avançado": extração de contatos declarada + aviso de risco
 //    (o hub DECLARA o método; a execução não-oficial é de responsabilidade do
 //    usuário e ainda não há executor no produto).
@@ -13,13 +15,19 @@
 
 import AppNav from '@/components/AppNav';
 import RiskBanner from '@/components/RiskBanner';
-import type { ChatbotConfig, ChatbotRule, MatchType } from '@/integrations/meta/whatsappChatbot';
+import type {
+  ChatbotConfig,
+  ChatbotRule,
+  ChatbotStep,
+  MatchType,
+} from '@/integrations/meta/whatsappChatbot';
 import { useEffect, useState } from 'react';
 
 const CATEGORIES = ['MARKETING', 'UTILITY', 'AUTHENTICATION'] as const;
 const MATCH_TYPES: MatchType[] = ['keyword', 'contains', 'exact', 'regex'];
 
 const EMPTY_RULE = (): ChatbotRule => ({ matchType: 'keyword', pattern: '', response: '', enabled: true });
+const uniqueStepId = () => `step-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
 
 export default function WhatsAppPage() {
   return (
@@ -291,6 +299,8 @@ function ChatbotCard() {
               activeFromHour: 9,
               activeToHour: 18,
               rules: [],
+              steps: [],
+              vars: {},
               useAI: false,
               aiSystemPrompt: '',
             },
@@ -310,6 +320,56 @@ function ChatbotCard() {
   const addRule = () => setCfg((c) => (c ? { ...c, rules: [...c.rules, EMPTY_RULE()] } : c));
   const delRule = (i: number) => setCfg((c) => (c ? { ...c, rules: c.rules.filter((_, idx) => idx !== i) } : c));
 
+  /* Fluxo visual (steps) + variáveis */
+  const setStep = (i: number, patch: Partial<ChatbotStep>) =>
+    setCfg(
+      (c) =>
+        c ? { ...c, steps: (c.steps ?? []).map((s, idx) => (idx === i ? { ...s, ...patch } : s)) } : c,
+    );
+  const addStep = () =>
+    setCfg((c) => (c ? { ...c, steps: [...(c.steps ?? []), { id: uniqueStepId(), response: '' }] } : c));
+  const delStep = (i: number) =>
+    setCfg((c) => {
+      if (!c) return c;
+      const cur = c.steps ?? [];
+      const removed = cur[i];
+      const next = cur.filter((_, idx) => idx !== i);
+      // Ponteiros órfãos: quem apontava para o nó removido vira "fim do fluxo".
+      return {
+        ...c,
+        steps: next.map((s) =>
+          removed?.id && s.nextStepId === removed.id ? { ...s, nextStepId: null } : s,
+        ),
+      };
+    });
+  const moveStep = (i: number, dir: -1 | 1) =>
+    setCfg((c) => {
+      if (!c) return c;
+      const cur = c.steps ?? [];
+      const j = i + dir;
+      if (j < 0 || j >= cur.length) return c;
+      const arr = [...cur];
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return { ...c, steps: arr };
+    });
+
+  const setVarValue = (key: string, value: string) =>
+    setCfg((c) => (c ? { ...c, vars: { ...c.vars, [key]: value } } : c));
+  const renameVar = (oldKey: string, newKey: string) =>
+    setCfg((c) => {
+      if (!c) return c;
+      const vars = { ...c.vars };
+      const value = vars[oldKey];
+      delete vars[oldKey];
+      if (newKey) vars[newKey] = value;
+      return { ...c, vars };
+    });
+  const delVar = (key: string) =>
+    setCfg((c) =>
+      c ? { ...c, vars: Object.fromEntries(Object.entries(c.vars ?? {}).filter(([k]) => k !== key)) } : c,
+    );
+  const addVar = () => setCfg((c) => (c ? { ...c, vars: { ...c.vars, variavel: '' } } : c));
+
   const save = async () => {
     if (!cfg) return;
     setBusy(true);
@@ -321,7 +381,7 @@ function ChatbotCard() {
         body: JSON.stringify(cfg),
       });
       const d = await r.json().catch(() => ({}));
-      if (r.ok) setMsg(`Chatbot salvo (${d.rules ?? 0} regras, ${d.enabled ? 'ativado' : 'inativo'}).`);
+      if (r.ok) setMsg(`Chatbot salvo (${d.rules ?? 0} regras, ${d.steps ?? 0} etapas, ${d.enabled ? 'ativado' : 'inativo'}).`);
       else if (r.status === 401) setMsg('Somente admin/owner salva o chatbot.');
       else setMsg(`Falha ao salvar (HTTP ${r.status}).`);
     } catch {
@@ -413,6 +473,166 @@ function ChatbotCard() {
               ))}
             </div>
             <button onClick={addRule} className="mt-2 text-xs text-purple-300 hover:underline">+ adicionar regra</button>
+          </div>
+
+          {/* Fluxo visual — etapas conectadas (FASE 3 · slice 2) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-semibold text-gray-300">Fluxo visual (etapas)</p>
+              <span className="text-[10px] text-gray-500">
+                condição → resposta → próxima · {`{{variavel}}`} aceita
+              </span>
+            </div>
+            <div className="space-y-2">
+              {(cfg.steps ?? []).map((s, i) => (
+                <div key={i} className="p-2 bg-black/20 border border-white/10 rounded-lg space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => moveStep(i, -1)}
+                      disabled={i === 0}
+                      className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30"
+                      title="Mover para cima"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveStep(i, 1)}
+                      disabled={i >= (cfg.steps ?? []).length - 1}
+                      className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30"
+                      title="Mover para baixo"
+                    >
+                      ↓
+                    </button>
+                    <span className="text-[10px] font-mono text-purple-300">{s.id || `step-${i + 1}`}</span>
+                    {i < (cfg.steps ?? []).length - 1 && <span className="text-gray-600 text-xs">↓</span>}
+                    <button onClick={() => delStep(i)} className="ml-auto text-xs text-red-400">
+                      remover
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <select
+                      value={s.matchType ?? ''}
+                      onChange={(e) =>
+                        setStep(i, {
+                          matchType: e.target.value ? (e.target.value as MatchType) : undefined,
+                        })
+                      }
+                      className={inputCls}
+                    >
+                      <option value="" className="bg-[#0D0915]">sempre (sem condição)</option>
+                      {MATCH_TYPES.map((m) => (
+                        <option key={m} value={m} className="bg-[#0D0915]">
+                          se mensagem: {m}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={s.pattern ?? ''}
+                      onChange={(e) => setStep(i, { pattern: e.target.value || undefined })}
+                      placeholder="padrão (ex.: preço)"
+                      className={inputCls}
+                    />
+                    {s.matchType === 'regex' ? (
+                      <input
+                        value={s.flags ?? ''}
+                        onChange={(e) => setStep(i, { flags: e.target.value || undefined })}
+                        placeholder="flags (i)"
+                        className={inputCls}
+                      />
+                    ) : (
+                      <label
+                        className="flex items-center gap-1 text-[10px] text-gray-400 self-center cursor-pointer"
+                        title="Encerra o fluxo neste nó (não segue a próxima etapa)"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={s.end === true}
+                          onChange={(e) => setStep(i, { end: e.target.checked })}
+                          className="accent-purple-500"
+                        />
+                        termina aqui
+                      </label>
+                    )}
+                    <div />
+                  </div>
+                  <input
+                    value={s.response ?? ''}
+                    onChange={(e) => setStep(i, { response: e.target.value })}
+                    placeholder="resposta (aceita {{variavel}})"
+                    className={inputCls}
+                  />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input
+                      value={(s.quickReplies ?? []).join(', ')}
+                      onChange={(e) =>
+                        setStep(i, {
+                          quickReplies: e.target.value
+                            ? e.target.value
+                                .split(',')
+                                .map((x) => x.trim())
+                                .filter(Boolean)
+                            : undefined,
+                        })
+                      }
+                      placeholder="quick replies (separadas por vírgula, máx. 3)"
+                      className={inputCls}
+                    />
+                    <select
+                      value={s.nextStepId ?? ''}
+                      onChange={(e) => setStep(i, { nextStepId: e.target.value || null })}
+                      className={inputCls}
+                      title="Próxima etapa do fluxo"
+                    >
+                      <option value="" className="bg-[#0D0915]">→ fim do fluxo</option>
+                      {(cfg.steps ?? []).map((t, ti) =>
+                        t.id !== s.id ? (
+                          <option key={ti} value={t.id} className="bg-[#0D0915]">
+                            → {t.id || `step-${ti + 1}`}
+                          </option>
+                        ) : null,
+                      )}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={addStep} className="mt-2 text-xs text-purple-300 hover:underline">
+              + adicionar etapa
+            </button>
+          </div>
+
+          {/* Variáveis — {{chave}} nas respostas das etapas */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-semibold text-gray-300">Variáveis</p>
+              <span className="text-[10px] text-gray-500">use {`{{chave}}`} nas respostas das etapas</span>
+            </div>
+            <div className="space-y-1.5">
+              {Object.entries(cfg.vars ?? {}).map(([k]) => (
+                <div key={k} className="grid grid-cols-2 gap-1.5">
+                  <input
+                    value={k}
+                    onChange={(e) => renameVar(k, e.target.value)}
+                    placeholder="chave"
+                    className={inputCls}
+                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      value={cfg.vars?.[k] ?? ''}
+                      onChange={(e) => setVarValue(k, e.target.value)}
+                      placeholder="valor"
+                      className={inputCls}
+                    />
+                    <button onClick={() => delVar(k)} className="text-xs text-red-400">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={addVar} className="mt-2 text-xs text-purple-300 hover:underline">
+              + adicionar variável
+            </button>
           </div>
 
           <label className="flex items-center gap-2 text-xs text-gray-300">

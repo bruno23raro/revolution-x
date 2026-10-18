@@ -23,7 +23,8 @@ export type SendError =
   | 'meta_not_configured'
   | 'fetch_unavailable'
   | 'http_error'
-  | 'network_error';
+  | 'network_error'
+  | 'invalid_message';
 
 export interface SendTextResult {
   ok: boolean;
@@ -162,6 +163,85 @@ export async function sendWhatsAppTemplate(
       status: 'failed',
       errorDetail: err?.message ? `${err.code ?? res.status}: ${err.message}` : `HTTP ${res.status}`,
     };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, to, error: 'network_error', status: 'failed', errorDetail: msg };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick replies — mensagem interativa com botões (FASE 3 · slice 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Envia mensagem interativa com botões de resposta rápida (formato oficial
+ * `interactive/button` da Cloud API). Limite da Meta: **3 botões** por
+ * mensagem, rótulos de **20 caracteres** — o excedente é cortado aqui,
+ * nunca lançado. Rótulos vazios são descartados; sem corpo ou sem botão
+ * válido → `invalid_message` (chamada que não faria sentido).
+ * Não lança; retorna resultado.
+ */
+export async function sendWhatsAppButton(
+  access: MetaWABAccess,
+  to: string,
+  body: string,
+  buttons: string[],
+  opts: SendOptions = {},
+): Promise<SendTextResult> {
+  if (!access?.accessToken || !access?.phoneNumberId) {
+    return { ok: false, to, error: 'meta_not_configured' };
+  }
+  const labels = (Array.isArray(buttons) ? buttons : [])
+    .map((b) => String(b).trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((b) => b.slice(0, 20));
+  if (!body?.trim() || labels.length === 0) {
+    return { ok: false, to, error: 'invalid_message', status: 'failed' };
+  }
+
+  const fetchImpl = resolveFetch(opts);
+  if (!fetchImpl) return { ok: false, to, error: 'fetch_unavailable' };
+
+  const url = endpointFor(access, opts, `${access.phoneNumberId}/messages`);
+  const payload = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: body },
+      action: {
+        type: 'reply',
+        buttons: labels.map((label, i) => ({ type: 'reply', text: label, id: `rx-${i + 1}` })),
+      },
+    },
+  };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 15000);
+  try {
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${access.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    const raw = await res.text();
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      /* mantém apenas o status HTTP */
+    }
+    if (res.ok) {
+      const id = (parsed as { messages?: Array<{ id?: string }> } | null)?.messages?.[0]?.id;
+      return { ok: true, to, messageId: id, status: 'sent' };
+    }
+    const err = (parsed as { error?: { message?: string; code?: number } } | null)?.error;
+    const detail = err?.message ? `${err.code ?? res.status}: ${err.message}` : `HTTP ${res.status}`;
+    return { ok: false, to, error: 'http_error', status: 'failed', errorDetail: detail };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, to, error: 'network_error', status: 'failed', errorDetail: msg };

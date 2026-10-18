@@ -20,6 +20,12 @@ export interface WhatsAppMessageResult {
   error?: string;
   contactId?: string;
   messageId?: string;
+  /** waId do remetente — alimenta a resposta automática do chatbot. */
+  waId?: string;
+  /** Texto da mensagem recebida (vazio se não-texto). */
+  text?: string;
+  /** Verdadeiro quando o Contact foi criado nesta chegada (1º contato). */
+  firstContact?: boolean;
 }
 
 /**
@@ -80,6 +86,7 @@ export async function processWhatsAppPayload(
 
         // --- Localizar ou criar Contact (sempre dentro do tenant) ---
         let contactId: string | null = null;
+        let firstContact = false;
 
         try {
           let contact = await tx.contact.findFirst({
@@ -91,6 +98,7 @@ export async function processWhatsAppPayload(
           });
 
           if (!contact) {
+            firstContact = true;
             const name = profileName || `WhatsApp ${waId}`;
             contact = await tx.contact.create({
               data: {
@@ -132,6 +140,9 @@ export async function processWhatsAppPayload(
             success: true,
             contactId: contactId!,
             messageId: createdMessage.id,
+            waId,
+            text: textBody || undefined,
+            firstContact,
           });
         } catch (err) {
           console.error('[whatsapp-processor] message create failed:', (err as Error).message);

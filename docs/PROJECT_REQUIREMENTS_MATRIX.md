@@ -108,8 +108,8 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.2d** | Selecionar participantes de grupo | ❌ ausente | — |
 | **3.2e** | Extrair contatos de grupos | 🟡 declarado (Sem API/Avançado) | card em `/whatsapp` declara + `RiskBanner` (ToS/LGPD); **executor ausente** |
 | **3.2f** | Extrair contatos de conversas não salvas | 🟡 declarado (Sem API/Avançado) | idem 3.2e (declarado, sem executor) |
-| **3.2g** | Chatbot/robô configurável (fluxos, horários) | ✅ backend+UI (F1) | motor `evaluateChatbot` + CRUD `/api/whatsapp/chatbot` + editor visual em `/whatsapp` (regras/horário/IA) |
-| **3.2h** | Automação de respostas automáticas | ❌ ausente | — |
+| **3.2g** | Chatbot/robô configurável (fluxos, horários) | ✅ backend+UI (F1+F3s2) | motor `evaluateChatbot` (regras + **fluxo visual de etapas** + variáveis `{{nome}}` + quick replies) + CRUD `/api/whatsapp/chatbot` + editor visual em `/whatsapp` (regras/etapas/variáveis/horário/IA) |
+| **3.2h** | Automação de respostas automáticas | ✅ backend (F3 slice 2) | webhook Meta dispara `maybeAutoReply` (config do tenant no AgentMemory → motor → Cloud API oficial: texto ou **botões de quick replies**); nunca quebra a entrega (200); falhas degradam honesto (logs) |
 | **3.3a** | Disparo em massa Instagram | 🟡 parcial (F2) | publicação única + agendamento prontos (`/api/instagram/publish`); lote em massa pendente |
 | **3.3b** | Agendamento posts/stories/reels Instagram | ✅ backend+UI (F2) | `instagramPublisher` (criar container → publicar/agendar, 10 min–75 d) + `POST /api/instagram/publish` + UI em `/instagram` |
 | **3.3c** | Automações: seguir seguidores/interações | 🟡 declarado (Sem API/Avançado) | card em `/instagram` + `RiskBanner` (ToS/LGPD); **executor ausente** |
@@ -125,8 +125,8 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.7b** | Integração n8n | ✅ backend+UI (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound + form genérico "Integrar" em `/integrations` |
 | **3.7c** | Integração Zapier/Make/webhooks | ✅ backend+UI (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry + form genérico "Integrar" em `/integrations` |
 | **3.7d** | Hub de integrações com botão "Integrar" + status | ✅ backend+UI (F1) | `/integrations`: 2 seções (API Oficial / Sem API·Avançado), form "Integrar", health check, refresh-token, status Meta |
-| **3.8a** | Chatbot visual configurável (fluxos/condições/variáveis) | ❌ ausente | — |
-| **3.8b** | Automações gerais de resposta | ❌ ausente | — |
+| **3.8a** | Chatbot visual configurável (fluxos/condições/variáveis) | ✅ backend+UI (F3 slice 2) | fluxo visual `steps` (condição opcional, resposta, quick replies, ponteiro `nextStepId`, `end`, anti-loop) + variáveis `{{nome}}` + editor em `/whatsapp` + auto-reply no webhook Meta |
+| **3.8b** | Automações gerais de resposta | 🟡 parcial (F3 slice 2) | resposta automática no WhatsApp (oficial) pronta; automações gerais multi-canal/sem API = FASE 3 · slice 4 (com aviso de risco) |
 
 ### E.2 — Princípios de UX (§4) — requisitos de implementação
 
@@ -169,4 +169,4 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-8 (§3.3/3.4/3.5)** | Instagram agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); Facebook agendamento ✅ (F2, `/api/facebook/publish` + `/facebook`); TikTok publicação imediata + tracking de vídeo ✅ (F2, `/api/tiktok/{publish,status,analytics}` + `/tiktok`; agendamento em hora marcada = intenção persistida → FASE 4); Marketplace/grupos declarados (Sem API/Avançado) | Média |
 | **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok Ads) em tempo real — **CONCLUÍDO (F3 slice 1, backend+UI)**: `GET /api/meta/ads-insights` + `GET /api/tiktok/ads-insights` + cards em `/facebook` e `/tiktok`; tracking de vídeo orgânico TikTok ✅ (F2) | Concluído |
-| **P3 (§3.8)** | Chatbot visual configurável | Alta |
+| **P3 (§3.8)** | Chatbot visual configurável — **CONCLUÍDO (F3 slice 2, backend+UI)**: fluxo `steps` + variáveis `{{nome}}` + quick replies + auto-reply no webhook Meta (`maybeAutoReply`); suíte 383/383, tsc 0 | Concluído (automacoes gerais multi-canal → F3 slice 4) |

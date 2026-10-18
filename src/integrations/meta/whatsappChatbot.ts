@@ -1,14 +1,16 @@
 // FASE 1 — Chatbot de WhatsApp configurável: motor de regras puro.
+// FASE 3 · slice 2 — fluxo visual (steps) + variáveis + quick replies.
 //
 // Determinístico e injetável (IA e relógio são parâmetros → 100% testável).
 // Ordem de decisão:
 //   1. desligado → não responde;
 //   2. fora da janela de horas → só fallback (se existir);
 //   3. primeiro contato com saudação → saudação;
-//   4. regras (keyword/contains/exact/regex), em ordem;
-//   5. IA (opcional, quando `useAI` e houve match de nenhuma regra);
-//   6. fallback;
-//   7. senão, nada.
+//   4. fluxo visual (steps), antes das regras planas;
+//   5. regras (keyword/contains/exact/regex), em ordem;
+//   6. IA (opcional, quando `useAI` e houve match de nenhuma regra);
+//   7. fallback;
+//   8. senão, nada.
 
 export type MatchType = 'keyword' | 'contains' | 'exact' | 'regex';
 
@@ -24,6 +26,36 @@ export interface ChatbotRule {
   enabled?: boolean;
 }
 
+/**
+ * Nó (etapa) do fluxo visual (FASE 3 · slice 2).
+ *
+ * Semântica determinística e sem estado (o config é o JSON inteiro):
+ *  - nó **sem condição** = incondicional; com condição, só dispara se a
+ *    mensagem recebida casa com ela;
+ *  - a entrada do fluxo é o **primeiro** nó da lista que seja incondicional
+ *    ou tenha condição matcheando; o resto da cadeia avança por `nextStepId`
+ *    (a condição do nó destino, se houver, é re-chequeada contra a MESMA
+ *    mensagem);
+ *  - `end: true` para a cadeia após este nó;
+ *  - proteção de loop: conjunto de visitados + limite de saltos.
+ */
+export interface ChatbotStep {
+  /** Identificador estável (usado pelos ponteiros nextStepId). */
+  id?: string;
+  /** Condição opcional. Ausente ou padrão vazio = nó incondicional. */
+  matchType?: MatchType;
+  pattern?: string;
+  flags?: string;
+  /** Resposta deste nó (suporta {{variavel}} de `vars`). */
+  response?: string;
+  /** Quick replies (botões) sugeridos junto à resposta. */
+  quickReplies?: string[];
+  /** Próximo nó da cadeia (null/ausente = fim do fluxo). */
+  nextStepId?: string | null;
+  /** Termina o fluxo após este nó (não segue nextStepId). */
+  end?: boolean;
+}
+
 export interface ChatbotConfig {
   enabled: boolean;
   greeting?: string;
@@ -33,6 +65,10 @@ export interface ChatbotConfig {
   activeFromHour?: number;
   activeToHour?: number;
   rules: ChatbotRule[];
+  /** Fluxo visual (etapas conectadas). Avaliado antes das `rules`. */
+  steps?: ChatbotStep[];
+  /** Variáveis para interpolação {{nome}} nas respostas dos steps. */
+  vars?: Record<string, string>;
   useAI?: boolean;
   aiSystemPrompt?: string;
 }
@@ -45,13 +81,17 @@ export interface ChatbotInput {
 
 export type AiFn = (system: string, user: string) => Promise<string>;
 
-export type DecisionSource = 'greeting' | 'rule' | 'fallback' | 'ai' | 'none';
+export type DecisionSource = 'greeting' | 'step' | 'rule' | 'fallback' | 'ai' | 'none';
 
 export interface ChatbotDecision {
   respond: boolean;
   text?: string;
   source: DecisionSource;
   matchedRuleId?: string;
+  /** ID do último step respondido (source = 'step'). */
+  matchedStepId?: string;
+  /** Quick replies do último step com botões (source = 'step'). */
+  quickReplies?: string[];
   action?: string;
 }
 
@@ -77,22 +117,109 @@ function withinActiveHours(cfg: ChatbotConfig, hour: number): boolean {
   return hour >= f || hour <= t; // janela que cruza a meia-noite
 }
 
-function ruleMatches(rule: ChatbotRule, text: string): boolean {
-  switch (rule.matchType) {
+function matchesPattern(
+  matchType: MatchType,
+  pattern: string,
+  flags: string | undefined,
+  text: string,
+): boolean {
+  switch (matchType) {
     case 'exact':
-      return text.toLowerCase() === rule.pattern.trim().toLowerCase();
+      return text.toLowerCase() === pattern.trim().toLowerCase();
     case 'contains':
     case 'keyword':
-      return text.toLowerCase().includes(rule.pattern.trim().toLowerCase());
+      return text.toLowerCase().includes(pattern.trim().toLowerCase());
     case 'regex':
       try {
-        return new RegExp(rule.pattern, rule.flags ?? '').test(text);
+        return new RegExp(pattern, flags ?? '').test(text);
       } catch {
         return false;
       }
     default:
       return false;
   }
+}
+
+function ruleMatches(rule: ChatbotRule, text: string): boolean {
+  return matchesPattern(rule.matchType, rule.pattern, rule.flags, text);
+}
+
+/**
+ * Substitui {{nome}} pelo valor em `vars`. Chaves desconhecidas permanecem
+ * como estão (degradação honesta — nunca inventa valor).
+ */
+export function interpolateVars(
+  text: string,
+  vars: Record<string, string> | null | undefined,
+): string {
+  if (!text) return '';
+  if (!vars || Object.keys(vars).length === 0) return text;
+  return text.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (whole, name: string) =>
+    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : whole,
+  );
+}
+
+function stepConditionMet(step: ChatbotStep, text: string): boolean {
+  if (!step.matchType || !step.pattern?.trim()) return true;
+  return matchesPattern(step.matchType, step.pattern, step.flags, text);
+}
+
+interface StepFlowResult {
+  text?: string;
+  quickReplies?: string[];
+  lastStepId?: string;
+}
+
+/**
+ * Percorre o fluxo visual: encontra a entrada (primeiro nó incondicional ou
+ * com condição matcheando), responde e avança por nextStepId, re-checando a
+ * condição de cada nó destino contra a MESMA mensagem. Respostas da cadeia
+ * são unidas com "\n\n". Devolve null quando nada dispara (fall-through
+ * para as regras planas). Puro: sem rede, sem banco.
+ */
+export function evaluateSteps(
+  steps: ChatbotStep[] | null | undefined,
+  text: string,
+  vars?: Record<string, string>,
+): StepFlowResult | null {
+  if (!Array.isArray(steps) || steps.length === 0) return null;
+
+  const entryIdx = steps.findIndex((s) => stepConditionMet(s, text));
+  if (entryIdx === -1) return null;
+
+  const visited = new Set<string>();
+  const responses: string[] = [];
+  let quickReplies: string[] | undefined;
+  let lastStepId: string | undefined;
+
+  const maxHops = steps.length + 2; // proteção contra nextStepId cíclico
+  let idx = entryIdx;
+  for (let hop = 0; hop < maxHops; hop++) {
+    const step = steps[idx];
+    if (!step) break;
+    const key = step.id ?? `#idx:${idx}`;
+    if (visited.has(key)) break;
+    visited.add(key);
+
+    lastStepId = step.id;
+    const resp = step.response?.trim();
+    if (resp) responses.push(interpolateVars(resp, vars));
+    const q = Array.isArray(step.quickReplies)
+      ? step.quickReplies.map((x) => String(x).trim()).filter(Boolean)
+      : [];
+    if (q.length > 0) quickReplies = q;
+
+    if (step.end === true) break;
+    if (!step.nextStepId) break;
+    const nextIdx = steps.findIndex((s) => s.id === step.nextStepId);
+    if (nextIdx === -1) break; // ponteiro quebrado (nó removido)
+    if (!stepConditionMet(steps[nextIdx], text)) break; // fora da branch
+    idx = nextIdx;
+  }
+
+  const joined = responses.join('\n\n').trim();
+  if (!joined && !quickReplies) return null;
+  return { text: joined || undefined, quickReplies, lastStepId };
 }
 
 export interface EvaluateDeps {
@@ -120,6 +247,18 @@ export async function evaluateChatbot(
   // Primeiro contato → saudação (se definida).
   if (input.firstContact && cfg.greeting?.trim()) {
     return { respond: true, text: cfg.greeting, source: 'greeting' };
+  }
+
+  // Fluxo visual (steps) — avaliado antes das regras planas.
+  const flow = evaluateSteps(cfg.steps, text, cfg.vars);
+  if (flow) {
+    return {
+      respond: true,
+      text: flow.text,
+      source: 'step',
+      matchedStepId: flow.lastStepId,
+      quickReplies: flow.quickReplies,
+    };
   }
 
   // Regras, em ordem.

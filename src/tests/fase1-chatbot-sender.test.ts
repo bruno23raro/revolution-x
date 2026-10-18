@@ -1,12 +1,14 @@
 // FASE 1 — Testes da camada de serviço de WhatsApp (sem banco, mock de fetch).
 //
-// Cobre: motor de chatbot (puro), sender (texto/template), disparo em massa
-// (contagem + delay), refresh de token e o conector (delega para o sender).
+// Cobre: motor de chatbot (puro), sender (texto/template/quick replies —
+// FASE 3 · slice 2), disparo em massa (contagem + delay), refresh de token
+// e o conector (delega para o sender).
 
 import { evaluateChatbot, type ChatbotConfig } from '@/integrations/meta/whatsappChatbot';
 import {
   sendWhatsAppText,
   sendWhatsAppTemplate,
+  sendWhatsAppButton,
   runMassSend,
   type MetaWABAccess,
 } from '@/integrations/meta/whatsappSender';
@@ -191,6 +193,88 @@ describe('sendWhatsAppTemplate', () => {
   it('sem credencial → meta_not_configured', async () => {
     const r = await sendWhatsAppTemplate({ accessToken: '', phoneNumberId: '' }, '55', 'promo');
     expect(r.error).toBe('meta_not_configured');
+  });
+});
+
+// ============================================================
+// Sender — quick replies / botões (FASE 3 · slice 2)
+// ============================================================
+
+describe('sendWhatsAppButton', () => {
+  it('monta payload oficial interactive/button (ids rx-1..3)', async () => {
+    let body: any;
+    const fetchImpl = fakeFetch((_url, init) => {
+      body = JSON.parse((init as RequestInit).body as string);
+      return resp({ messages: [{ id: 'wamid.btn' }] });
+    });
+    const r = await sendWhatsAppButton(ACCESS, '5511', 'Escolha uma opção', ['A', 'B', 'C'], {
+      fetchImpl,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.messageId).toBe('wamid.btn');
+    expect(body.type).toBe('interactive');
+    expect(body.interactive.type).toBe('button');
+    expect(body.interactive.body.text).toBe('Escolha uma opção');
+    expect(body.interactive.action.type).toBe('reply');
+    expect(body.interactive.action.buttons).toEqual([
+      { type: 'reply', text: 'A', id: 'rx-1' },
+      { type: 'reply', text: 'B', id: 'rx-2' },
+      { type: 'reply', text: 'C', id: 'rx-3' },
+    ]);
+  });
+
+  it('corta em 3 botões, rótulos em 20 chars; descarta os vazios', async () => {
+    let body: any;
+    const fetchImpl = fakeFetch((_url, init) => {
+      body = JSON.parse((init as RequestInit).body as string);
+      return resp({});
+    });
+    await sendWhatsAppButton(ACCESS, '5511', 'x', ['', '  ', 'A'.repeat(30), 'segundo', 'terceiro', 'quarto'], {
+      fetchImpl,
+    });
+    const labels = body.interactive.action.buttons.map((b: any) => b.text);
+    expect(labels).toEqual(['A'.repeat(20), 'segundo', 'terceiro']);
+  });
+
+  it('sem credencial → meta_not_configured', async () => {
+    const r = await sendWhatsAppButton({ accessToken: '', phoneNumberId: '' }, '5511', 'oi', ['A']);
+    expect(r).toEqual({ ok: false, to: '5511', error: 'meta_not_configured' });
+  });
+
+  it('sem corpo ou sem botão válido → invalid_message', async () => {
+    expect((await sendWhatsAppButton(ACCESS, '5511', '   ', ['A'])).error).toBe('invalid_message');
+    expect((await sendWhatsAppButton(ACCESS, '5511', 'oi', [])).error).toBe('invalid_message');
+  });
+
+  it('sem fetch → fetch_unavailable', async () => {
+    const prev = globalThis.fetch;
+    (globalThis as { fetch?: typeof fetch }).fetch = undefined as unknown as typeof fetch;
+    try {
+      const r = await sendWhatsAppButton(ACCESS, '5511', 'oi', ['A']);
+      expect(r.error).toBe('fetch_unavailable');
+    } finally {
+      (globalThis as { fetch?: typeof fetch }).fetch = prev;
+    }
+  });
+
+  it('erro HTTP carrega detalhe da Meta', async () => {
+    const fetchImpl = fakeFetch(() =>
+      resp({ error: { message: 'Unsupported message type', code: 10016 } }, { ok: false, status: 400 }),
+    );
+    const r = await sendWhatsAppButton(ACCESS, '5511', 'oi', ['A'], { fetchImpl });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('http_error');
+    expect(r.errorDetail).toContain('10016');
+  });
+
+  it('fetch que lança → network_error', async () => {
+    const fetchImpl = (((() => {
+      throw new Error('offline');
+    }) as unknown) as unknown) as typeof fetch;
+    const r = await sendWhatsAppButton(ACCESS, '5511', 'oi', ['A'], { fetchImpl });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('network_error');
+    expect(r.errorDetail).toContain('offline');
   });
 });
 

@@ -45,6 +45,7 @@ const ADMIN: NavItem[] = [
   { label: 'Memória', href: '/admin/memory' },
   { label: 'Integrações', href: '/integrations' },
   { label: 'WhatsApp', href: '/whatsapp' },
+  { label: 'Instagram', href: '/instagram' },
   { label: 'Config', href: '/admin/settings' },
 ];
 

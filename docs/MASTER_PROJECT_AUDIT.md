@@ -574,7 +574,7 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 | **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 só WhatsApp (Meta) parcial; IG/FB/TikTok ausentes |
 | **§3.1** Logins por canal | 7-8 métodos de login (API + sem API p/ cada canal) | 🟡 WhatsApp-Meta parcial; demais ❌ |
 | **§3.2** WhatsApp Business | Disparo em massa, templates, grupos, chatbot | 🟡 webhook+processor; UI/templates/chatbot ❌ |
-| **§3.3** Instagram | Disparo em massa, agendamento, automações, scraping | ❌ (`/publisher` = stub) |
+| **§3.3** Instagram | Disparo em massa, agendamento, automações, scraping | 🟡 agendamento ✅ (F2, `/instagram` + `/api/instagram/publish`); massa/automações/scraping pendentes |
 | **§3.4** Facebook | Agendamento, Marketplace, grupos | ❌ |
 | **§3.5** TikTok | Agendamento + tracking | ❌ |
 | **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | ❌ |
@@ -621,6 +621,34 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 - Suíte total agora **288/288**; `tsc` 0 erros; build verde. **P0 [HUMANO]:** as
   credenciais `META_APP_ID/SECRET` continuam no hpanel — a UI degrada de forma honesta
   (503) enquanto não forem preenchidas.
+
+### O que mudou em 2026-10-18 (FASE 2 — Instagram)
+
+- **FASE 2, slice 1 concluída:** publicação e agendamento de **Instagram pela Graph API
+  oficial da Meta**. Serviço puro-TS `src/integrations/meta/instagramPublisher.ts`
+  (fluxo real em 2 passos: `POST /{ig}/media` → `containerId`, depois
+  `POST /{ig}/media_publish?creation_ids=` → `mediaId`; `scheduled_start_time` em UNIX
+  s, janela oficial 10 min–75 dias). Como o sender de WhatsApp, **não lança** — devolve
+  `ok`/`error` (`meta_not_configured`, `no_media_source`, `http_error`, `network_error`).
+- **Resolver adicionativo** em `resolveAccess.ts`:
+  `resolveTenantPublisherAccess(organizationId)` lê `meta_integrations` (service_role,
+  filtrado por provider `instagram|facebook|whatsapp` e `status ≠ DISCONNECTED`), descripta
+  o token AES-256-GCM e devolve `{accessToken, instagramUserId}`; degrada em
+  `not_connected`/`no_token`/`decrypt_failed`/`no_ig_account`. **Não** alterou a função de
+  WhatsApp existente.
+- **Rota nova** `POST /api/instagram/publish`: auth (401), validação de mídia/janela
+  (400), resolução do access (409/503) e publicação agregada (200 com `mediaId`/
+  `containerId`/`scheduled`). `export const dynamic = 'force-dynamic'`.
+- **UI nova** `app/instagram/page.tsx` (lilás + preto + branco): card de conexão (status
+  real de `/api/integrations/meta`), card "Publicar/agendar" (post/reel + agendar 10min–
+  75d), e card "Sem API / Avançado" (automações seguir/curtir/comentar **declaradas** com
+  `RiskBanner` ToS/LGPD — executor ainda ausente). Link **Instagram** no AppNav admin.
+- **Testes:** 16 novos em `instagramPublisher.test.ts` (fluxo criar+publicar, agendamento,
+  degradamentos, fallback REEL→imagem, mapeamento de erro HTTP/rede). Suíte total
+  **304/304** (23 suítes); `tsc` 0 erros; `next build` verde (`/instagram` 4.58 kB;
+  `/api/instagram/publish` na rota dinâmica).
+- **P0 [HUMANO] permanece:** `META_APP_ID/SECRET` no hpanel + conta IG vinculada via
+  OAuth. Sem isso, a rota degrada honestamente (503/409) — nunca finge sucesso.
 
 ---
 

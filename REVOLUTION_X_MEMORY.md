@@ -16,7 +16,24 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-18) — FASE 1 (backend + UI) concluída
+## ESTADO ATUAL (2026-10-18) — FASE 2 · slice 1 (Instagram) concluída
+
+- **FASE 2, slice 1 (Instagram, API oficial):** serviço
+  `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
+  `containerId`, `POST /{ig}/media_publish?creation_ids=` → `mediaId`;
+  `scheduled_start_time` em UNIX s, 10 min–75 d; **não lança**, devolve
+  `ok`/`error`). Resolver adicionativo
+  `resolveTenantPublisherAccess(organizationId)` em `resolveAccess.ts` (não
+  tocou a de WhatsApp). Rota `POST /api/instagram/publish` (401/400/409/503/502).
+  UI `app/instagram/page.tsx` (lilás/preto/branco: conexão real,
+  publicar/agendar, "Sem API/Avançado" declarado c/ `RiskBanner`) + link
+  **Instagram** no AppNav admin.
+- **Testes**: 16 novos → suíte total **23 suítes / 304 testes PASS**; `tsc`
+  0 erros; `next build` verde (`/instagram` + `/api/instagram/publish`).
+- **P0 [HUMANO]**: `META_*` no hpanel + conta IG vinculada via OAuth; sem isso
+  a rota degrada honestamente (409/503).
+
+### FASE 1 (backend + UI) — concluída (referência)
 
 - **PROMPT MESTRE real** (§1–§8, multi-canal IG/FB/WhatsApp/TikTok) recebido; a
   auditoria §3–§16 anterior era reconstrução inventada (corrigida). Correção de
@@ -33,13 +50,11 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   extração de contatos declarado) + `GET /api/auth/meta` (início do OAuth da Meta,
   complementa o callback; degrada 503 honesto quando `META_*` ausentes).
   Primitivas compartilhadas: `ApiBadge` / `RiskBanner` / `HealthPill`.
-- **Testes**: jest **22 suítes / 288 testes PASS**; `tsc` 0 erros; build verde.
 - **Dependência [HUMANO] (P0)**: `META_APP_ID/SECRET`, `EMAIL_*` (Resend) e
   `OMNIROUTER_*` ainda no hpanel do Hostinger — a UI degrada de forma honesta
   (503) até serem preenchidas; nenhum segredo em localStorage.
-- Docs `PROJECT_REQUIREMENTS_MATRIX.md` §E + `MASTER_PROJECT_AUDIT.md` atualizados.
-- **Próximo passo autônomo: FASE 2** (canais IG/FB/TikTok: login + agendamento via
-  API oficial, automações IG, agendamento FB + Marketplace, TikTok post).
+- **Próximo passo autônomo: FASE 2 · slice 2** (Facebook agendamento +
+  Marketplace/grupos) e depois TikTok agendamento; então Fases 3–4 do PROMPT MESTRE.
 
 ## ESTADO ANTIGO (2026-10-15)
 

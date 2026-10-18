@@ -94,7 +94,7 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 
 | Requisito | Descrição | Estado | Evidência |
 | --- | --- | --- | --- |
-| **3.1a** | Login Instagram via API oficial | ❌ ausente | — |
+| **3.1a** | Login Instagram via API oficial | 🟡 parcial (F2) | início reutiliza `GET /api/auth/meta?provider=instagram` + status real em `/instagram`; login em si exige `META_*` + conta vinculada |
 | **3.1b** | Login Instagram sem API | ❌ ausente | — |
 | **3.1c** | Login Facebook via API oficial | ❌ ausente | — |
 | **3.1d** | Login Facebook sem API | ❌ ausente | — |
@@ -110,10 +110,10 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.2f** | Extrair contatos de conversas não salvas | 🟡 declarado (Sem API/Avançado) | idem 3.2e (declarado, sem executor) |
 | **3.2g** | Chatbot/robô configurável (fluxos, horários) | ✅ backend+UI (F1) | motor `evaluateChatbot` + CRUD `/api/whatsapp/chatbot` + editor visual em `/whatsapp` (regras/horário/IA) |
 | **3.2h** | Automação de respostas automáticas | ❌ ausente | — |
-| **3.3a** | Disparo em massa Instagram | ❌ ausente | — |
-| **3.3b** | Agendamento posts/stories/reels Instagram | 🟡 stub | `/publisher` (página stub, sem funcionalidade real) |
-| **3.3c** | Automações: seguir seguidores/interações | ❌ ausente | — |
-| **3.3d** | Extrair contatos de seguidores (scraping) | ❌ ausente | ⚠️ pode violar ToS do Instagram; exige decisão de risco |
+| **3.3a** | Disparo em massa Instagram | 🟡 parcial (F2) | publicação única + agendamento prontos (`/api/instagram/publish`); lote em massa pendente |
+| **3.3b** | Agendamento posts/stories/reels Instagram | ✅ backend+UI (F2) | `instagramPublisher` (criar container → publicar/agendar, 10 min–75 d) + `POST /api/instagram/publish` + UI em `/instagram` |
+| **3.3c** | Automações: seguir seguidores/interações | 🟡 declarado (Sem API/Avançado) | card em `/instagram` + `RiskBanner` (ToS/LGPD); **executor ausente** |
+| **3.3d** | Extrair contatos de seguidores (scraping) | 🟡 declarado (Sem API/Avançado) | idem 3.3c; guardado como método, sem execução não-oficial |
 | **3.4a** | Agendamento posts Facebook | ❌ ausente | — |
 | **3.4b** | Anúncios Marketplace | ❌ ausente | — |
 | **3.4c** | Anúncios em grupos (delay configurável) | ❌ ausente | — |
@@ -167,6 +167,6 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health + status detalhado + início OAuth — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot — **CONCLUÍDO (F1, backend+UI em `/whatsapp`)** | Concluído |
 | **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
-| **P2-8 (§3.3/3.4/3.5)** | Instagram/Facebook/TikTok: agendamento + automações | Alta |
+| **P2-8 (§3.3/3.4/3.5)** | Instagram: agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); FB + TikTok pendentes; IG automações declaradas (Sem API/Avançado) | Média (alta para FB/TikTok) |
 | **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok) | Alta |
 | **P3 (§3.8)** | Chatbot visual configurável | Alta |

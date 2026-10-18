@@ -22,6 +22,7 @@ import {
   chatCompletion,
   type ChatMessage,
   type OmniRouterUsage,
+  type OmniRouterOverrides,
 } from '../../../../src/ai/omniRouter';
 import {
   createTask,
@@ -45,6 +46,30 @@ async function requireAdmin(req: NextRequest) {
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');
   return ok ? user : null;
+}
+
+// ------------------------------------------------------------------
+// Busca configuração manual de IA do DB (AgentMemory)
+// Retorna overrides para passar a resolveOmniRouterConfig
+// ------------------------------------------------------------------
+const AI_CONFIG_KEY = 'ai_config';
+
+async function getAiConfigOverrides(
+  organizationId: string,
+  userId: string,
+): Promise<OmniRouterOverrides | null> {
+  try {
+    const memories = await listMemory(prisma, { organizationId, userId }, 10);
+    const config = memories.find((m) => m.key === AI_CONFIG_KEY);
+    if (!config) return null;
+    const value = config.value as
+      | { baseUrl?: string; apiKey?: string; model?: string }
+      | null;
+    if (!value?.baseUrl || !value?.apiKey) return null;
+    return { baseUrl: value.baseUrl, apiKey: value.apiKey, model: value.model };
+  } catch {
+    return null;
+  }
 }
 
 // ------------------------------------------------------------------
@@ -75,7 +100,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await requireAdmin(req);
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized (papel admin/owner exigido)' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized (papel admin/owner exigido)' },
+      { status: 401 },
+    );
   }
 
   let body: { message?: unknown; context?: unknown };
@@ -90,8 +118,11 @@ export async function POST(req: NextRequest) {
   }
   const context = typeof body.context === 'string' ? body.context.slice(0, 4000) : '';
 
-  const cfg = resolveOmniRouterConfig();
   const scope = { organizationId: user.organizationId, userId: user.id };
+
+  // Busca overrides do DB (configuração manual salva pelo admin)
+  const dbOverrides = await getAiConfigOverrides(user.organizationId, user.id);
+  const cfg = resolveOmniRouterConfig(dbOverrides ?? undefined);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -199,6 +230,8 @@ export async function POST(req: NextRequest) {
             'Para habilitar o chat com IA, defina no servidor:',
             '- `OMNIROUTER_BASE_URL` (ex.: https://api.openai.com ou proxy compatível)',
             '- `OMNIROUTER_API_KEY` (sua chave de API)',
+            '',
+            'Ou salve uma configuração manual em <a href="/admin/settings" class="text-purple-400 underline">Configurações</a>.',
             '',
             'Até lá, você pode usar as outras ferramentas administrativas:',
             '- **Tarefas**: acompanhe o progresso real das requisições',

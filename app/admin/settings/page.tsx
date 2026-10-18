@@ -4,6 +4,9 @@
 // Mostra somente o que o backend expõe hoje (roteador de IA, fila, memória,
 // sessão/papel). Nada é inventado: quando um subsistema está indisponível no
 // ambiente, a tela mostra o motivo exato.
+//
+// Configuração de IA: salva via API segura (AgentMemory no DB) — NUNCA
+// no localStorage. A chave de API nunca retorna ao frontend.
 
 import { useEffect, useState } from 'react';
 import AppNav from '@/components/AppNav';
@@ -57,12 +60,13 @@ export default function AdminSettingsPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Configuração manual de IA (persistida em localStorage)
+  // Configuração manual de IA (persistida no DB via API, NÃO no navegador)
   const [aiBaseUrl, setAiBaseUrl] = useState('');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiModel, setAiModel] = useState('');
   const [aiSaved, setAiSaved] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +98,12 @@ export default function AdminSettingsPage() {
           authorized: queueRes.status !== 401,
           available: queueRes.status === 200,
           count: typeof b?.count === 'number' ? b.count : null,
-          detail: queueRes.status === 503 ? b?.detail ?? 'fila indisponível' : queueRes.status === 401 ? 'exige papel admin/owner' : null,
+          detail:
+            queueRes.status === 503
+              ? b?.detail ?? 'fila indisponível'
+              : queueRes.status === 401
+                ? 'exige papel admin/owner'
+                : null,
         });
       }
       if (memoryRes) {
@@ -104,7 +113,12 @@ export default function AdminSettingsPage() {
           authorized: memoryRes.status !== 401,
           available: memoryRes.status === 200,
           count: typeof b?.count === 'number' ? b.count : null,
-          detail: memoryRes.status === 503 ? b?.detail ?? 'memória indisponível' : memoryRes.status === 401 ? 'exige papel admin/owner' : null,
+          detail:
+            memoryRes.status === 503
+              ? b?.detail ?? 'memória indisponível'
+              : memoryRes.status === 401
+                ? 'exige papel admin/owner'
+                : null,
         });
       }
       if (sessionRes) {
@@ -122,22 +136,25 @@ export default function AdminSettingsPage() {
     };
   }, []);
 
-  // Carregar configuração manual de IA do localStorage
+  // Carregar configuração de IA do servidor (API segura — nunca do localStorage)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('rx_ai_config');
-      if (saved) {
-        const cfg = JSON.parse(saved);
-        setAiBaseUrl(cfg.baseUrl ?? '');
-        setAiApiKey(cfg.apiKey ?? '');
-        setAiModel(cfg.model ?? '');
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/admin/ai-config').catch(() => null);
+      if (cancelled || !res) return;
+      const b = await res.json().catch(() => null);
+      if (b?.configured && b?.baseUrl) {
+        setAiBaseUrl(b.baseUrl);
+        setAiModel(b.model ?? '');
+        // apiKey não é retornado — campo fica vazio por segurança
       }
-    } catch {
-      /* configuração inválida — ignora */
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const saveAiConfig = () => {
+  const saveAiConfig = async () => {
     const base = aiBaseUrl.trim();
     const key = aiApiKey.trim();
     const model = aiModel.trim();
@@ -148,7 +165,6 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    // Validação básica de URL
     try {
       new URL(base);
     } catch {
@@ -156,19 +172,62 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    // Persistir em localStorage (cliente apenas — o servidor usa variáveis de ambiente)
-    const cfg = { baseUrl: base, apiKey: key, model: model || undefined };
-    localStorage.setItem('rx_ai_config', JSON.stringify(cfg));
-    setAiSaved(true);
-    setTimeout(() => setAiSaved(false), 3000);
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/admin/ai-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl: base, apiKey: key, model: model || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao salvar');
+      setAiSaved(true);
+      setAiApiKey(''); // limpar campo de senha após salvar
+      setTimeout(() => setAiSaved(false), 3000);
+      // Recarregar estado do roteador
+      const r = await fetch('/api/admin/chat').catch(() => null);
+      if (r?.ok) {
+        const b = await r.json().catch(() => null);
+        if (b) {
+          setRouter((prev) =>
+            prev
+              ? { ...prev, configured: Boolean(b.routerConfigured), model: b.model, baseUrl: b.baseUrl }
+              : prev,
+          );
+        }
+      }
+    } catch (err: any) {
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
-  const clearAiConfig = () => {
-    localStorage.removeItem('rx_ai_config');
-    setAiBaseUrl('');
-    setAiApiKey('');
-    setAiModel('');
-    setAiSaved(false);
+  const clearAiConfig = async () => {
+    setAiLoading(true);
+    try {
+      await fetch('/api/admin/ai-config', { method: 'DELETE' });
+      setAiBaseUrl('');
+      setAiApiKey('');
+      setAiModel('');
+      setAiSaved(false);
+      // Recarregar estado do roteador
+      const r = await fetch('/api/admin/chat').catch(() => null);
+      if (r?.ok) {
+        const b = await r.json().catch(() => null);
+        if (b) {
+          setRouter((prev) =>
+            prev
+              ? { ...prev, configured: Boolean(b.routerConfigured), model: b.model, baseUrl: b.baseUrl }
+              : prev,
+          );
+        }
+      }
+    } catch {
+      setAiError('Falha ao remover configuração.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   if (loading) {
@@ -182,7 +241,11 @@ export default function AdminSettingsPage() {
     );
   }
 
-  const card = (title: string, lines: Array<{ k: string; v: React.ReactNode }>, tone: 'ok' | 'warn' | 'bad' | 'muted') => {
+  const card = (
+    title: string,
+    lines: Array<{ k: string; v: React.ReactNode }>,
+    tone: 'ok' | 'warn' | 'bad' | 'muted',
+  ) => {
     const toneCls =
       tone === 'ok'
         ? 'border-green-400/20'
@@ -192,7 +255,13 @@ export default function AdminSettingsPage() {
             ? 'border-red-400/20'
             : 'border-white/10';
     const dot =
-      tone === 'ok' ? 'bg-green-400' : tone === 'warn' ? 'bg-amber-400' : tone === 'bad' ? 'bg-red-400' : 'bg-gray-500';
+      tone === 'ok'
+        ? 'bg-green-400'
+        : tone === 'warn'
+          ? 'bg-amber-400'
+          : tone === 'bad'
+            ? 'bg-red-400'
+            : 'bg-gray-500';
     return (
       <div className={`p-4 bg-[#0D0915] border ${toneCls} rounded-2xl`}>
         <div className="flex items-center gap-2 mb-3">
@@ -239,7 +308,7 @@ export default function AdminSettingsPage() {
                   v: !router.authorized ? (
                     <span className="text-amber-400">exige admin</span>
                   ) : router.configured ? (
-                    <span className="text-green-400">configurado via env</span>
+                    <span className="text-green-400">configurado</span>
                   ) : (
                     <span className="text-amber-400">não configurado</span>
                   ),
@@ -247,9 +316,9 @@ export default function AdminSettingsPage() {
                 { k: 'Modelo', v: router.model ?? '—' },
                 { k: 'Origem', v: router.baseUrl ?? '—' },
                 {
-                  k: 'Configuração manual',
+                  k: 'Configuração',
                   v: router.configured ? (
-                    <span className="text-gray-500">usando env do servidor</span>
+                    <span className="text-gray-500">ativa no servidor</span>
                   ) : (
                     <a href="#ai-config" className="text-purple-400 hover:underline">
                       configurar abaixo ↓
@@ -319,10 +388,7 @@ export default function AdminSettingsPage() {
                 {
                   k: 'Organização',
                   v: session.organizationId ? (
-                    <span
-                      title={session.organizationId}
-                      className="truncate"
-                    >
+                    <span title={session.organizationId} className="truncate">
                       {session.organizationId.slice(0, 12)}…
                     </span>
                   ) : (
@@ -334,16 +400,19 @@ export default function AdminSettingsPage() {
             )}
         </div>
 
-        {/* Configuração manual de IA */}
-        <div id="ai-config" className="mt-6 max-w-4xl p-4 bg-[#0D0915] border border-purple-500/20 rounded-2xl">
+        {/* Configuração manual de IA — salva no DB, nunca no navegador */}
+        <div
+          id="ai-config"
+          className="mt-6 max-w-4xl p-4 bg-[#0D0915] border border-purple-500/20 rounded-2xl"
+        >
           <div className="flex items-center gap-2 mb-3">
             <span className="h-2 w-2 rounded-full bg-purple-400" />
             <h2 className="text-sm font-semibold text-gray-200">Configuração manual de IA</h2>
           </div>
           <p className="text-xs text-gray-500 mb-4">
-            Se o roteador não estiver configurado no servidor, você pode adicionar uma chave de API
-            manualmente abaixo. A configuração é salva localmente no navegador e usada pelo chat
-            quando o backend permitir.
+            Salve uma chave de API manualmente. A configuração é armazenada de forma segura no
+            banco de dados (RLS ativo) e usada pelo chat quando o roteador do servidor não está
+            configurado. A chave <strong>nunca</strong> é retornada ao navegador.
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
@@ -365,6 +434,9 @@ export default function AdminSettingsPage() {
                 placeholder="sk-..."
                 className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
+              <p className="text-xs text-gray-600 mt-1">
+                Campo limpo após salvar com sucesso.
+              </p>
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Modelo</label>
@@ -377,27 +449,27 @@ export default function AdminSettingsPage() {
               />
             </div>
           </div>
-          {aiError && (
-            <p className="mt-2 text-xs text-red-400">{aiError}</p>
-          )}
+          {aiError && <p className="mt-2 text-xs text-red-400">{aiError}</p>}
           <div className="mt-3 flex gap-2">
             <button
               onClick={saveAiConfig}
+              disabled={aiLoading}
               className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
             >
-              {aiSaved ? '✓ Salvo!' : 'Salvar configuração'}
+              {aiSaved ? '✓ Salvo!' : aiLoading ? 'Salvando…' : 'Salvar configuração'}
             </button>
             <button
               onClick={clearAiConfig}
-              className="px-4 py-2 text-sm text-gray-400 border border-white/10 rounded-lg hover:bg-white/5 focus:outline-none"
+              disabled={aiLoading}
+              className="px-4 py-2 text-sm text-gray-400 border border-white/10 rounded-lg hover:bg-white/5 focus:outline-none disabled:opacity-50"
             >
               Limpar
             </button>
           </div>
           <p className="mt-2 text-xs text-gray-600">
-            ⚠ Esta configuração fica apenas no seu navegador. Para ativação global, configure as
-            variáveis de ambiente <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
-            <code className="text-purple-300">OMNIROUTER_API_KEY</code> no servidor.
+            ⚠ Para ativação global no servidor, configure as variáveis de ambiente{' '}
+            <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
+            <code className="text-purple-300">OMNIROUTER_API_KEY</code> no Hostinger hpanel.
           </p>
         </div>
 

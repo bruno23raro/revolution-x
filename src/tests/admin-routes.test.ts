@@ -43,6 +43,7 @@ jest.mock('@/lib/prisma', () => {
     agentMemory: {
       upsert: jest.fn(),
       findMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
     $executeRaw: jest.fn().mockResolvedValue(0),
   };
@@ -62,6 +63,7 @@ const { GET: tasksGET } = require('../../app/api/admin/tasks/route');
 const { GET: taskByIdGET, POST: taskByIdPOST } = require('../../app/api/admin/tasks/[id]/route');
 const { GET: memoryGET, POST: memoryPOST } = require('../../app/api/admin/memory/route');
 const { GET: chatGET, POST: chatPOST } = require('../../app/api/admin/chat/route');
+const { GET: aiConfigGET, POST: aiConfigPOST, DELETE: aiConfigDELETE } = require('../../app/api/admin/ai-config/route');
 
 // ── fixtures de usuário ───────────────────────────────────────────────────────
 const ADMIN = { id: 'user-admin', role: 'admin', organizationId: 'org-admin', email: 'admin@x.com' };
@@ -582,5 +584,127 @@ describe('POST /api/admin/chat (SSE)', () => {
     const failUpd = prisma.task.update.mock.calls.find((c) => c[0].data.status === 'failed');
     expect(failUpd).toBeDefined();
     expect(failUpd[0].data.errorText).toContain('generation boom');
+  });
+});
+
+// ============================================================================
+// GET /api/admin/ai-config
+// ============================================================================
+describe('GET /api/admin/ai-config', () => {
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await aiConfigGET(adminReq('/api/admin/ai-config'));
+    expect(res.status).toBe(401);
+  });
+
+  it('200 sem config salva → configured=false', async () => {
+    asNoAdmin();
+    prisma.agentMemory.findMany = jest.fn().mockResolvedValue([]);
+    const res = await aiConfigGET(adminReq('/api/admin/ai-config'));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ configured: false, baseUrl: null, model: null });
+  });
+
+  it('200 com config salva → retorna baseUrl e model, NUNCA apiKey', async () => {
+    asNoAdmin();
+    // O Prisma retorna memoryKey/valueJson; listMemory mapeia para key/value.
+    // O mock simula a resposta crua do banco.
+    prisma.agentMemory.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'mem-1',
+        organizationId: 'org-admin',
+        userId: 'user-admin',
+        kind: 'preference',
+        memoryKey: 'ai_config',
+        valueJson: { baseUrl: 'https://api.openai.com', apiKey: 'sk-SECRET', model: 'gpt-4o' },
+        supersededAt: null,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    const res = await aiConfigGET(adminReq('/api/admin/ai-config'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.configured).toBe(true);
+    expect(json.baseUrl).toBe('https://api.openai.com');
+    expect(json.model).toBe('gpt-4o');
+    expect(json.apiKey).toBeUndefined(); // segurança: chave nunca retorna
+  });
+});
+
+// ============================================================================
+// POST /api/admin/ai-config
+// ============================================================================
+describe('POST /api/admin/ai-config', () => {
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await aiConfigPOST(
+      adminReq('/api/admin/ai-config', { method: 'POST', body: { baseUrl: 'x', apiKey: 'y' } }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('400 sem baseUrl ou apiKey', async () => {
+    asNoAdmin();
+    const res = await aiConfigPOST(
+      adminReq('/api/admin/ai-config', { method: 'POST', body: { apiKey: 'sk-1' } }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('baseUrl');
+  });
+
+  it('400 URL inválida', async () => {
+    asNoAdmin();
+    const res = await aiConfigPOST(
+      adminReq('/api/admin/ai-config', { method: 'POST', body: { baseUrl: 'nao-e-url', apiKey: 'sk-1' } }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('URL válida');
+  });
+
+  it("200 salva config no DB — apiKey não retorna na resposta", async () => {
+    asNoAdmin();
+    const res = await aiConfigPOST(
+      adminReq('/api/admin/ai-config', {
+        method: 'POST',
+        body: { baseUrl: 'https://api.openai.com', apiKey: 'sk-test-123', model: 'gpt-4o' },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    const arg = prisma.agentMemory.upsert.mock.calls[0][0];
+    // A chave composta do Prisma é gerada automaticamente: organizationId_userId_kind_memoryKey
+    expect(arg.where.organizationId_userId_kind_memoryKey).toEqual({
+      organizationId: 'org-admin',
+      userId: 'user-admin',
+      kind: 'preference',
+      memoryKey: 'ai_config',
+    });
+    // saveMemory usa jsonSafe(value) → campo fica em update.valueJson e create.valueJson
+    expect(arg.update.valueJson.baseUrl).toBe('https://api.openai.com');
+    expect(arg.update.valueJson.apiKey).toBe('sk-test-123');
+    expect(arg.update.valueJson.model).toBe('gpt-4o');
+  });
+});
+
+// ============================================================================
+// DELETE /api/admin/ai-config
+// ============================================================================
+describe('DELETE /api/admin/ai-config', () => {
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await aiConfigDELETE(adminReq('/api/admin/ai-config', { method: 'DELETE' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('200 remove configuração do DB', async () => {
+    asNoAdmin();
+    prisma.agentMemory.deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const res = await aiConfigDELETE(adminReq('/api/admin/ai-config', { method: 'DELETE' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    const arg = prisma.agentMemory.deleteMany.mock.calls[0][0];
+    expect(arg.where.memoryKey).toBe('ai_config');
+    expect(arg.where.organizationId).toBe('org-admin');
+    expect(arg.where.userId).toBe('user-admin');
   });
 });

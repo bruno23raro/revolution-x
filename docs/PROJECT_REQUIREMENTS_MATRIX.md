@@ -4,6 +4,26 @@
 > evidência objetiva. Estados: `implementado` / `testado-local` /
 > `validado-staging` / `aplicado-producao` / `validado-producao`.
 
+> ⚠️ **CORREÇÃO DE ESCOPO (2026-10-18)** — Os itens §5 (Ponte local Claude Code)
+> e §11 (Inventário MCP/CLI) da reconstrução eram **ferramentas de desenvolvimento**,
+> não funcionalidades do produto Revolution X. Reclassificados como **FORA DE ESCOPO**.
+> §12 (Hub de integrações) e §13 (Hub Meta) permanecem **em escopo**.
+> G12 foi dividido em G12a (fora) e G12b (em escopo).
+>
+> **ATUALIZAÇÃO 2026-10-18 (PROMPT MESTRE recebido):** O texto original do PROMPT MESTRE
+> foi recebido e analisado. As seções §3–§16 da seção B eram uma **reconstrução inventada**
+> (os números NÃO correspondem ao documento real). O PROMPT MESTRE tem §1–§8 reais —
+> ver seção E para o estado de cada requisito real.
+>
+> **REFINAMENTO (automação de navegador):** A seção B marcava o "§10 Automação de navegador"
+> como FORA DE ESCOPO "sem requisito explícito de produto". Isso foi **corrigido**: o
+> PROMPT MESTRE REAL (§2 "Sem API / Avançado", §3.1 e §3.3) EXIGE explicitamente
+> *scrapers, QR Code e browser automation* como métodos de produto para logins e
+> automações "sem API", com avisos claros de risco. São duas camadas distintas:
+> - **Browser automation como MÉTODO da seção "Sem API / Avançado"** = **EM ESCOPO**
+>   (funcionalidade real de produto, pendente de autorização; exige avisos de risco).
+> - **Playwright/MCP como FERRAMENTA do engenheiro de IA** = permanece **FORA DE ESCOPO**.
+
 ## A. Roadmap de 12 FASES (README.md:6-19)
 
 | Fase | Requisito | Módulo/evidência | Teste | Estado local | Estado prod | Pendência |
@@ -30,14 +50,14 @@
 | --- | --- | --- | --- | --- | --- |
 | §3 | UI chat admin | `app/admin/chat/page.tsx` | admin-routes 34 + webhooks 11 | implementado/testado-local/preview (F) | G1 **FECHADO** |
 | §4 | OmniRouter | `src/ai/omniRouter.ts` | omni-router 6 | implementado/testado-local | prod: credencial |
-| §5 | Ponte local Claude Code | ausente | — | ❌ | escopo novo (alto) |
+| §5 | Ponte local Claude Code | ausente | — | ❌ | **FORA DE ESCOPO** (ferramenta de dev, não produto) |
 | §7 | Memória agente | `AgentMemory` + injeção (`chat/route.ts:144-160`) | task-queue 19 + rls 10 | implementado/testado-local/**aplicado-produção** (014) | 014 ✅ em prod |
 | §8 | Progresso % SSE real | `taskQueue.ts:139-148` | assert 33→66→100 (rls) + admin-routes | implementado/testado-local | fila 014 ✅ em prod |
 | §9 | Fila persistente | `src/lib/taskQueue.ts` | 19 + 10 + admin-routes (list/503/409) | implementado/testado-local/**aplicado-produção** | 014 ✅ em prod |
-| §10 | Automação navegador | ausente (sem Playwright) | — | ❌ | escopo novo (alto) |
-| §11 | Inventário MCP/CLI | ausente | — | ❌ | escopo novo (baixo-médio) |
-| §12 | Hub de integrações | ausente | — | ❌ | escopo novo (médio) |
-| §13 | Hub Meta | parcial (OAuth/webhook/processor + claim atômico) | 8 + 6 + webhooks-meta 11 | implementado-parcial/testado-local | segredos + refresh token + UI; **015 ✅ em prod** |
+| §10 | Automação navegador (reconstrução — ver seção E) | ausente (sem Playwright) | — | ⚠️ reavaliado | **EM ESCOPO**: "Sem API / Avançado" (§2/§3.1/§3.3 real) exige scrapers/QR/browser automation c/ avisos de risco. Só o Playwright-MCP (ferramenta de dev) continua FORA. |
+| §11 | Inventário MCP/CLI | ausente | — | ❌ | **FORA DE ESCOPO** (ferramenta interna de dev, não exposta ao usuário) |
+| §12 | Hub de integrações | ausente | — | ❌ | ✅ **EM ESCOPO** (P2-4) — funcionalidade real: status por provider + health + config per-tenant |
+| §13 | Hub Meta | parcial (OAuth/webhook/processor + claim atômico) | 8 + 6 + webhooks-meta 11 | implementado-parcial/testado-local | ✅ **EM ESCOPO** (P2-5) — segredos + refresh token + UI; **015 ✅ em prod** |
 | §14 | Segurança | RLS FORCE + secrets no backend | 41/41 + 21 + admin-routes (authz negativa) | implementado/validado-staging | rotação credencial |
 | §15 | Multi-tenant prod | 007/008/009 + 014 + 015 + GUC | 41/41 + 10/10 | **aplicado-producao** (007–015) | rotação credencial |
 | §16 | Testes por módulo | forte em `src/` + rotas admin/webhook | **185/185 (18 suítes)** | parcial → melhorado | G7, G12 |
@@ -57,11 +77,96 @@
 | G9 | rascunhos locais sem gitignore | **FECHADO** (A) |
 | G10 | Zernio morto | **DECIDIDO**: manter (MCP zernio ativo na sessão; uso futuro). Sem remoção. |
 | G11 | `REVOLUTION_X_MEMORY.md` obsoleto | **FECHADO** (A) — atualizado para 2026-10-15 |
-| G12 | prompt-mestre §5/§10/§11/§12/§13 | **ABERTO** (escopo novo P3) |
+| G12 | prompt-mestre §5/§10/§11/§12/§13 | **REVISADO 2026-10-18** — §5/§11 = FORA (ferramentas de dev); §10 reavaliado: automação "Sem API" = **EM ESCOPO** (ver seção E §2/§3.1/§3.3); §12/§13 = **ABERTO** (em escopo) |
 
 ## D. Item de dependência humana restante
 
-O texto integral do PROMPT MESTRE (§1–§16) **não está em nenhum arquivo do
-repositório nem nos docs** (verificado por grep). Se o usuário fornecer o
-texto exato, esta matriz será reconciliada seção a seção; até lá, as linhas
-acima são o escopo recuperável com evidência.
+**ATUALIZADO 2026-10-18:** O texto integral do PROMPT MESTRE (§1–§8) foi recebido
+e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito real.
+
+## E. PROMPT MESTRE — Requisitos reais (§1–§8, texto original recebido 2026-10-18)
+
+> O texto original foi fornecido pelo usuário em 2026-10-18. A seção B acima
+> (com §3–§16) continha **números inventados** por reconstrução a partir de grep;
+> os números reais do PROMPT MESTRE são §1–§8.
+
+### E.1 — Funcionalidades Obrigatórias (§3.1–§3.8)
+
+| Requisito | Descrição | Estado | Evidência |
+| --- | --- | --- | --- |
+| **3.1a** | Login Instagram via API oficial | ❌ ausente | — |
+| **3.1b** | Login Instagram sem API | ❌ ausente | — |
+| **3.1c** | Login Facebook via API oficial | ❌ ausente | — |
+| **3.1d** | Login Facebook sem API | ❌ ausente | — |
+| **3.1e** | Login WhatsApp Business via API Meta | 🟡 parcial | OAuth existe (`app/api/auth/callback/meta`), inerte sem `META_*` credenciais |
+| **3.1f** | Login WhatsApp Business via QR Code | ❌ ausente | — |
+| **3.1g** | Login TikTok via API | ❌ ausente | — |
+| **3.1h** | Login TikTok sem API | ❌ ausente | — |
+| **3.2a** | Disparo em massa WhatsApp via API | 🟡 backend (F1) | `/api/whatsapp/send` + `runMassSend` (limite 500, fila é melhor esforço); **UI de disparo pendente** |
+| **3.2b** | Disparo em massa WhatsApp via QR | ❌ ausente | — |
+| **3.2c** | Templates oficiais sincronizados com Meta | 🟡 backend (F1) | `/api/whatsapp/templates` GET/POST + `listWhatsAppTemplates`/`createWhatsAppTemplate`; **UI pendente** |
+| **3.2d** | Selecionar participantes de grupo | ❌ ausente | — |
+| **3.2e** | Extrair contatos de grupos | ❌ ausente | — |
+| **3.2f** | Extrair contatos de conversas não salvas | ❌ ausente | — |
+| **3.2g** | Chatbot/robô configurável (fluxos, horários) | 🟡 backend (F1) | motor `evaluateChatbot` (regras/horário/IA) + CRUD `/api/whatsapp/chatbot`; **UI visual pendente** |
+| **3.2h** | Automação de respostas automáticas | ❌ ausente | — |
+| **3.3a** | Disparo em massa Instagram | ❌ ausente | — |
+| **3.3b** | Agendamento posts/stories/reels Instagram | 🟡 stub | `/publisher` (página stub, sem funcionalidade real) |
+| **3.3c** | Automações: seguir seguidores/interações | ❌ ausente | — |
+| **3.3d** | Extrair contatos de seguidores (scraping) | ❌ ausente | ⚠️ pode violar ToS do Instagram; exige decisão de risco |
+| **3.4a** | Agendamento posts Facebook | ❌ ausente | — |
+| **3.4b** | Anúncios Marketplace | ❌ ausente | — |
+| **3.4c** | Anúncios em grupos (delay configurável) | ❌ ausente | — |
+| **3.5a** | Agendamento TikTok | ❌ ausente | — |
+| **3.5b** | Tracking campanhas TikTok | ❌ ausente | — |
+| **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ❌ ausente | — |
+| **3.6b** | Tracking equivalente TikTok | ❌ ausente | — |
+| **3.7a** | Integração Meta API (Facebook+IG+WhatsApp) | 🟡 backend (F1) | OAuth + webhook Meta + **refresh-token** (`/api/integrations/meta/refresh-token`) + **health** (`/api/integrations/health`); UI avançada pendente |
+| **3.7b** | Integração n8n | 🟡 backend (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound; **fluxo "Integrar" na UI pendente** |
+| **3.7c** | Integração Zapier/Make/webhooks | 🟡 backend (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry; **fluxo "Integrar" na UI pendente** |
+| **3.7d** | Hub de integrações com botão "Integrar" + status | 🟡 backend (F1) | `/integrations` (UI atual) + backend: config GET/POST/DELETE + health + refresh-token; **fluxo guiado "Integrar" na UI pendente** |
+| **3.8a** | Chatbot visual configurável (fluxos/condições/variáveis) | ❌ ausente | — |
+| **3.8b** | Automações gerais de resposta | ❌ ausente | — |
+
+### E.2 — Princípios de UX (§4) — requisitos de implementação
+
+| Requisito | Estado |
+| --- | --- |
+| Interface simples, 1 clique, botões grandes | ✅ (design atual usa cards/botões limpos) |
+| Fluxos guiados (OAuth, QR Code, wizard) | 🟡 parcial (Meta OAuth existe; QR Code e wizards ausentes) |
+| Feedback visual imediato (loading/sucesso/erro) | ✅ implementado em páginas existentes |
+| Separação visual "API Oficial" vs "Sem API" | 🟡 backend (F1) — registry `providers.ts` declara `layer` (official/sem_api); **UI de separação visual pendente** |
+| Avisos de risco nas funcionalidades sem API | 🟡 backend (F1) — `riskNote` (ToS/LGPD/bloqueio) já por item "Sem API"; **banner de risco na UI pendente** |
+
+### E.3 — Design Frontend (§5)
+
+| Requisito | Estado |
+| --- | --- |
+| Paleta lilás + preto + branco | ✅ (lilás/purple já em uso no tema atual) |
+| Glassmorphism, gradientes, animações leves | ✅ parcialmente (estilo atual com bordas suaves) |
+| Layout responsivo desktop + mobile | ✅ (Tailwind responsive classes) |
+| Componentes consistentes (cards, botões, modais, sidebars) | ✅ (AppNav + cards existentes) |
+
+### E.4 — Arquitetura (§6)
+
+| Requisito | Estado |
+| --- | --- |
+| Next.js + TypeScript + Tailwind + PostgreSQL + Prisma | ✅ implementado |
+| Fila de jobs (BullMQ/Inngest ou similar) | 🟡 `taskQueue.ts` (fila interna, não BullMQ) — funcional, sem escala horizontal |
+| Separação API oficial vs browser automation | ❌ ausente (não há serviços de browser automation) |
+| Logs detalhados + monitoramento de erros | 🟡 logs em console; sem sistema de monitoramento dedicado |
+
+### E.5 — Síntese de pendências reais do produto
+
+| Prioridade | Item | Complexidade |
+| --- | --- | --- |
+| **P0 [HUMANO]** | Credenciais `META_*`, `EMAIL_*`, `OMNIROUTER_*` no hpanel | Baixa (configuração) |
+| **P1** | UI `/crm/pipelines` (já criada nesta sessão ✅) | Baixa (concluída) |
+| **P1** | Validar URL de onboarding WhatsApp (G7) | Baixa |
+| **P2-4 (§3.7d)** | Hub de integrações: refresh token + health check **prontos no backend (F1)**; fluxo guiado "Integrar" na UI pendente | Média (UI) |
+| **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health **prontos no backend (F1)**; onboarding UI + status detalhado pendentes | Média (UI) |
+| **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot **prontos no backend (F1)**; UI de disparo pendente | Média (UI) |
+| **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks **prontas no backend (F1)**; UI "Integrar" pendente | Baixa (UI) |
+| **P2-8 (§3.3/3.4/3.5)** | Instagram/Facebook/TikTok: agendamento + automações | Alta |
+| **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok) | Alta |
+| **P3 (§3.8)** | Chatbot visual configurável | Alta |

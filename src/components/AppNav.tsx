@@ -47,6 +47,7 @@ const ADMIN: NavItem[] = [
   { label: 'WhatsApp', href: '/whatsapp' },
   { label: 'Instagram', href: '/instagram' },
   { label: 'Facebook', href: '/facebook' },
+  { label: 'TikTok', href: '/tiktok' },
   { label: 'Config', href: '/admin/settings' },
 ];
 

@@ -571,13 +571,13 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 
 | Bloco real | O que pede | Estado no código (2026-10-18) |
 |---|---|---|
-| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 WhatsApp (Meta) parcial; IG/FB agendamento ✅ (F2); TikTok ausente |
+| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 WhatsApp (Meta) parcial; IG/FB/TikTok agendamento-publicação ✅ (F2); TikTok Ads/scraping pendentes |
 | **§3.1** Logins por canal | 7-8 métodos de login (API + sem API p/ cada canal) | 🟡 WhatsApp-Meta parcial; demais ❌ |
 | **§3.2** WhatsApp Business | Disparo em massa, templates, grupos, chatbot | 🟡 webhook+processor; UI/templates/chatbot ❌ |
 | **§3.3** Instagram | Disparo em massa, agendamento, automações, scraping | 🟡 agendamento ✅ (F2, `/instagram` + `/api/instagram/publish`); massa/automações/scraping pendentes |
 | **§3.4** Facebook | Agendamento, Marketplace, grupos | 🟡 agendamento ✅ (F2, `/facebook` + `/api/facebook/publish`); Marketplace/grupos declarados (Sem API/Avançado) |
-| **§3.5** TikTok | Agendamento + tracking | ❌ |
-| **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | ❌ |
+| **§3.5** TikTok | Agendamento + tracking | 🟡 publicação imediata + tracking de vídeo ✅ (F2, `/tiktok` + `/api/tiktok/{publish,status,analytics}`); agendamento = intenção persistida (execução F4); Ads ❌ (F3) |
+| **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | 🟡 vídeo orgânico TikTok ✅ (F2); Gerenciador de Anúncios (Meta + TikTok Ads) ❌ (F3) |
 | **§3.7** Integrações | Meta (obrigatória), n8n, Zapier/Make/webhooks; hub "Integrar" + status | 🟡 Meta parcial; n8n/Zapier/Make ❌ (P2-4) |
 | **§3.8** Automações/Chatbot | Chatbot visual configurável + automações gerais | ❌ |
 | **§4** UX 1-clique | Botões grandes, fluxos guiados, separação API vs Sem API, avisos de risco | 🟡 parcial |
@@ -677,6 +677,51 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 - **P0 [HUMANO] permanece:** `META_*` no hpanel + Página FB vinculada via OAuth;
   sem isso a rota degrada honestamente (409/503).
 
+### O que mudou em 2026-10-18 (FASE 2 — TikTok)
+
+- **FASE 2, slice 3 concluída:** publicação e tracking de **vídeos do TikTok
+  pela Content Posting API oficial** (`open.tiktokapis.com`). Serviço puro-TS
+  `src/integrations/tiktok/tiktokPublisher.ts` (**não lança** — `ok`/`error`):
+  publicação imediata em **1 chamada** (`POST /v2/post/publish/video/init/`,
+  `source_info.source=PULL_FROM_URL` com `video_url`; o servidor do TikTok puxa
+  o vídeo) → devolve `publish_id`. A API **não tem `scheduled_start_time`**
+  (diferente da Meta), então o "agendamento" persiste apenas a **intenção**
+  (helpers puros `appendPendingTikTokPost`/`markPendingTikTokPost` + chave de
+  AgentMemory `pending:tiktok_posts`); a **execução em hora marcada é da FASE 4**
+  (fila de jobs atrasados). Tracking: `getTikTokPostStatus`
+  (`POST /v2/post/publish/status/fetch/`) e `getTikTokVideoAnalytics`
+  (`GET /v2/post/publish/video/data/?publish_ids=[…]`, máx. 5; a query é um
+  array JSON de strings — `encodeURIComponent(JSON.stringify(ids))`).
+- **Resolver** `src/integrations/tiktok/resolveAccess.ts`:
+  `resolveTenantTikTokAccess(client, scope)` lê `integration:tiktok` do
+  **AgentMemory (Prisma)** — provider `tiktok` (camada oficial,
+  `clientKey`/`clientSecret`/`accessToken`, s/ OAuth) — e degrada em
+  `not_connected`/`no_token`/`queue_unavailable` (503 na rota). Também expõe
+  `listPendingTikTokPosts`/`addPendingTikTokPost` (PENDING_KEY).
+- **Rotas novas** (todas `force-dynamic`, auth 401, sem segredos no corpo de
+  erro): `POST /api/tiktok/publish` (publicar agora → `publishId`; ou
+  `scheduledAt` → persiste intenção, `ok:{scheduled:true,intentId,note}`;
+  409/503 na resolução; 502 em falha de API), `GET /api/tiktok/status?publishId=`
+  → `{ok,publishId,status}` e `GET /api/tiktok/analytics?publishIds=a,b` →
+  `{ok,items[]}`.
+- **"Sem API / Avançado":** provider `scraper_tiktok` (camada sem_api) — o
+  TikTok **não expõe** coleta de seguidores/vídeos pela API oficial; o
+  produto declara o método (campo `proxy` opcional) e **não executa** o
+  scraping não-oficial (executor ainda ausente), com `RiskBanner` fixando o
+  risco (ToS, bloqueio, LGPD/GDPR).
+- **UI nova** `app/tiktok/page.tsx` (lilás + preto + branco): card de conexão
+  (status real do provider `tiktok`), card "Publicar/agendar vídeo" (API
+  oficial, `ApiBadge layer="official"`), card "Tracking de vídeos" (estado +
+  métricas) e card de **scraping** com `ApiBadge layer="sem_api"` +
+  `RiskBanner`. Link **TikTok** no AppNav admin.
+- **Testes:** 15 novos em `tiktokPublisher.test.ts` (incl. regressão do
+  encoding JSON de `publish_ids`). Suíte total **331/331** (25 suítes);
+  `tsc` 0 erros; `next build` verde (`/tiktok` estático;
+  `/api/tiktok/{publish,status,analytics}` nas rotas dinâmicas).
+- **Tracking de campanhas pagas (TikTok Ads / Gerenciador de Anúncios)** e
+  o executor real do agendamento ficam para as **FASES 3 e 4**,
+  respectivamente (estado honesto na matriz).
+
 ---
 
 ## APÊNDICE A — Comandos para Reproduzir
@@ -725,9 +770,14 @@ curl -s -o /dev/null -w "%{http_code}" https://revolutionx.com.br/
 *Auditoria concluída em 2026-10-17. Nenhuma funcionalidade de produção foi modificada por ela. Todos os dados são baseados em evidências executadas ou arquivos lidos.*
 
 **Próximo passo (2026-10-18):** execução autônoma contínua. **FASE 1 (backend + UI)
-concluída** e **FASE 2, slices 1–2 concluídas**: agendamento/publicação via API oficial
-da Meta para **Instagram** (`/instagram` + `/api/instagram/publish`) e **Facebook**
-(`/facebook` + `/api/facebook/publish`, com Marketplace/grupos declarados "Sem API/
-Avançado"); suíte 316/316, tsc 0, build verde. **A seguir:** FASE 2 · slice 3
-(TikTok: agendamento de posts + tracking via API oficial), depois Fases 3–4 do
-PROMPT MESTRE.
+concluída** e **FASE 2, slices 1–3 concluídas**: agendamento/publicação via API
+oficial para **Instagram** (`/instagram` + `/api/instagram/publish`),
+**Facebook** (`/facebook` + `/api/facebook/publish`, com Marketplace/grupos
+declarados "Sem API/Avançado") e **TikTok** (`/tiktok` +
+`/api/tiktok/{publish,status,analytics}` — publicação imediata + tracking de
+vídeo; agendamento persiste intenção, execução na FASE 4); suíte 331/331,
+tsc 0, build verde. **A seguir:** FASE 3 do PROMPT MESTRE (tracking em tempo
+real — Meta Ad Manager + TikTok Ads; executores "Sem API/Avançado" com
+aviso de risco; chatbot visual completo; n8n/Zapier/Make/webhooks), depois a
+FASE 4 (fila de jobs: BullMQ/Inngest — incluindo o executor do
+agendamento de TikTok — e testes de fluxo principal).

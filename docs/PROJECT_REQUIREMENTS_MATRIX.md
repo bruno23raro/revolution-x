@@ -100,8 +100,8 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.1d** | Login Facebook sem API | ❌ ausente | — |
 | **3.1e** | Login WhatsApp Business via API Meta | 🟡 parcial | OAuth existe (`app/api/auth/callback/meta`), inerte sem `META_*` credenciais |
 | **3.1f** | Login WhatsApp Business via QR Code | ❌ ausente | — |
-| **3.1g** | Login TikTok via API | ❌ ausente | — |
-| **3.1h** | Login TikTok sem API | ❌ ausente | — |
+| **3.1g** | Login TikTok via API | 🟡 declarado (F2) | provider `tiktok` no registry (clientKey/secret + accessToken do usuário em AgentMemory, probe `keys`); TikTok fornece chaves, não há fluxo OAuth de conta |
+| **3.1h** | Login TikTok sem API | 🟡 declarado (F2) | provider `scraper_tiktok` + `RiskBanner` em `/tiktok` (executor ausente) |
 | **3.2a** | Disparo em massa WhatsApp via API | ✅ backend+UI (F1) | `/api/whatsapp/send` + card de disparo em `/whatsapp` (números→`to[]`, texto ou template; total/sent/failed/tracked) |
 | **3.2b** | Disparo em massa WhatsApp via QR | ❌ ausente | — |
 | **3.2c** | Templates oficiais sincronizados com Meta | ✅ backend+UI (F1) | `/api/whatsapp/templates` GET/POST + listagem/criação em `/whatsapp` |
@@ -117,10 +117,10 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.4a** | Agendamento posts Facebook | ✅ backend+UI (F2) | `facebookPublisher` (`POST /{page}/feed` + `scheduled_publish_time`, 10 min–75 d) + `POST /api/facebook/publish` + UI em `/facebook` |
 | **3.4b** | Anúncios Marketplace | 🟡 declarado (Sem API/Avançado) | card em `/facebook` + `RiskBanner` (não há API oficial de Marketplace); **executor ausente** |
 | **3.4c** | Anúncios em grupos (delay configurável) | 🟡 declarado (Sem API/Avançado) | idem 3.4b (automação de navegador declarada, sem executor) |
-| **3.5a** | Agendamento TikTok | ❌ ausente | — |
-| **3.5b** | Tracking campanhas TikTok | ❌ ausente | — |
+| **3.5a** | Agendamento TikTok | 🟡 parcial (F2) | publicação imediata oficial `publishTikTokVideo` (PULL_FROM_URL); em hora marcada = intenção persistida em AgentMemory (`pending:tiktok_posts`, execução FASE 4 — API oficial não tem horário) + UI `/tiktok` |
+| **3.5b** | Tracking campanhas TikTok | 🟡 parcial (F2) | tracking de **vídeos publicados** via `/api/tiktok/analytics` (plays/curtidas/comentários) + `/api/tiktok/status`; campanhas **pagas** (TikTok Ads) ausente → FASE 3 |
 | **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ❌ ausente | — |
-| **3.6b** | Tracking equivalente TikTok | ❌ ausente | — |
+| **3.6b** | Tracking equivalente TikTok | 🟡 tracking de vídeo (F2) | tracking de vídeo orgânico ✅ via `/api/tiktok/analytics` + `/api/tiktok/status`; Gerenciador de Anúncios (TikTok Ads) em tempo real = FASE 3 |
 | **3.7a** | Integração Meta API (Facebook+IG+WhatsApp) | ✅ backend+UI (F1) | OAuth (início `GET /api/auth/meta` + callback) + webhook + refresh-token + health + status real em `/integrations` |
 | **3.7b** | Integração n8n | ✅ backend+UI (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound + form genérico "Integrar" em `/integrations` |
 | **3.7c** | Integração Zapier/Make/webhooks | ✅ backend+UI (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry + form genérico "Integrar" em `/integrations` |
@@ -167,6 +167,6 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health + status detalhado + início OAuth — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot — **CONCLUÍDO (F1, backend+UI em `/whatsapp`)** | Concluído |
 | **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
-| **P2-8 (§3.3/3.4/3.5)** | Instagram agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); Facebook agendamento ✅ (F2, `/api/facebook/publish` + `/facebook`); TikTok pendente; Marketplace/grupos declarados (Sem API/Avançado) | Média (alta p/ TikTok) |
-| **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok) | Alta |
+| **P2-8 (§3.3/3.4/3.5)** | Instagram agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); Facebook agendamento ✅ (F2, `/api/facebook/publish` + `/facebook`); TikTok publicação imediata + tracking de vídeo ✅ (F2, `/api/tiktok/{publish,status,analytics}` + `/tiktok`; agendamento em hora marcada = intenção persistida → FASE 4); Marketplace/grupos declarados (Sem API/Avançado) | Média |
+| **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok Ads) em tempo real → FASE 3; tracking de vídeo orgânico TikTok ✅ (F2) | Alta |
 | **P3 (§3.8)** | Chatbot visual configurável | Alta |

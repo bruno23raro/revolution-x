@@ -39,6 +39,8 @@ export interface ProviderDef {
   authField?: string;
   /** Header em que a credencial é enviada no probe. */
   authHeader?: string;
+  /** Passos guiados ("como conectar"), renderizados no card do hub. */
+  guidance?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -121,41 +123,56 @@ export const PROVIDERS: ProviderDef[] = [
     id: 'n8n',
     name: 'n8n',
     layer: 'official',
-    summary: 'Webhooks de saída/entrada e disparo de workflows do n8n (instância própria ou nuvem).',
+    summary:
+      'Disparo de workflows do n8n (instância própria ou nuvem): eventos do app vão por POST para o webhook do seu workflow.',
     fields: [
       { key: 'baseUrl', label: 'URL base da instância', required: true, placeholder: 'https://n8n.suaempresa.com' },
+      { key: 'webhookPath', label: 'Caminho do webhook (workflow)', required: true, placeholder: 'ex.: revolution-x/lead' },
       { key: 'apiKey', label: 'API Key (X-Api-Key)', secret: true },
     ],
     probe: 'endpoint',
     endpointField: 'baseUrl',
     authField: 'apiKey',
     authHeader: 'X-Api-Key',
+    guidance: [
+      'No n8n, crie um workflow com o nó "Webhook" (método POST) e publique (produção).',
+      'Cole a URL base da instância e o caminho do webhook do nó (campo "Caminho do webhook").',
+      'Se a instância usa API Key, preencha o campo opcional — vai no header X-Api-Key.',
+    ],
   },
   {
     id: 'zapier',
     name: 'Zapier',
     layer: 'official',
-    summary: 'Catch Hook / webhooks para disparar Zaps e receber eventos.',
+    summary:
+      'Disparo de Zaps via "Webhooks by Zapier → Catch Hook": eventos do app vão por POST para a URL do hook.',
     fields: [
       { key: 'webhookUrl', label: 'URL do Catch Hook / Webhook', required: true, placeholder: 'https://hooks.zapier.com/...' },
       { key: 'apiKey', label: 'API Key', secret: true },
     ],
-    probe: 'endpoint',
-    endpointField: 'webhookUrl',
-    authField: 'apiKey',
-    authHeader: 'Authorization',
+    probe: 'keys',
+    guidance: [
+      'No Zapier, crie um Zap com o trigger "Webhooks by Zapier → Catch Hook".',
+      'Cole a URL do Catch Hook no campo acima (ela já é o segredo — sem API Key necessária).',
+      'Teste: o botão "Testar envio" dispara um evento revolution-x.test por POST JSON.',
+    ],
   },
   {
     id: 'make',
     name: 'Make (Integromat)',
     layer: 'official',
-    summary: 'Webhooks de entrada/saída para cenários Make.',
+    summary:
+      'Disparo de cenários Make via módulo "Custom Webhook": eventos do app vão por POST para a URL do cenário.',
     fields: [
       { key: 'webhookUrl', label: 'URL do Webhook', required: true, placeholder: 'https://hook.make.com/...' },
-      { key: 'hmacKey', label: 'HMAC Key', secret: true },
+      { key: 'hmacKey', label: 'HMAC Key (assinatura opcional)', secret: true },
     ],
-    probe: 'endpoint',
-    endpointField: 'webhookUrl',
+    probe: 'keys',
+    guidance: [
+      'No Make, crie um cenário com o módulo "Custom Webhook" (Trigger) e publique.',
+      'Cole a URL do webhook no campo acima.',
+      'Opcional: ative "Webhook signing" no Make, copie a HMAC Key para cá — os envios passam a assinar o corpo (X-Hook-Signature, HMAC-SHA256).',
+    ],
   },
   {
     id: 'resend',
@@ -169,6 +186,23 @@ export const PROVIDERS: ProviderDef[] = [
     probe: 'keys',
   },
   {
+    id: 'webhook_outbound',
+    name: 'Webhook de saída (genérico)',
+    layer: 'official',
+    summary:
+      'Envia eventos estruturados do app para qualquer endpoint HTTP(S) seu ({ source, event, payload, sentAt }) — sua própria automação ou de terceiros.',
+    fields: [
+      { key: 'webhookUrl', label: 'URL do webhook', required: true, placeholder: 'https://api.suaempresa.com/webhooks/revolution' },
+      { key: 'secret', label: 'Secret de assinatura (opcional)', secret: true },
+    ],
+    probe: 'keys',
+    guidance: [
+      'Aponte para qualquer endpoint que aceite POST JSON.',
+      'O evento chega como { source:"revolution-x", event, payload, sentAt, organizationId? }.',
+      'Com secret definido, o corpo é assinado em X-Webhook-Signature (HMAC-SHA256) — verifique no seu receptor.',
+    ],
+  },
+  {
     id: 'webhook_inbound',
     name: 'Webhook de entrada (n8n/Zapier/Make)',
     layer: 'official',
@@ -176,6 +210,10 @@ export const PROVIDERS: ProviderDef[] = [
       'Segredo compartilhado que autoriza eventos recebidos de sua automação (endpoint /api/webhooks/inbound).',
     fields: [{ key: 'secret', label: 'Secret compartilhado', secret: true, required: true }],
     probe: 'keys',
+    guidance: [
+      'Endpoint que RECEBE: POST /api/webhooks/inbound com headers X-Organization-Id + X-Webhook-Secret.',
+      'Defina o MESMO secret na sua automação (n8n/Zapier/Make) para enviar eventos para cá.',
+    ],
   },
 
   // ===== Sem API / Avançado =====
@@ -224,6 +262,10 @@ export const PROVIDERS: ProviderDef[] = [
 export function providerById(id: string): ProviderDef | undefined {
   return PROVIDERS.find((p) => p.id === id);
 }
+
+/** Provedores que executam eventos de SAÍDA (slice 3) — re-exportado por outboundExecutors. */
+export const OUTBOUND_PROVIDER_IDS = ['n8n', 'zapier', 'make', 'webhook_outbound'] as const;
+export type OutboundProviderId = (typeof OUTBOUND_PROVIDER_IDS)[number];
 
 export function providersByLayer(layer: Layer): ProviderDef[] {
   return PROVIDERS.filter((p) => p.layer === layer);

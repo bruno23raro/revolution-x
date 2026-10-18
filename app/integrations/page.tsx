@@ -13,7 +13,7 @@ import AppNav from '@/components/AppNav';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
 import HealthPill from '@/components/HealthPill';
-import { providersByLayer, type ProviderDef, type ProbeStatus } from '@/integrations/providers';
+import { providersByLayer, OUTBOUND_PROVIDER_IDS, type ProviderDef, type ProbeStatus } from '@/integrations/providers';
 import { useCallback, useEffect, useState } from 'react';
 
 interface MetaIntegration {
@@ -387,8 +387,10 @@ interface ProviderCardProps {
 function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: ProviderCardProps) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [exec, setExec] = useState<{ ok: boolean; msg: string } | null>(null);
   const hasForm = def.fields.length > 0;
   const missingRequired = hasForm ? def.fields.filter((f) => f.required && !values[f.key]) : [];
+  const isOutbound = (OUTBOUND_PROVIDER_IDS as readonly string[]).includes(def.id);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,6 +399,25 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
     onSave(def, value);
     setOpen(false);
     setValues({});
+  };
+
+  const testOutbound = async () => {
+    setExec({ ok: false, msg: 'Enviando evento de teste…' });
+    try {
+      const r = await fetch('/api/integrations/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: def.id, test: true }),
+      });
+      const d = await r.json().catch(() => ({} as { ok?: boolean; httpStatus?: number; error?: string; detail?: string }));
+      if (r.status === 409) setExec({ ok: false, msg: `Não configurado: ${d.detail ?? 'faltam campos do alvo'}.` });
+      else if (r.status === 503) setExec({ ok: false, msg: 'Banco/fila indisponível (503).' });
+      else if (r.ok && d.ok) setExec({ ok: true, msg: `Alvo respondeu HTTP ${d.httpStatus ?? '?'}.` });
+      else if (r.ok && d.error) setExec({ ok: false, msg: `Alvo falhou: ${d.error}${d.detail ? ` — ${d.detail}` : ''}.` });
+      else setExec({ ok: false, msg: `Falha (HTTP ${r.status}${d.detail ? ` — ${d.detail}` : ''}).` });
+    } catch {
+      setExec({ ok: false, msg: 'Falha de rede ao testar o envio.' });
+    }
   };
 
   return (
@@ -419,6 +440,19 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
         </div>
       )}
 
+      {def.guidance && (
+        <details className="mt-3 text-xs">
+          <summary className="cursor-pointer text-purple-300 hover:text-purple-200 select-none">
+            Como conectar (passos guiados)
+          </summary>
+          <ol className="mt-2 space-y-1 pl-5 list-decimal text-gray-400">
+            {def.guidance.map((g, i) => (
+              <li key={i}>{g}</li>
+            ))}
+          </ol>
+        </details>
+      )}
+
       {hasForm ? (
         <div className="mt-3">
           <div className="flex flex-wrap gap-2">
@@ -437,7 +471,20 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
                 Remover
               </button>
             )}
+            {isOutbound && configured && !admin && (
+              <button
+                onClick={() => void testOutbound()}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+              >
+                Testar envio
+              </button>
+            )}
           </div>
+          {exec && (
+            <p className={`mt-2 text-xs ${exec.ok ? 'text-emerald-400' : 'text-amber-300'}`}>
+              {exec.msg}
+            </p>
+          )}
           {open && (
             <form onSubmit={submit} className="mt-3 space-y-2">
               {def.fields.map((f) => (

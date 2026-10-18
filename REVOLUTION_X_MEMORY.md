@@ -16,7 +16,32 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-15)
+## ESTADO ATUAL (2026-10-18) — FASE 1 (backend + UI) concluída
+
+- **PROMPT MESTRE real** (§1–§8, multi-canal IG/FB/WhatsApp/TikTok) recebido; a
+  auditoria §3–§16 anterior era reconstrução inventada (corrigida). Correção de
+  escopo: P2-1/P2-3 (ferramentas de dev) FORA; P2-2 "Sem API" (browser automation)
+  EM ESCOPO como MÉTODO declarado c/ avisos de risco.
+- **FASE 1 backend**: 7 rotas (`/api/integrations/{config,health,meta/refresh-token}`,
+  `/api/whatsapp/{send,templates,chatbot}`, `/api/webhooks/inbound`) + serviços
+  `src/integrations/*` (registry `providers.ts`, chatbot `evaluateChatbot`, mass-send,
+  templates, config em AgentMemory c/ RLS).
+- **FASE 1 UI** (commit `ea70496`): `/integrations` (2 seções visuais
+  **API Oficial** roxo / **Sem API·Avançado** âmbar + `RiskBanner`, form "Integrar"
+  genérico, health check, refresh de token, status real da Meta) + `/whatsapp`
+  (disparo em massa, templates oficiais, chatbot configurável, card "Sem API" de
+  extração de contatos declarado) + `GET /api/auth/meta` (início do OAuth da Meta,
+  complementa o callback; degrada 503 honesto quando `META_*` ausentes).
+  Primitivas compartilhadas: `ApiBadge` / `RiskBanner` / `HealthPill`.
+- **Testes**: jest **22 suítes / 288 testes PASS**; `tsc` 0 erros; build verde.
+- **Dependência [HUMANO] (P0)**: `META_APP_ID/SECRET`, `EMAIL_*` (Resend) e
+  `OMNIROUTER_*` ainda no hpanel do Hostinger — a UI degrada de forma honesta
+  (503) até serem preenchidas; nenhum segredo em localStorage.
+- Docs `PROJECT_REQUIREMENTS_MATRIX.md` §E + `MASTER_PROJECT_AUDIT.md` atualizados.
+- **Próximo passo autônomo: FASE 2** (canais IG/FB/TikTok: login + agendamento via
+  API oficial, automações IG, agendamento FB + Marketplace, TikTok post).
+
+## ESTADO ANTIGO (2026-10-15)
 
 - **Auth Supabase: FUNCIONAL** (registro/login/reset). O estado antigo de
   "GoTrue 500" está SUPERADO — a falha histórica de `auth.users` foi

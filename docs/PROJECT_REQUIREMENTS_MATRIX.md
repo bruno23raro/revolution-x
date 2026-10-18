@@ -102,13 +102,13 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.1f** | Login WhatsApp Business via QR Code | ❌ ausente | — |
 | **3.1g** | Login TikTok via API | ❌ ausente | — |
 | **3.1h** | Login TikTok sem API | ❌ ausente | — |
-| **3.2a** | Disparo em massa WhatsApp via API | 🟡 backend (F1) | `/api/whatsapp/send` + `runMassSend` (limite 500, fila é melhor esforço); **UI de disparo pendente** |
+| **3.2a** | Disparo em massa WhatsApp via API | ✅ backend+UI (F1) | `/api/whatsapp/send` + card de disparo em `/whatsapp` (números→`to[]`, texto ou template; total/sent/failed/tracked) |
 | **3.2b** | Disparo em massa WhatsApp via QR | ❌ ausente | — |
-| **3.2c** | Templates oficiais sincronizados com Meta | 🟡 backend (F1) | `/api/whatsapp/templates` GET/POST + `listWhatsAppTemplates`/`createWhatsAppTemplate`; **UI pendente** |
+| **3.2c** | Templates oficiais sincronizados com Meta | ✅ backend+UI (F1) | `/api/whatsapp/templates` GET/POST + listagem/criação em `/whatsapp` |
 | **3.2d** | Selecionar participantes de grupo | ❌ ausente | — |
-| **3.2e** | Extrair contatos de grupos | ❌ ausente | — |
-| **3.2f** | Extrair contatos de conversas não salvas | ❌ ausente | — |
-| **3.2g** | Chatbot/robô configurável (fluxos, horários) | 🟡 backend (F1) | motor `evaluateChatbot` (regras/horário/IA) + CRUD `/api/whatsapp/chatbot`; **UI visual pendente** |
+| **3.2e** | Extrair contatos de grupos | 🟡 declarado (Sem API/Avançado) | card em `/whatsapp` declara + `RiskBanner` (ToS/LGPD); **executor ausente** |
+| **3.2f** | Extrair contatos de conversas não salvas | 🟡 declarado (Sem API/Avançado) | idem 3.2e (declarado, sem executor) |
+| **3.2g** | Chatbot/robô configurável (fluxos, horários) | ✅ backend+UI (F1) | motor `evaluateChatbot` + CRUD `/api/whatsapp/chatbot` + editor visual em `/whatsapp` (regras/horário/IA) |
 | **3.2h** | Automação de respostas automáticas | ❌ ausente | — |
 | **3.3a** | Disparo em massa Instagram | ❌ ausente | — |
 | **3.3b** | Agendamento posts/stories/reels Instagram | 🟡 stub | `/publisher` (página stub, sem funcionalidade real) |
@@ -121,10 +121,10 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.5b** | Tracking campanhas TikTok | ❌ ausente | — |
 | **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ❌ ausente | — |
 | **3.6b** | Tracking equivalente TikTok | ❌ ausente | — |
-| **3.7a** | Integração Meta API (Facebook+IG+WhatsApp) | 🟡 backend (F1) | OAuth + webhook Meta + **refresh-token** (`/api/integrations/meta/refresh-token`) + **health** (`/api/integrations/health`); UI avançada pendente |
-| **3.7b** | Integração n8n | 🟡 backend (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound; **fluxo "Integrar" na UI pendente** |
-| **3.7c** | Integração Zapier/Make/webhooks | 🟡 backend (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry; **fluxo "Integrar" na UI pendente** |
-| **3.7d** | Hub de integrações com botão "Integrar" + status | 🟡 backend (F1) | `/integrations` (UI atual) + backend: config GET/POST/DELETE + health + refresh-token; **fluxo guiado "Integrar" na UI pendente** |
+| **3.7a** | Integração Meta API (Facebook+IG+WhatsApp) | ✅ backend+UI (F1) | OAuth (início `GET /api/auth/meta` + callback) + webhook + refresh-token + health + status real em `/integrations` |
+| **3.7b** | Integração n8n | ✅ backend+UI (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound + form genérico "Integrar" em `/integrations` |
+| **3.7c** | Integração Zapier/Make/webhooks | ✅ backend+UI (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry + form genérico "Integrar" em `/integrations` |
+| **3.7d** | Hub de integrações com botão "Integrar" + status | ✅ backend+UI (F1) | `/integrations`: 2 seções (API Oficial / Sem API·Avançado), form "Integrar", health check, refresh-token, status Meta |
 | **3.8a** | Chatbot visual configurável (fluxos/condições/variáveis) | ❌ ausente | — |
 | **3.8b** | Automações gerais de resposta | ❌ ausente | — |
 
@@ -133,10 +133,10 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | Requisito | Estado |
 | --- | --- |
 | Interface simples, 1 clique, botões grandes | ✅ (design atual usa cards/botões limpos) |
-| Fluxos guiados (OAuth, QR Code, wizard) | 🟡 parcial (Meta OAuth existe; QR Code e wizards ausentes) |
+| Fluxos guiados (OAuth, QR Code, wizard) | 🟡 parcial (Meta OAuth início+callback; QR Code ausente; wizard genérico "Integrar" em `/integrations`) |
 | Feedback visual imediato (loading/sucesso/erro) | ✅ implementado em páginas existentes |
-| Separação visual "API Oficial" vs "Sem API" | 🟡 backend (F1) — registry `providers.ts` declara `layer` (official/sem_api); **UI de separação visual pendente** |
-| Avisos de risco nas funcionalidades sem API | 🟡 backend (F1) — `riskNote` (ToS/LGPD/bloqueio) já por item "Sem API"; **banner de risco na UI pendente** |
+| Separação visual "API Oficial" vs "Sem API" | ✅ (F1) — `ApiBadge` + 2 seções separadas em `/integrations` (roxo oficial / âmbar sem API) |
+| Avisos de risco nas funcionalidades sem API | ✅ (F1) — `RiskBanner` com `riskNote` em cada item "Sem API" + card de extração em `/whatsapp` |
 
 ### E.3 — Design Frontend (§5)
 
@@ -163,10 +163,10 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P0 [HUMANO]** | Credenciais `META_*`, `EMAIL_*`, `OMNIROUTER_*` no hpanel | Baixa (configuração) |
 | **P1** | UI `/crm/pipelines` (já criada nesta sessão ✅) | Baixa (concluída) |
 | **P1** | Validar URL de onboarding WhatsApp (G7) | Baixa |
-| **P2-4 (§3.7d)** | Hub de integrações: refresh token + health check **prontos no backend (F1)**; fluxo guiado "Integrar" na UI pendente | Média (UI) |
-| **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health **prontos no backend (F1)**; onboarding UI + status detalhado pendentes | Média (UI) |
-| **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot **prontos no backend (F1)**; UI de disparo pendente | Média (UI) |
-| **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks **prontas no backend (F1)**; UI "Integrar" pendente | Baixa (UI) |
+| **P2-4 (§3.7d)** | Hub de integrações: refresh token + health + fluxo guiado "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
+| **P2-5 (§3.7a)** | Hub Meta avançado: token refresh + health + status detalhado + início OAuth — **CONCLUÍDO (F1, backend+UI)** | Concluído |
+| **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot — **CONCLUÍDO (F1, backend+UI em `/whatsapp`)** | Concluído |
+| **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-8 (§3.3/3.4/3.5)** | Instagram/Facebook/TikTok: agendamento + automações | Alta |
 | **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok) | Alta |
 | **P3 (§3.8)** | Chatbot visual configurável | Alta |

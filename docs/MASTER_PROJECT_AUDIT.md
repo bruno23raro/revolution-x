@@ -602,8 +602,25 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 - **"Sem API / Avançado"** é agora uma camada de **abstração declarativa** (`providers.ts`
   com `riskNote` ToS/LGPD/bloqueio + probes que degradam para `skipped`) — **não** se
   executa scraping/automação evasiva em plataformas reais.
-- O que **ainda falta** = a **UI** (separação visual "API Oficial" vs "Sem API", fluxo
-  "Integrar", tela `/whatsapp` de disparo) — segue como próximo passo autônomo.
+- O que **faltava** = a **UI** (separação visual "API Oficial" vs "Sem API", fluxo
+  "Integrar", tela `/whatsapp` de disparo) — concluída na seção abaixo.
+
+### O que mudou em 2026-10-18 (FASE 1 UI)
+
+- **UI da FASE 1 implementada** em cima do backend: `/integrations` agora tem as 2 seções
+  visuais (**API Oficial** roxo / **Sem API · Avançado** âmbar + `RiskBanner`), form
+  genérico "Integrar" (POST `/api/integrations/config`), health check, renovação de token
+  e status real da Meta (GET `/api/integrations/meta`).
+- **Tela `/whatsapp`** criada: disparo em massa, templates oficiais (listar+criar), chatbot
+  configurável (editor de regras/horário/IA) e card "Sem API / Avançado" de extração de
+  contatos (declarada, sem executor).
+- **Primitivas** compartilhadas (`ApiBadge`, `RiskBanner`, `HealthPill`) + link
+  `WhatsApp` no AppNav admin.
+- Nova rota **`GET /api/auth/meta`** (início do OAuth da Meta, complementa o callback que já
+  existia) com degradação honesta 503 quando `META_*` ausentes + 5 testes Jest.
+- Suíte total agora **288/288**; `tsc` 0 erros; build verde. **P0 [HUMANO]:** as
+  credenciais `META_APP_ID/SECRET` continuam no hpanel — a UI degrada de forma honesta
+  (503) enquanto não forem preenchidas.
 
 ---
 
@@ -652,8 +669,8 @@ curl -s -o /dev/null -w "%{http_code}" https://revolutionx.com.br/
 
 *Auditoria concluída em 2026-10-17. Nenhuma funcionalidade de produção foi modificada por ela. Todos os dados são baseados em evidências executadas ou arquivos lidos.*
 
-**Próximo passo (2026-10-18):** execução autônoma contínua. **FASE 1 (backend) concluída**
-(seção "O que mudou em 2026-10-18"): 7 rotas + serviços de integrações/WhatsApp, suíte
-283/283, tsc 0, build verde. **Em curso:** UI da FASE 1 (separação "API Oficial" vs
-"Sem API / Avançado" + fluxo "Integrar" + tela `/whatsapp`), seguida das Fases 2–4 do
-PROMPT MESTRE.
+**Próximo passo (2026-10-18):** execução autônoma contínua. **FASE 1 (backend + UI)
+concluída**: 8 rotas (7 FASE 1 + `GET /api/auth/meta`) + serviços de integrações/WhatsApp +
+`/integrations` e `/whatsapp`, suíte 288/288, tsc 0, build verde. **A seguir:** FASE 2
+(canais principais: login+agendamento IG/FB/TikTok via API oficial, automações IG,
+agendamento FB + Marketplace, TikTok post), depois Fases 3–4 do PROMPT MESTRE.

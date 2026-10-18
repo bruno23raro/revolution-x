@@ -4,6 +4,9 @@
 //
 //  • Publicação e agendamento de posts de Página pela Graph API oficial da
 //    Meta (/api/facebook/publish): 10 min a 75 dias.
+//  • FASE 3: tracking de anúncios em tempo real via Marketing API
+//    (Ad Manager, /api/meta/ads-insights) — exige o ID da conta de
+//    anúncios em /integrations (Meta Ads) e a permissão ads_read.
 //  • Condição real da Página (vem da conexão Meta, /api/integrations/meta).
 //  • "Sem API / Avançado": anúncios em Marketplace e grupos NÃO existem na
 //    API oficial — são DECLARADOS + aviso de risco (browser automation);
@@ -34,6 +37,7 @@ export default function FacebookPage() {
           <div className="grid gap-6">
             <ConnectionStatusCard />
             <PublishCard />
+            <AdsInsightsCard />
             <MarketplaceCard />
           </div>
         </div>
@@ -221,6 +225,104 @@ function PublishCard() {
           </div>
         )}
       </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* FASE 3 · slice 1 — Tracking de anúncios (Meta Ad Manager)          */
+/* ------------------------------------------------------------------ */
+
+const TIME_RANGES: Array<{ value: string; label: string }> = [
+  { value: 'today', label: 'Hoje' },
+  { value: 'yesterday', label: 'Ontem' },
+  { value: 'last_7d', label: 'Últimos 7 dias' },
+  { value: 'last_28d', label: 'Últimos 28 dias' },
+  { value: 'this_month', label: 'Este mês' },
+  { value: 'last_month', label: 'Mês passado' },
+  { value: 'last_quarter', label: 'Último trimestre' },
+  { value: 'last_year', label: 'Último ano' },
+];
+
+function AdsInsightsCard() {
+  const [timeRange, setTimeRange] = useState('last_7d');
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState<string | null>(null);
+
+  const load = async () => {
+    setBusy(true);
+    setOut(null);
+    try {
+      const r = await fetch(`/api/meta/ads-insights?timeRange=${encodeURIComponent(timeRange)}`);
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && Array.isArray(d.insights)) {
+        if (d.insights.length === 0) {
+          setOut(`Conta de anúncios ${d.adAccountId ?? '—'} não teve registros no período. Nada de gasto ou impressões neste intervalo.`);
+        } else {
+          setOut(
+            d.insights
+              .map((v: Record<string, unknown>) =>
+                Object.entries(v)
+                  .filter(([, x]) => x !== undefined && x !== null)
+                  .map(([k, x]) => `${k}=${String(x)}`)
+                  .join(' · '),
+              )
+              .join('\n'),
+          );
+        }
+      } else if (r.status === 409 && d.error === 'not_connected') {
+        setOut(`Não conectado. ${d.detail ?? ''}`);
+      } else if (r.status === 409 && d.error === 'no_ad_account') {
+        setOut(`ID da conta de anúncios ausente. ${d.detail ?? ''}`);
+      } else if (r.status === 409) {
+        setOut(`Credencial Meta incompleta: ${d.error ?? 'erro'}. ${d.detail ?? ''}`);
+      } else if (r.status === 503) {
+        setOut(d.detail ?? 'Memória/fila de integrações indisponível no servidor (503).');
+      } else if (r.status === 502) {
+        setOut(`A API da Meta rejeitou (502): ${d.detail ?? 'sem detalhe'}. Verifique a permissão ads_read e o ID da conta.`);
+      } else if (r.status === 401) {
+        setOut('Faça login para consultar os anúncios.');
+      } else {
+        setOut(`Falha (HTTP ${r.status}). ${d.detail ?? ''}`);
+      }
+    } catch {
+      setOut('Falha de rede ao consultar os anúncios.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-sm font-bold text-gray-200">Anúncios em tempo real (Ad Manager)</h2>
+        <ApiBadge layer="official" />
+      </div>
+      <p className="text-xs text-gray-400 mb-3">
+        Métricas reais dos anúncios da sua conta de anúncios Meta (gasto, impressões, cliques, alcance)
+        via Marketing API — o ID da conta fica em /integrations (Meta Ads); o token usa a conexão OAuth.
+        Pré-requisito: permissão <code className="text-gray-300">ads_read</code> no app da Meta.
+      </p>
+      <div className="flex items-end gap-3">
+        <label className="block text-xs text-gray-400">
+          Período
+          <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={inputCls + ' !mt-1'}>
+            {TIME_RANGES.map((o) => (
+              <option key={o.value} value={o.value} className="bg-[#0D0915]">
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={() => void load()}
+          disabled={busy}
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+        >
+          {busy ? 'Consultando…' : 'Ver anúncios'}
+        </button>
+      </div>
+      {out && <pre className="mt-3 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{out}</pre>}
     </Card>
   );
 }

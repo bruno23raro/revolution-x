@@ -8,6 +8,8 @@
 //    agendador — FASE 4).
 //  • Tracking: estado (`/api/tiktok/status`) e métricas
 //    (`/api/tiktok/analytics`) dos vídeos publicados.
+//  • FASE 3: anúncios em tempo real via Business API (`/api/tiktok/ads-insights`)
+//    — Advertiser ID + token BAP em /integrations (TikTok Ads).
 //  • "Sem API / Avançado": scraping de seguidores/vídeos NÃO existe na API
 //    oficial — é DECLARADO + aviso de risco (provider `scraper_tiktok`); o
 //    produto guarda apenas o parâmetro e não executa a coleta não-oficial em
@@ -45,6 +47,7 @@ export default function TikTokPage() {
             <ConnectionStatusCard />
             <PublishCard />
             <TrackingCard />
+            <AdsInsightsCard />
             <ScrapingCard />
           </div>
         </div>
@@ -363,6 +366,111 @@ function TrackingCard() {
           )}
         </div>
       </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* FASE 3 · slice 1 — Anúncios em tempo real (TikTok Business API)    */
+/* ------------------------------------------------------------------ */
+
+const AD_ENTITIES: Array<{ value: string; label: string }> = [
+  { value: 'AD_ACCOUNT', label: 'Conta (total)' },
+  { value: 'CAMPAIGN', label: 'Campanhas' },
+  { value: 'AD_GROUP', label: 'Grupos de anúncios' },
+  { value: 'AD', label: 'Anúncios' },
+  { value: 'CREATIVE', label: 'Criativos' },
+];
+
+function AdsInsightsCard() {
+  const [date, setDate] = useState('');
+  const [entity, setEntity] = useState('AD_GROUP');
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState<string | null>(null);
+
+  const load = async () => {
+    setBusy(true);
+    setOut(null);
+    const qs = new URLSearchParams();
+    if (date) qs.set('date', date);
+    if (entity) qs.set('entity', entity);
+    try {
+      const r = await fetch(`/api/tiktok/ads-insights?${qs.toString()}`);
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && Array.isArray(d.rows)) {
+        if (d.rows.length === 0) {
+          setOut(`Advertiser ${d.advertiserId ?? '—'} sem registros no dia ${d.date ?? '?'} (nível ${d.entity ?? '?'}) — sem gasto ou impressões.`);
+        } else {
+          setOut(
+            d.rows
+              .map((row: Record<string, unknown>) =>
+                Object.entries(row)
+                  .filter(([, x]) => x !== undefined && x !== null)
+                  .map(([k, x]) => `${k}=${String(x)}`)
+                  .join(' · '),
+              )
+              .join('\n'),
+          );
+        }
+      } else if (r.status === 409 && d.error === 'not_connected') {
+        setOut(`Não conectado. ${d.detail ?? ''}`);
+      } else if (r.status === 409 && (d.error === 'no_token' || d.error === 'no_advertiser')) {
+        setOut(`Credencial incompleta (${d.error}). ${d.detail ?? ''}`);
+      } else if (r.status === 409) {
+        setOut(d.detail ?? 'TikTok Ads não conectado neste tenant.');
+      } else if (r.status === 503) {
+        setOut(d.detail ?? 'Memória/fila de integrações indisponível no servidor (503).');
+      } else if (r.status === 502) {
+        setOut(`A API do TikTok rejeitou (502): ${d.detail ?? 'sem detalhe'}. Confira o token BAP e o Advertiser ID.`);
+      } else if (r.status === 401) {
+        setOut('Faça login para consultar os anúncios.');
+      } else {
+        setOut(`Falha (HTTP ${r.status}). ${d.detail ?? ''}`);
+      }
+    } catch {
+      setOut('Falha de rede ao consultar os anúncios.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-sm font-bold text-gray-200">Anúncios em tempo real (TikTok Ads)</h2>
+        <ApiBadge layer="official" />
+      </div>
+      <p className="text-xs text-gray-400 mb-3">
+        Relatórios do Gerenciador de Anúncios do TikTok (Business API) — Advertiser ID e Access Token de
+        Business ficam em /integrations (TikTok Ads). O relatório cobre 1 dia por consulta; deixe vazio
+        para ontem.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block text-xs text-gray-400">
+          Data (YYYY-MM-DD, opcional)
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+        </label>
+        <label className="block text-xs text-gray-400">
+          Nível
+          <select value={entity} onChange={(e) => setEntity(e.target.value)} className={inputCls + ' !mt-1'}>
+            {AD_ENTITIES.map((o) => (
+              <option key={o.value} value={o.value} className="bg-[#0D0915]">
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="mt-3">
+        <button
+          onClick={() => void load()}
+          disabled={busy}
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+        >
+          {busy ? 'Consultando…' : 'Ver anúncios'}
+        </button>
+      </div>
+      {out && <pre className="mt-3 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{out}</pre>}
     </Card>
   );
 }

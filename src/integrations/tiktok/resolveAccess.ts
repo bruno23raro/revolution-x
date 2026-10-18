@@ -16,8 +16,10 @@
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { OrgScope } from '@/lib/taskQueue';
 import { listMemory, saveMemory, TaskQueueUnavailableError } from '@/lib/taskQueue';
+import { providerConfigKey } from '@/integrations/configStore';
 import { appendPendingTikTokPost } from './tiktokPublisher';
 import type { TikTokAccess, PendingTikTokPost } from './tiktokPublisher';
+import type { TikTokAdsAccess } from './adsAnalytics';
 
 const PROVIDER = 'tiktok';
 export const PENDING_KEY = 'pending:tiktok_posts';
@@ -89,4 +91,50 @@ export async function addPendingTikTokPost(
   const current = await listPendingTikTokPosts(client, scope);
   const next = appendPendingTikTokPost(current, item);
   await saveMemory(client, scope, 'preference', PENDING_KEY, next as unknown as Prisma.JsonValue);
+}
+
+// ---------------------------------------------------------------------------
+// FASE 3 · slice 1 — Ads: resolve a credencial do TikTok BUSINESS (BAP) para
+// relatórios do Gerenciador de Anúncios. Provider `tiktok_ads` no
+// AgentMemory: `advertiserId` (público) + `accessToken` (segredo, BAP).
+// ---------------------------------------------------------------------------
+
+export type ResolveTikTokAdsReason =
+  | 'not_connected'
+  | 'no_token'
+  | 'no_advertiser'
+  | 'queue_unavailable';
+
+export type ResolveTikTokAdsResult =
+  | { ok: true; access: TikTokAdsAccess }
+  | { ok: false; reason: ResolveTikTokAdsReason };
+
+/**
+ * Lê a config `tiktok_ads` em AgentMemory e devolve o `TikTokAdsAccess`
+ * pronto para o report de anúncios. Mesma captura de
+ * `TaskQueueUnavailableError` do resolver de publicação (503 na rota).
+ */
+export async function resolveTenantTikTokAdsAccess(
+  client: PrismaClient,
+  scope: OrgScope,
+): Promise<ResolveTikTokAdsResult> {
+  let mems: Awaited<ReturnType<typeof listMemory>>;
+  try {
+    mems = await listMemory(client, scope);
+  } catch (e) {
+    if (e instanceof TaskQueueUnavailableError) return { ok: false, reason: 'queue_unavailable' };
+    throw e;
+  }
+  const hit = mems.find((m) => m.key === providerConfigKey('tiktok_ads'));
+  if (!hit) return { ok: false, reason: 'not_connected' };
+
+  const cfg = (hit.value ?? {}) as Record<string, unknown>;
+  const accessToken = typeof cfg.accessToken === 'string' ? cfg.accessToken.trim() : '';
+  if (!accessToken) return { ok: false, reason: 'no_token' };
+
+  const advertiserId = typeof cfg.advertiserId === 'string' ? cfg.advertiserId.trim() : '';
+  if (!advertiserId) return { ok: false, reason: 'no_advertiser' };
+
+  const access: TikTokAdsAccess = { accessToken, advertiserId };
+  return { ok: true, access };
 }

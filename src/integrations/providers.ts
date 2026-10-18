@@ -95,6 +95,29 @@ export const PROVIDERS: ProviderDef[] = [
     probe: 'keys',
   },
   {
+    id: 'meta_ads',
+    name: 'Meta Ads (Gerenciador de Anúncios)',
+    layer: 'official',
+    summary:
+      'Relatórios de anúncios em tempo real (spend, impressões, cliques, alcance) — usa a conexão Meta (OAuth, permissão ads_read). O ID da conta de anúncios fica aqui; o token vem do OAuth.',
+    fields: [
+      { key: 'adAccountId', label: 'ID da Conta de Anúncios', required: true, placeholder: 'ACT-123456789' },
+    ],
+    probe: 'none',
+  },
+  {
+    id: 'tiktok_ads',
+    name: 'TikTok Ads (Business)',
+    layer: 'official',
+    summary:
+      'Relatórios de campanhas do TikTok em tempo real via Business API (BAP) — Advertiser ID + Access Token de Business.',
+    fields: [
+      { key: 'advertiserId', label: 'Advertiser ID', required: true, placeholder: '7291234567890' },
+      { key: 'accessToken', label: 'Access Token (BAP)', secret: true, required: true },
+    ],
+    probe: 'keys',
+  },
+  {
     id: 'n8n',
     name: 'n8n',
     layer: 'official',

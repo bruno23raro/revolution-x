@@ -118,9 +118,9 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **3.4b** | Anúncios Marketplace | 🟡 declarado (Sem API/Avançado) | card em `/facebook` + `RiskBanner` (não há API oficial de Marketplace); **executor ausente** |
 | **3.4c** | Anúncios em grupos (delay configurável) | 🟡 declarado (Sem API/Avançado) | idem 3.4b (automação de navegador declarada, sem executor) |
 | **3.5a** | Agendamento TikTok | 🟡 parcial (F2) | publicação imediata oficial `publishTikTokVideo` (PULL_FROM_URL); em hora marcada = intenção persistida em AgentMemory (`pending:tiktok_posts`, execução FASE 4 — API oficial não tem horário) + UI `/tiktok` |
-| **3.5b** | Tracking campanhas TikTok | 🟡 parcial (F2) | tracking de **vídeos publicados** via `/api/tiktok/analytics` (plays/curtidas/comentários) + `/api/tiktok/status`; campanhas **pagas** (TikTok Ads) ausente → FASE 3 |
-| **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ❌ ausente | — |
-| **3.6b** | Tracking equivalente TikTok | 🟡 tracking de vídeo (F2) | tracking de vídeo orgânico ✅ via `/api/tiktok/analytics` + `/api/tiktok/status`; Gerenciador de Anúncios (TikTok Ads) em tempo real = FASE 3 |
+| **3.5b** | Tracking campanhas TikTok | ✅ backend+UI (F2 vídeo + F3 ads) | tracking de **vídeos publicados** via `/api/tiktok/analytics` (plays/curtidas/comentários) + `/api/tiktok/status`; campanhas **pagas** ✅ (F3) via `GET /api/tiktok/ads-insights` (Business API `report/object/get`, 1 dia, níveis por entidade) + card em `/tiktok` |
+| **3.6a** | Tracking em tempo real Gerenciador de Anúncios Meta | ✅ backend+UI (F3) | `GET /api/meta/ads-insights` (Marketing API `/{act}/insights`: spend/impressões/cliques/alcance/ctr/cpc + ações, `time_range` hoje→ano) + resolver `resolveTenantMetaAdsAccess` (token do OAuth Meta + ID da conta em AgentMemory `meta_ads`) + card em `/facebook` |
+| **3.6b** | Tracking equivalente TikTok | ✅ backend+UI (F3) | tracking de vídeo orgânico ✅ (F2, `/api/tiktok/analytics` + `/status`) + Gerenciador de Anúncios (TikTok Ads) em tempo real ✅ (F3, `GET /api/tiktok/ads-insights` + card em `/tiktok`); creds BAP em AgentMemory `tiktok_ads` |
 | **3.7a** | Integração Meta API (Facebook+IG+WhatsApp) | ✅ backend+UI (F1) | OAuth (início `GET /api/auth/meta` + callback) + webhook + refresh-token + health + status real em `/integrations` |
 | **3.7b** | Integração n8n | ✅ backend+UI (F1) | registry + `/api/integrations/config` (baseUrl+apiKey) + webhook inbound + form genérico "Integrar" em `/integrations` |
 | **3.7c** | Integração Zapier/Make/webhooks | ✅ backend+UI (F1) | `/api/webhooks/inbound` (secret fail-closed) + registry + form genérico "Integrar" em `/integrations` |
@@ -168,5 +168,5 @@ e fornecido pelo usuário. Ver seção E abaixo para o estado de cada requisito 
 | **P2-6 (§3.2)** | WhatsApp Business: disparo em massa + templates + chatbot — **CONCLUÍDO (F1, backend+UI em `/whatsapp`)** | Concluído |
 | **P2-7 (§3.7b/c)** | Integrações n8n/Zapier/Make/webhooks: fluxo "Integrar" — **CONCLUÍDO (F1, backend+UI)** | Concluído |
 | **P2-8 (§3.3/3.4/3.5)** | Instagram agendamento ✅ (F2, `/api/instagram/publish` + `/instagram`); Facebook agendamento ✅ (F2, `/api/facebook/publish` + `/facebook`); TikTok publicação imediata + tracking de vídeo ✅ (F2, `/api/tiktok/{publish,status,analytics}` + `/tiktok`; agendamento em hora marcada = intenção persistida → FASE 4); Marketplace/grupos declarados (Sem API/Avançado) | Média |
-| **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok Ads) em tempo real → FASE 3; tracking de vídeo orgânico TikTok ✅ (F2) | Alta |
+| **P2-9 (§3.6)** | Tracking Gerenciador de Anúncios (Meta + TikTok Ads) em tempo real — **CONCLUÍDO (F3 slice 1, backend+UI)**: `GET /api/meta/ads-insights` + `GET /api/tiktok/ads-insights` + cards em `/facebook` e `/tiktok`; tracking de vídeo orgânico TikTok ✅ (F2) | Concluído |
 | **P3 (§3.8)** | Chatbot visual configurável | Alta |

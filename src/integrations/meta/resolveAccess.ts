@@ -7,9 +7,14 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/encryption';
+import type { PrismaClient } from '@prisma/client';
+import { TaskQueueUnavailableError } from '@/lib/taskQueue';
+import type { OrgScope } from '@/lib/taskQueue';
+import { getProviderConfig } from '@/integrations/configStore';
 import type { TemplatesAccess } from './whatsappTemplates';
 import type { InstagramAccess } from './instagramPublisher';
 import type { FacebookPageAccess } from './facebookPublisher';
+import type { MetaAdsAccess } from './adsInsights';
 
 /** Linha real da tabela `meta_integrations` (nomes snake_case). */
 export interface MetaIntegrationRow {
@@ -183,4 +188,56 @@ export async function resolveTenantFacebookPageAccess(
 
   const access: FacebookPageAccess = { accessToken, facebookPageId };
   return { ok: true, access, row };
+}
+
+// ---------------------------------------------------------------------------
+// FASE 3 · slice 1 — Ads: resolve a credencial do Gerenciador de Anúncios
+// (Meta Ad Manager / Marketing API) de um tenant.
+//
+// O token vem da linha privilegiada `meta_integrations` (OAuth, MESMO fluxo
+// do WhatsApp); o ID da conta de anúncios (ACT) fica no AgentMemory
+// (provider `meta_ads`), porque a tabela Supabase não tem essa coluna. A
+// permissão `ads_read` (ou `read_insights`) no app da Meta é pré-requisito.
+// ---------------------------------------------------------------------------
+
+export type ResolveMetaAdsReason =
+  | 'not_connected'
+  | 'no_token'
+  | 'decrypt_failed'
+  | 'no_ad_account'
+  | 'queue_unavailable';
+
+export type ResolveMetaAdsResult =
+  | { ok: true; access: MetaAdsAccess }
+  | { ok: false; reason: ResolveMetaAdsReason };
+
+/**
+ * Compõe o `MetaAdsAccess` de um tenant: token (meta_integrations,
+ * descriptografado) + ID da conta de anúncios (AgentMemory `meta_ads`).
+ * Injetável: `client` (Prisma) e `serviceRole` (Supabase) entram por
+ * argumento/dep — testável sem rede nem banco.
+ */
+export async function resolveTenantMetaAdsAccess(
+  client: PrismaClient,
+  scope: OrgScope,
+  deps: ResolveDeps = {},
+): Promise<ResolveMetaAdsResult> {
+  let adAccountId: string | undefined;
+  try {
+    const cfg = await getProviderConfig(client, scope, 'meta_ads');
+    adAccountId =
+      cfg && typeof cfg.adAccountId === 'string' && cfg.adAccountId.trim()
+        ? cfg.adAccountId.trim()
+        : undefined;
+  } catch (e) {
+    if (e instanceof TaskQueueUnavailableError) return { ok: false, reason: 'queue_unavailable' };
+    throw e;
+  }
+
+  const base = await resolveTenantMetaAccess(scope.organizationId, deps);
+  if (!base.ok) return { ok: false, reason: base.reason };
+  if (!adAccountId) return { ok: false, reason: 'no_ad_account' };
+
+  const access: MetaAdsAccess = { accessToken: base.access.accessToken, adAccountId };
+  return { ok: true, access };
 }

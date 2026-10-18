@@ -571,13 +571,13 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
 
 | Bloco real | O que pede | Estado no código (2026-10-18) |
 |---|---|---|
-| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 WhatsApp (Meta) parcial; IG/FB/TikTok agendamento-publicação ✅ (F2); TikTok Ads/scraping pendentes |
+| **§2** Plataforma multi-canal | 4 canais (IG/FB/WhatsApp/TikTok), cada um "API oficial + Sem API" | 🟡 WhatsApp (Meta) parcial; IG/FB/TikTok agendamento-publicação ✅ (F2); TikTok Ads ✅ (F3); scraping pendente (executor) |
 | **§3.1** Logins por canal | 7-8 métodos de login (API + sem API p/ cada canal) | 🟡 WhatsApp-Meta parcial; demais ❌ |
 | **§3.2** WhatsApp Business | Disparo em massa, templates, grupos, chatbot | 🟡 webhook+processor; UI/templates/chatbot ❌ |
 | **§3.3** Instagram | Disparo em massa, agendamento, automações, scraping | 🟡 agendamento ✅ (F2, `/instagram` + `/api/instagram/publish`); massa/automações/scraping pendentes |
 | **§3.4** Facebook | Agendamento, Marketplace, grupos | 🟡 agendamento ✅ (F2, `/facebook` + `/api/facebook/publish`); Marketplace/grupos declarados (Sem API/Avançado) |
-| **§3.5** TikTok | Agendamento + tracking | 🟡 publicação imediata + tracking de vídeo ✅ (F2, `/tiktok` + `/api/tiktok/{publish,status,analytics}`); agendamento = intenção persistida (execução F4); Ads ❌ (F3) |
-| **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | 🟡 vídeo orgânico TikTok ✅ (F2); Gerenciador de Anúncios (Meta + TikTok Ads) ❌ (F3) |
+| **§3.5** TikTok | Agendamento + tracking | 🟡 publicação imediata + tracking de vídeo ✅ (F2, `/tiktok` + `/api/tiktok/{publish,status,analytics}`); agendamento = intenção persistida (execução F4); Ads ✅ (F3, `/api/tiktok/ads-insights`) |
+| **§3.6** Tracking | Gerenciador de Anúncios Meta + TikTok em tempo real | ✅ (F3, slice 1): `GET /api/meta/ads-insights` (Ad Manager) + `GET /api/tiktok/ads-insights` (TikTok Ads) + cards em `/facebook` e `/tiktok`; vídeo orgânico TikTok ✅ (F2) |
 | **§3.7** Integrações | Meta (obrigatória), n8n, Zapier/Make/webhooks; hub "Integrar" + status | 🟡 Meta parcial; n8n/Zapier/Make ❌ (P2-4) |
 | **§3.8** Automações/Chatbot | Chatbot visual configurável + automações gerais | ❌ |
 | **§4** UX 1-clique | Botões grandes, fluxos guiados, separação API vs Sem API, avisos de risco | 🟡 parcial |
@@ -718,9 +718,55 @@ O sistema está tecnicamente completo para operação. As funcionalidades core (
   encoding JSON de `publish_ids`). Suíte total **331/331** (25 suítes);
   `tsc` 0 erros; `next build` verde (`/tiktok` estático;
   `/api/tiktok/{publish,status,analytics}` nas rotas dinâmicas).
-- **Tracking de campanhas pagas (TikTok Ads / Gerenciador de Anúncios)** e
-  o executor real do agendamento ficam para as **FASES 3 e 4**,
-  respectivamente (estado honesto na matriz).
+- O executor real do agendamento de TikTok (fila de jobs) fica na **FASE 4**
+  (estado honesto na matriz); o tracking de campanhas pagas saiu nesta
+  **FASE 3 · slice 1** (abaixo).
+
+---
+
+## FASE 3 — slice 1: tracking de anúncios em tempo real (Meta Ad Manager + TikTok Ads)
+
+- **Serviços puros** (mesmo padrão: `fetchImpl` injetado, timeout, NUNCA
+  lançam, degradam honestamente):
+  - `src/integrations/meta/adsInsights.ts` → `getMetaAdInsights`: `GET
+    {graph}/{v26.0}/{act}/insights?time_range=…&fields=spend,impressions,
+    clicks,reach,ctr,cpc,actions&limit=100&use_account_time=true` (Header
+    Bearer do OAuth Meta); parse defensivo das métricas + soma de `actions`
+    → `actionsCount`; erros `meta_not_configured|no_ad_account|
+    fetch_unavailable|http_error|network_error`.
+  - `src/integrations/tiktok/adsAnalytics.ts` → `getTikTokAdsInsights`: `GET
+    {business-api}/v1.3/report/object/get/?advertiser_id=…&entity=…&date=…&
+    time_grain=DAILY&metrics=show,click,cost_num,ctr,likes` (token **BAP**,
+    distinto do Content Posting); sucesso só com `error.code==='NoError'`;
+    `isValidTikTokAdsDate` (YYYY-MM-DD, rejeita dias inexistentes);
+    erros `tiktok_ads_not_configured|no_advertiser|fetch_unavailable|
+    http_error|network_error`.
+- **Resolvers** (adição sem tocar os anteriores): `resolveTenantMetaAdsAccess`
+  (token da linha `meta_integrations` + ID da conta de anúncios do
+  AgentMemory provider `meta_ads`; razões
+  `not_connected|no_token|decrypt_failed|no_ad_account|queue_unavailable`) e
+  `resolveTenantTikTokAdsAccess` (provider `tiktok_ads` no AgentMemory:
+  `advertiserId` público + `accessToken` BAP; razões
+  `not_connected|no_token|no_advertiser|queue_unavailable`).
+- **Provedores novos** no registry `providers.ts` (camada **API Oficial**):
+  `meta_ads` (campo `adAccountId`; sem probe — token vem do OAuth) e
+  `tiktok_ads` (campos `advertiserId` + `accessToken` secret; probe `keys`).
+- **Rotas novas** (todas `force-dynamic`, auth 401, sem segredos no corpo):
+  `GET /api/meta/ads-insights?timeRange=` (400 `bad_time_range`; 409 com
+  detalhe por razão; 503 `queue_unavailable`; 502 com o erro da API) e
+  `GET /api/tiktok/ads-insights?date=&entity=` (400 `bad_date`/`bad_entity`;
+  409; 503; 502).
+- **UI** (lilás + preto + branco, `ApiBadge official`): card
+  "Anúncios em tempo real (Ad Manager)" em `/facebook` (período → hoje/ano)
+  e card "Anúncios em tempo real (TikTok Ads)" em `/tiktok` (1 dia + nível
+  por entidade); degrada com o detalhe honesto de cada status.
+- **Testes:** 8 novos (`meta/adsInsights.test.ts`) + 12 novos
+  (`tiktok/adsAnalytics.test.ts`); suíte total **351/351** (27 suítes);
+  `tsc` 0 erros.
+- **Dependências externas [HUMANO/P0]:** o tracking de Meta exige
+  `ads_read` (ou `read_insights`) no app da Meta + a conexão OAuth; o do
+  TikTok exige um Access Token de Business (BAP) + Advertiser ID no
+  AgentMemory. Sem essas, as rotas degradam com 409/502 honestos.
 
 ---
 
@@ -770,14 +816,17 @@ curl -s -o /dev/null -w "%{http_code}" https://revolutionx.com.br/
 *Auditoria concluída em 2026-10-17. Nenhuma funcionalidade de produção foi modificada por ela. Todos os dados são baseados em evidências executadas ou arquivos lidos.*
 
 **Próximo passo (2026-10-18):** execução autônoma contínua. **FASE 1 (backend + UI)
-concluída** e **FASE 2, slices 1–3 concluídas**: agendamento/publicação via API
+concluída**, **FASE 2, slices 1–3 concluídas**: agendamento/publicação via API
 oficial para **Instagram** (`/instagram` + `/api/instagram/publish`),
 **Facebook** (`/facebook` + `/api/facebook/publish`, com Marketplace/grupos
 declarados "Sem API/Avançado") e **TikTok** (`/tiktok` +
 `/api/tiktok/{publish,status,analytics}` — publicação imediata + tracking de
-vídeo; agendamento persiste intenção, execução na FASE 4); suíte 331/331,
-tsc 0, build verde. **A seguir:** FASE 3 do PROMPT MESTRE (tracking em tempo
-real — Meta Ad Manager + TikTok Ads; executores "Sem API/Avançado" com
-aviso de risco; chatbot visual completo; n8n/Zapier/Make/webhooks), depois a
+vídeo; agendamento persiste intenção, execução na FASE 4). **FASE 3 · slice 1
+concluída**: tracking de anúncios em tempo real — Meta Ad Manager
+(`/api/meta/ads-insights`) + TikTok Ads (`/api/tiktok/ads-insights`),
+providers `meta_ads`/`tiktok_ads` no hub; suíte 351/351, tsc 0. **A
+seguir:** FASE 3 restante (executores "Sem API/Avançado" com aviso de
+risco — QR, scrapers e browser automation; chatbot visual completo;
+executores de n8n/Zapier/Make/webhooks de saída), depois a
 FASE 4 (fila de jobs: BullMQ/Inngest — incluindo o executor do
 agendamento de TikTok — e testes de fluxo principal).

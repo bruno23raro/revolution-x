@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–3 (Instagram + Facebook + TikTok) concluídas
+## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–3 (Instagram + Facebook + TikTok) e FASE 3 · slice 1 (tracking de anúncios) concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -55,17 +55,33 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   tracking de vídeos, card scraping "Sem API/Avançado" com provider
   `scraper_tiktok` + `RiskBanner`, executor ausente) + link **TikTok** no
   AppNav admin.
-- **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) → suíte total
-  **25 suítes / 331 testes PASS**; `tsc` 0 erros; `next build` verde
-  (`/instagram`, `/facebook`, `/tiktok` + rotas
-  `/api/{instagram,facebook}/publish` e `/api/tiktok/{publish,status,analytics}`).
+- **FASE 3, slice 1 (tracking de anúncios em tempo real):** serviços
+  puros `src/integrations/meta/adsInsights.ts` (`getMetaAdInsights` —
+  Marketing API `/{act}/insights`, `time_range`, métricas spend/impressões/
+  cliques/alcance/ctr/cpc + ações, Header Bearer do OAuth Meta; não lança)
+  e `src/integrations/tiktok/adsAnalytics.ts` (`getTikTokAdsInsights` —
+  TikTok Business API `report/object/get`, token **BAP** distinto do
+  Content Posting, 1 dia por consulta, níveis por entidade;
+  `isValidTikTokAdsDate` rejeita dias inexistentes). Resolvers novos:
+  `resolveTenantMetaAdsAccess` (token `meta_integrations` + ID da conta em
+  AgentMemory `meta_ads`) e `resolveTenantTikTokAdsAccess` (provider
+  `tiktok_ads`: `advertiserId` + `accessToken`). Provedores `meta_ads` e
+  `tiktok_ads` (camada oficial) no registry. Rotas
+  `GET /api/meta/ads-insights?timeRange=` e `GET /api/tiktok/ads-insights?date=&entity=`
+  (401/400/409/503/502 honestos, sem segredos no corpo). UI: card
+  "Anúncios em tempo real (Ad Manager)" em `/facebook` + card TikTok Ads em
+  `/tiktok` (lilás, `ApiBadge official`).
+- **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) + 8 novos
+  (Meta Ads) + 12 novos (TikTok Ads) → suíte total **27 suítes / 351
+  testes PASS**; `tsc` 0 erros.
 - **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
   OAuth; sem isso as rotas degradam honestamente (409/503). O TikTok usa as
   chaves do AgentMemory (provider `tiktok`) — sem dependência de credencial
   externa de terceiros.
-- **Próximo passo autônomo: FASE 3** (tracking em tempo real — Meta Ad
-  Manager + TikTok Ads; executores "Sem API/Avançado" com aviso de risco;
-  chatbot visual completo; n8n/Zapier/Make/webhooks), depois FASE 4 (fila de
+- **Próximo passo autônomo: FASE 3 restante** (executores "Sem API/Avançado"
+  com aviso de risco — QR/scrapers/browser automation; chatbot visual
+  completo; executores de n8n/Zapier/Make/webhooks de saída), depois FASE 4
+  (fila de
   jobs BullMQ/Inngest, incluindo o executor do agendamento de TikTok, e
   testes de fluxo principal).
 

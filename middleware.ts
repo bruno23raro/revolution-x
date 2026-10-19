@@ -7,9 +7,35 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const pathname = request.nextUrl.pathname;
+    const isPublicRoute =
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/forgot-password' ||
+      pathname === '/reset-password' ||
+      pathname === '/verify-email' ||
+      pathname.startsWith('/onboarding');
+
+    // A preview without Supabase may render public pages, but must never make
+    // protected UI appear authenticated in a production-like runtime.
+    if (process.env.NODE_ENV === 'production' && !isPublicRoute) {
+      if (pathname.startsWith('/api/')) {
+        return new NextResponse('Authentication service is not configured', { status: 503 });
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

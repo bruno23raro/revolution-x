@@ -272,7 +272,7 @@ function PublishCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* FASE 4 · slice 1 — Agendados (executor da fila)                     */
+/* FASE 4 · slice 1+2 — Agendados (executor da fila c/ retry+backoff)  */
 /* ------------------------------------------------------------------ */
 
 interface PendingView {
@@ -282,6 +282,7 @@ interface PendingView {
   publishId?: string;
   videoUrl?: string;
   caption?: string;
+  attempts?: number;
 }
 
 function ScheduledCard() {
@@ -332,14 +333,14 @@ function ScheduledCard() {
         setTickOut(`Fila indisponível no servidor (503)${d.detail ? ` — ${d.detail}` : ''}.`);
       } else if (r.ok && d.ok) {
         setTickOut(
-          `Tick concluído: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.failed ?? 0} falha(s).`,
+          `Tick concluído: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).`,
         );
       } else if (r.ok && d.error === 'queue_unavailable') {
         setTickOut(`Fila indisponível${d.detail ? ` — ${d.detail}` : ''}.`);
       } else if (r.ok) {
         const why = Array.isArray(d.reasons) && d.reasons.length > 0 ? ` Motivos: ${d.reasons.join('; ')}.` : '';
         setTickOut(
-          `Tick concluído com falhas: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.failed ?? 0} falha(s).${why}`,
+          `Tick concluído com falhas: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).${why}`,
         );
       } else {
         setTickOut(`Falha ao processar (HTTP ${r.status}).`);
@@ -363,8 +364,9 @@ function ScheduledCard() {
 
       <p className="text-xs text-gray-400 mb-3">
         Como a API oficial não publica em hora marcada, o agendamento guarda a <em>intenção</em>. Este card é o
-        executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na própria fila
-        (idempotente — cada item é processado uma vez).
+        executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na própria fila.
+        Falhas <em>não</em> encerram na hora: o item é reagendado com backoff exponencial (até 3 tentativas); só
+        então vira <span className="text-red-300">failed</span> terminal.
       </p>
 
       {queueState === 'loading' && <p className="text-xs text-gray-500">Carregando fila…</p>}
@@ -396,6 +398,9 @@ function ScheduledCard() {
                 {p.videoUrl}
               </span>
               {p.publishId && <span className="text-gray-600">pub {p.publishId}</span>}
+              {typeof p.attempts === 'number' && p.attempts > 0 && (
+                <span className="text-gray-500">(tentativa {p.attempts})</span>
+              )}
             </li>
           ))}
         </ul>

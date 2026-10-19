@@ -117,6 +117,8 @@ export interface PendingTikTokPost {
   /** Rastreável pela rota ao publicar. */
   publishId?: string;
   status?: 'pending' | 'published' | 'failed';
+  /** Contagem de tentativas de publicação falhas (retry c/ backoff — FASE 4 · slice 2). */
+  attempts?: number;
 }
 
 /** Acrescenta uma intenção na fila persistente (não modifica `existing`). */
@@ -127,11 +129,20 @@ export function appendPendingTikTokPost(
   return [...(existing ?? []), item];
 }
 
-/** Marca uma intenção (por `id`) como publicada/falhou; não modifica a origem. */
+/**
+ * Marca/atualiza uma intenção (por `id`): status (publicado/falhou/pendente),
+ * `publishId`, `attempts` (retry) e `scheduledAt` (reagendamento c/ backoff).
+ * Não modifica a origem.
+ */
 export function markPendingTikTokPost(
   existing: PendingTikTokPost[] | null | undefined,
   id: string,
-  patch: { status?: PendingTikTokPost['status']; publishId?: string },
+  patch: {
+    status?: PendingTikTokPost['status'];
+    publishId?: string;
+    attempts?: number;
+    scheduledAt?: string;
+  },
 ): PendingTikTokPost[] {
   const list = existing ?? [];
   return list.map((p) => (p.id === id ? { ...p, ...patch } : p));

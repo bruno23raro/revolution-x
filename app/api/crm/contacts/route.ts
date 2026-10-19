@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const errors = validateContact(body);
   if (errors.length) return NextResponse.json({ error: errors.join(',') }, { status: 400 });
+  // Nunca confiar em organizationId vindo do payload (mass-assignment): a linha
+  // SEMPRE nasce na org do usuário autenticado (server-derived). Mesmo padrão
+  // seguro da rota /api/crm/pipelines. O `...body` original permitia plantar
+  // registros em outro tenant.
+  delete (body as Record<string, unknown>).organizationId;
   const item = await contactRepoReal.create({ organizationId: user.organizationId, ...body });
   return NextResponse.json(item, { status: 201 });
 }

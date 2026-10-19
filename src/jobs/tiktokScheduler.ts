@@ -279,3 +279,120 @@ export async function listPendingTikTokView(client: PrismaClient, scope: OrgScop
   const list = await listPendingTikTokPosts(client, scope);
   return projectPending(list);
 }
+
+// ---------------------------------------------------------------------------
+// FASE 4 · slice 3 — Cron multi-tenant (gatilho de sistema, segredo).
+//
+// A fila `pending:tiktok_posts` é por USUÁRIO (AgentMemory tem escopo de
+// usuário: migration 014). O cron de sistema descobre QUEM tem intenção
+// pendente e roda UM tick por escopo (org+user) — cada tick continua no
+// contexto RLS daquele usuário (`withTenantContextOn` + GUCs). A varredura
+// é nível-sistema (por isso o gatilho só existe atrás do `CRON_SECRET` na
+// rota `/api/cron/tiktok`); os ticks individuais nunca saem do escopo do
+// usuário. NUNCA lança; um tenant com erro não bloqueia os demais.
+// ---------------------------------------------------------------------------
+
+export interface CronScope {
+  organizationId: string;
+  userId: string;
+}
+
+export interface CronResult {
+  ok: boolean;
+  /** Alvos (org+user) que tinham intenção pendente no cron. */
+  tenants: number;
+  published: number;
+  /** Falhas terminais (tentativas esgotadas), somadas dos tenants. */
+  failed: number;
+  /** Reagendadas c/ backoff, somadas dos tenants. */
+  retried: number;
+  /** Motivos honestos por tenant/item (sem segredos). */
+  reasons: string[];
+  /** Código de erro de topo (quando `ok: false`). */
+  error?: 'queue_unavailable' | 'list_failed' | 'tenant_failed' | string;
+  detail?: string;
+}
+
+/**
+ * Descobre os escopos (org+user) com intenção de TikTok pendente.
+ * A varredura cruza usuários de propósito — é a fila de sistema; a
+ * segurança vem do gatilho secreto, e cada tick individual roda de volta
+ * no escopo RLS do seu usuário. Propaga erros do backend (nunca lança
+ * silenciosamente).
+ */
+export async function findTikTokPendingScopes(client: PrismaClient): Promise<CronScope[]> {
+  const rows = await client.agentMemory.findMany({
+    where: { kind: 'preference', memoryKey: PENDING_KEY },
+    select: { organizationId: true, userId: true, valueJson: true },
+  });
+  const scopes = new Map<string, CronScope>();
+  for (const row of rows) {
+    const items = Array.isArray(row.valueJson) ? (row.valueJson as unknown as PendingTikTokPost[]) : [];
+    const hasPending = items.some((p) => p && typeof p === 'object' && (p.status ?? 'pending') === 'pending');
+    if (!hasPending) continue;
+    scopes.set(`${row.organizationId}:${row.userId}`, {
+      organizationId: row.organizationId,
+      userId: row.userId,
+    });
+  }
+  return [...scopes.values()];
+}
+
+/**
+ * Roda o cron do agendador para TODOS os tenants com intenção pendente
+ * (um tick por escopo, backend AgentMemory). Sem pendências → `ok` sem
+ * work. Falha em UM tenant não impede os demais (agregação honesta);
+ * `ok` = nenhum tenant terminou com falha/erro.
+ */
+export async function runTikTokCronForAll(client: PrismaClient, opts: TickOptions = {}): Promise<CronResult> {
+  let scopes: CronScope[];
+  try {
+    scopes = await findTikTokPendingScopes(client);
+  } catch (e) {
+    if (e instanceof TaskQueueUnavailableError) {
+      return { ok: false, tenants: 0, published: 0, failed: 0, retried: 0, reasons: [], error: 'queue_unavailable', detail: e.message };
+    }
+    return { ok: false, tenants: 0, published: 0, failed: 0, retried: 0, reasons: [], error: 'list_failed', detail: String((e as Error)?.message ?? e) };
+  }
+
+  if (scopes.length === 0) {
+    return { ok: true, tenants: 0, published: 0, failed: 0, retried: 0, reasons: [] };
+  }
+
+  let published = 0;
+  let failed = 0;
+  let retried = 0;
+  let badTenants = 0;
+  const reasons: string[] = [];
+
+  for (const scope of scopes) {
+    const tag = `(${scope.organizationId.slice(0, 8)}/${scope.userId.slice(0, 8)})`;
+    try {
+      const r = await runDueTikTokPosts(bindTikTokSchedulerDeps(client, scope), opts);
+      published += r.published;
+      failed += r.failed;
+      retried += r.retried;
+      for (const reason of r.reasons) reasons.push(`${tag} ${reason}`);
+      if (!r.ok) {
+        badTenants += 1;
+        // Falha terminal já documenta o item em `reasons`; só falta marcador
+        // quando NADA foi reportado (defesa honesta, não ruído):
+        if (!r.error && r.reasons.length === 0) reasons.push(`${tag} tick não concluído`);
+      }
+    } catch (e) {
+      // Executor nunca lança — isto é só contenção defensiva:
+      badTenants += 1;
+      reasons.push(`${tag} tick_failed: ${String((e as Error)?.message ?? e)}`);
+    }
+  }
+
+  return {
+    ok: badTenants === 0,
+    tenants: scopes.length,
+    published,
+    failed,
+    retried,
+    reasons,
+    error: badTenants > 0 ? 'tenant_failed' : undefined,
+  };
+}

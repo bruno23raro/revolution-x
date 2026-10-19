@@ -272,7 +272,7 @@ function PublishCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* FASE 4 · slice 1+2 — Agendados (executor da fila c/ retry+backoff)  */
+/* FASE 4 · slice 1+2+3 — Agendados (executor c/ retry+backoff + cron) */
 /* ------------------------------------------------------------------ */
 
 interface PendingView {
@@ -367,6 +367,11 @@ function ScheduledCard() {
         executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na própria fila.
         Falhas <em>não</em> encerram na hora: o item é reagendado com backoff exponencial (até 3 tentativas); só
         então vira <span className="text-red-300">failed</span> terminal.
+      </p>
+      <p className="text-xs text-gray-500 mb-3">
+        Disparo <em>periódico</em>: <code className="text-gray-400">POST /api/cron/tiktok</code> (gatilho de
+        sistema multi-tenant, protegido pelo segredo <code className="text-gray-400">CRON_SECRET</code>). O
+        registro do cron e a definição do segredo no hpanel são passos [HUMANO] — sem eles, use o botão abaixo.
       </p>
 
       {queueState === 'loading' && <p className="text-xs text-gray-500">Carregando fila…</p>}

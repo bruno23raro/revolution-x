@@ -5,6 +5,11 @@
 
 ## Etapa atual
 
+> **Atualizado 2026-10-19:** a etapa mais recente está no bloco
+> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 1
+> concluída, commit `0e3de63`). O texto original a seguir cobre FASE A–I
+> da missão de 2026-10-15/16 (histórico).
+
 FASES A/B/C/D/F/G **concluídas**. **FASE H concluída** (close-out em
 `902d25b`; deploy automático + smoke pós-deploy com evidência real).
 **FASE I (repo público + CI verde) concluída até o limite autônomo**
@@ -29,6 +34,43 @@ senha, slug da org); senhas reais existem apenas em refs **locais**
 do banco ficou CONCLUÍDO 2026-10-17** (`GET /api/admin/tasks` → 200
 `{count:0}` na sessão admin de produção; ver bloco **2026-10-17** abaixo). Detalhes:
 `docs/EXECUTION_LOG.md` §FASE I.
+
+## 2026-10-19 — FASE 2–4 do PROMPT MESTRE (hub de integrações)
+
+**Etapa atual: FASE 2 (IG/FB/TikTok oficial), FASE 3 (slices 1–4) e
+FASE 4 · slice 1 (executor do agendamento TikTok) CONCLUÍDAS e push em
+`origin/main`.**
+
+- Commits: `3648f3a` (FASE 3 · slice 2 — chatbot visual + auto-reply no
+  webhook Meta) → `0ccc12a` (slice 3 — executores de saída n8n/Zapier/Make/
+  webhook genérico + `/api/integrations/execute`) → `b4657de`
+  (`checkRiskAcknowledgment` em `riskAcknowledgment.ts`, never-throw,
+  usado por `qrCodeGenerator.ts`) → `5e649af` (slice 4 —
+  `publicScraper.ts` c/ guarda SSRF, seção Sem API/Avançado) →
+  `8fcd3a4` (teste live OmniRouter resiliente a 503/5xx: retry + adiar
+  honesto) → `0e3de63` (**FASE 4 · slice 1**).
+- **FASE 4 · slice 1** (`0e3de63`): `src/jobs/tiktokScheduler.ts`
+  (núcleo puro `selectDuePosts` + executor `runDueTikTokPosts` c/
+  `TickDeps` injetáveis; persistência na AgentMemory/Postgres EXISTENTE
+  — zero dep novas; `TickDeps` é o ponto de extensão p/ adaptadores
+  BullMQ `REDIS_URL` / Inngest `INNGEST_*`, ambos [HUMANO]) +
+  `app/api/tiktok/tick/route.ts` (POST tick 401/503/200 · GET fila
+  projetada, últimos 50, sem segredos) + card "Agendados" em `/tiktok`.
+  Semântica: acesso indisponível preserva a intenção (itens seguem
+  pendentes); publicação ok → `published`+`publishId`; falha →
+  `failed`+motivo; fila ausente → `queue_unavailable` (503 honesto).
+- **Evidências**: suíte total **33 suítes / 425 testes PASS**; `tsc` 0
+  erros; push `8fcd3a4..0e3de63` (deploy automático do hpanel).
+- **Próximo autônomo (FASE 4 · slice 2)**: disparo periódico do tick
+  (cron) + retry/backoff c/ contador `attempts` p/ posts `failed`.
+  Depois, com credenciais [HUMANO] (se o usuário fornecer
+  `REDIS_URL`/`INNGEST_*`): adaptadores BullMQ/Inngest plugando no
+  MESMO contrato `TickDeps` (executor não muda).
+- Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,
+  IG/FB/TikTok oficial, tracking de anúncios, Sem API com avisos de
+  risco, chatbot visual, n8n/Zapier/Make) estão CONCLUÍDOS nas
+  FASE 1–3 — estado completo em `REVOLUTION_X_MEMORY.md` §ESTADO ATUAL
+  (2026-10-19).
 
 ## 2026-10-17 — Rotação do banco de produção (CONCLUÍDA; resta só confirmação admin [HUMANO])
 

@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-18) — FASE 2 · slices 1–3 (Instagram + Facebook + TikTok), FASE 3 · slice 1 (tracking de anúncios) e FASE 3 · slice 2 (chatbot visual + auto-reply) concluídas
+## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 · slice 1 concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -108,20 +108,57 @@ Checkpoint persistente. Não inventar. Não expor secrets.
     → resposta `{{variavel}}` → quick replies → próxima etapa; mover ↑↓,
     remover, "termina aqui") + seção "Variáveis" no card "Chatbot
     configurável" (lilás).
+- **FASE 3, slice 3 (executores de saída — commit `0ccc12a`):**
+  `src/integrations/outboundExecutors.ts` dispara n8n / Zapier / Make /
+  webhook genérico (injetável `fetchImpl`, NUNCA lança, devolve
+  `ok`/`error`/`errorDetail`, sem segredo no corpo) + rota
+  `POST /api/integrations/execute` (prover no registry c/ credencial
+  guardada) + card "Execução de saída" em `/integrations` (212 testes
+  novos). Provedores `n8n`/`zapier`/`make`/`webhook` no registry
+  (`providers.ts`).
+- **FASE 3, slice 4 (Seção Sem API/Avançado — commits `b4657de` + `5e649af`):**
+  `checkRiskAcknowledgment` extraído p/ `src/integrations/riskAcknowledgment.ts`
+  (never-throw, importado por `qrCodeGenerator.ts` — QR Code WhatsApp
+  SVG/dataURL sem deps, com consentimento de risco);
+  `src/integrations/publicScraper.ts` (`scrapePublicUrl` +
+  `isSafePublicUrl` c/ guarda SSRF: bloqueia localhost, IPs privados,
+  link-local e metadata 169.254.169.254; `fetchImpl`/`timeoutMs`/`maxBytes`
+  injetáveis, NUNCA lança, máx. 500KB). Executores de scraping permanecem
+  DECLARADOS c/ `RiskBanner` — sem execução não-oficial silenciosa.
+- **Teste live OmniRouter resiliente (commit `8fcd3a4`):** `omni-router.test.ts`
+  detecta status HTTP no erro (`OmniRouter HTTP 5xx/429/408` →
+  indisponibilidade transitória): retry c/ backoff 1,5s×tentativa, máx. 3;
+  persistindo, ADIA com aviso honesto (sem deixar o CI vermelho por fora do
+  escopo); outro erro continua propagando.
+- **FASE 4, slice 1 (executor do agendamento — commit `0e3de63`):**
+  `src/jobs/tiktokScheduler.ts`: núcleo puro `selectDuePosts` +
+  `runDueTikTokPosts` c/ `TickDeps` injetáveis (backend-agnóstico);
+  persistência na AgentMemory EXISTENTE (`pending:tiktok_posts`,
+  `saveMemory` — zero dep novas; contrato `TickDeps` é o ponto de
+  extensão p/ adaptadores BullMQ (`REDIS_URL`) / Inngest
+  (`INNGEST_*`), ambos [HUMANO]). Semântica: acesso TikTok
+  indisponível → itens seguem pendentes (intenção preservada);
+  publicação ok → `published`+`publishId`; falha → `failed`+motivo;
+  UMA gravação por tick; fila ausente → `queue_unavailable` 503.
+  Rota `app/api/tiktok/tick/route.ts` (POST tick / GET fila projetada,
+  últimos 50, sem segredos; 401/503/200). UI: card "Agendados
+  (executor da fila)" em `/tiktok` (lista + "Processar agendados" +
+  "Recarregar"). Jest: `@/jobs` mapeado no `moduleNameMapper`.
 - **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) + 8 novos
-  (Meta Ads) + 12 novos (TikTok Ads) + **18 novos (fluxo/vars/quickReplies)**
-  + **8 novos (auto-reply)** + **6 novos (botões)** → suíte total
-  **29 suítes / 383 testes PASS**; `tsc` 0 erros; `next build` verde.
+  (Meta Ads) + 12 novos (TikTok Ads) + 18 novos (fluxo/vars/quickReplies)
+  + 8 novos (auto-reply) + 6 novos (botões) + **16 novos (executores de saída)**
+  + **3 novos (scraper público)** + **23 novos (FASE 4: executor + rota + projeção)**
+  → suíte total **33 suítes / 425 testes PASS**; `tsc` 0 erros.
 - **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
   OAuth; sem isso as rotas degradam honestamente (409/503). O TikTok usa as
   chaves do AgentMemory (provider `tiktok`) — sem dependência de credencial
   externa de terceiros.
-- **Próximo passo autônomo: FASE 3 restante** (slice 3: executores de
-  **saída** de n8n/Zapier/Make/webhooks; slice 4: executores "Sem API/
-  Avançado" com aviso de risco — QR/scrapers/browser automation, **sem
-  execução não-oficial silenciosa**), depois FASE 4 (fila de
-  jobs BullMQ/Inngest, incluindo o executor do agendamento de TikTok, e
-  testes de fluxo principal).
+- **Próximo passo autônomo: FASE 4 · slice 2** (disparo periódico do tick —
+  cron; retry/backoff + contador `attempts` p/ posts `failed`; adaptador
+  BullMQ c/ `REDIS_URL` e/ou Inngest c/ `INNGEST_*` — credenciais [HUMANO]).
+  Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,
+  IG/FB/TikTok oficial, tracking de anúncios, Sem API com avisos de risco,
+  chatbot visual, n8n/Zapier/Make/webhooks) estão CONCLUÍDOS nas FASE 1–3.
 
 ### FASE 1 (backend + UI) — concluída (referência)
 

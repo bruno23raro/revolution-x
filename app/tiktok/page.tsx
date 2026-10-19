@@ -4,8 +4,9 @@
 //
 //  • Publicação (agora) e agendamento de vídeos pela Content Posting API
 //    OFICIAL do TikTok (/api/tiktok/publish). A API não tem horário de
-//    publicação, então o agendamento persiste a intenção (execução no
-//    agendador — FASE 4).
+//    publicação, então o agendamento persiste a intenção e o EXECUTOR fica no
+//    agendador (/api/tiktok/tick — FASE 4), que publica via API oficial e
+//    marca o resultado na própria fila.
 //  • Tracking: estado (`/api/tiktok/status`) e métricas
 //    (`/api/tiktok/analytics`) dos vídeos publicados.
 //  • FASE 3: anúncios em tempo real via Business API (`/api/tiktok/ads-insights`)
@@ -46,6 +47,7 @@ export default function TikTokPage() {
           <div className="grid gap-6">
             <ConnectionStatusCard />
             <PublishCard />
+            <ScheduledCard />
             <TrackingCard />
             <AdsInsightsCard />
             <ScrapingCard />
@@ -250,7 +252,7 @@ function PublishCard() {
           </button>
           <span className="text-xs text-gray-600">
             {schedule
-              ? 'A API oficial não publica em hora marcada — a intenção é guardada (execução na FASE 4).'
+              ? 'A API oficial não publica em hora marcada — a intenção é guardada e o executor processa no card "Agendados".'
               : 'Publicação imediata via PULL_FROM_URL.'}
           </span>
         </div>
@@ -265,6 +267,168 @@ function PublishCard() {
           </div>
         )}
       </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* FASE 4 · slice 1 — Agendados (executor da fila)                     */
+/* ------------------------------------------------------------------ */
+
+interface PendingView {
+  id: string;
+  scheduledAt: string;
+  status: 'pending' | 'published' | 'failed';
+  publishId?: string;
+  videoUrl?: string;
+  caption?: string;
+}
+
+function ScheduledCard() {
+  const [pending, setPending] = useState<PendingView[] | null>(null);
+  const [queueState, setQueueState] = useState<'loading' | 'ok' | 'unavailable' | 'unauth' | 'error'>('loading');
+  const [busy, setBusy] = useState(false);
+  const [tickOut, setTickOut] = useState<string | null>(null);
+
+  const load = () => {
+    setQueueState('loading');
+    setTickOut(null);
+    fetch('/api/tiktok/tick')
+      .then(async (r) => {
+        if (r.status === 401) {
+          setQueueState('unauth');
+          setPending([]);
+          return;
+        }
+        if (r.status === 503) {
+          setQueueState('unavailable');
+          setPending([]);
+          return;
+        }
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) {
+          setPending(Array.isArray(d.pending) ? d.pending : []);
+          setQueueState('ok');
+        } else {
+          setQueueState('error');
+          setPending([]);
+        }
+      })
+      .catch(() => {
+        setQueueState('error');
+        setPending([]);
+      });
+  };
+
+  const runTick = async () => {
+    setBusy(true);
+    setTickOut(null);
+    try {
+      const r = await fetch('/api/tiktok/tick', { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 401) {
+        setTickOut('Faça login para processar os agendados.');
+      } else if (r.status === 503) {
+        setTickOut(`Fila indisponível no servidor (503)${d.detail ? ` — ${d.detail}` : ''}.`);
+      } else if (r.ok && d.ok) {
+        setTickOut(
+          `Tick concluído: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.failed ?? 0} falha(s).`,
+        );
+      } else if (r.ok && d.error === 'queue_unavailable') {
+        setTickOut(`Fila indisponível${d.detail ? ` — ${d.detail}` : ''}.`);
+      } else if (r.ok) {
+        const why = Array.isArray(d.reasons) && d.reasons.length > 0 ? ` Motivos: ${d.reasons.join('; ')}.` : '';
+        setTickOut(
+          `Tick concluído com falhas: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.failed ?? 0} falha(s).${why}`,
+        );
+      } else {
+        setTickOut(`Falha ao processar (HTTP ${r.status}).`);
+      }
+      load(); // recarrega a fila com o estado novo
+    } catch {
+      setTickOut('Falha de rede ao processar os agendados.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(load, []);
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-sm font-bold text-gray-200">Agendados (executor da fila)</h2>
+        <ApiBadge layer="official" />
+      </div>
+
+      <p className="text-xs text-gray-400 mb-3">
+        Como a API oficial não publica em hora marcada, o agendamento guarda a <em>intenção</em>. Este card é o
+        executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na própria fila
+        (idempotente — cada item é processado uma vez).
+      </p>
+
+      {queueState === 'loading' && <p className="text-xs text-gray-500">Carregando fila…</p>}
+      {queueState === 'unauth' && <p className="text-xs text-amber-300">Faça login para ver os agendados.</p>}
+      {queueState === 'unavailable' && (
+        <p className="text-xs text-amber-300">Memória/fila de integrações indisponível no servidor (503).</p>
+      )}
+      {queueState === 'error' && <p className="text-xs text-amber-300">Falha ao carregar a fila.</p>}
+      {queueState === 'ok' && pending && pending.length === 0 && (
+        <p className="text-xs text-gray-400">Nenhum agendamento pendente.</p>
+      )}
+      {queueState === 'ok' && pending && pending.length > 0 && (
+        <ul className="space-y-1.5 mb-3">
+          {pending.map((p) => (
+            <li key={p.id} className="text-xs text-gray-300 flex flex-wrap items-center gap-x-2">
+              <span
+                className={
+                  p.status === 'published'
+                    ? 'text-green-300'
+                    : p.status === 'failed'
+                      ? 'text-red-300'
+                      : 'text-purple-300'
+                }
+              >
+                [{p.status}]
+              </span>
+              <span className="text-gray-500">{new Date(p.scheduledAt).toLocaleString('pt-BR')}</span>
+              <span className="text-gray-600 truncate" title={p.videoUrl}>
+                {p.videoUrl}
+              </span>
+              {p.publishId && <span className="text-gray-600">pub {p.publishId}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => void runTick()}
+          disabled={busy || queueState !== 'ok'}
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+        >
+          {busy ? 'Processando…' : 'Processar agendados'}
+        </button>
+        <button
+          onClick={load}
+          disabled={queueState === 'loading'}
+          className="px-3 py-2 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:bg-white/5 disabled:opacity-40"
+        >
+          Recarregar
+        </button>
+      </div>
+
+      {tickOut && (
+        <div
+          className={`mt-3 p-3 text-xs rounded-lg border ${
+            tickOut.includes('falha') || tickOut.includes('Falha') || tickOut.includes('indisponível')
+              ? 'bg-amber-400/10 border-amber-400/25 text-amber-300'
+              : 'bg-green-400/10 border-green-400/25 text-green-300'
+          }`}
+        >
+          {tickOut}
+        </div>
+      )}
     </Card>
   );
 }

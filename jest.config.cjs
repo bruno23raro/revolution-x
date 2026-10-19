@@ -9,5 +9,6 @@ module.exports = {
     '^@/integrations/(.*)$': '<rootDir>/src/integrations/$1',
     '^@/services/(.*)$': '<rootDir>/src/services/$1',
     '^@/repositories/(.*)$': '<rootDir>/src/repositories/$1',
+    '^@/jobs/(.*)$': '<rootDir>/src/jobs/$1',
   },
 };

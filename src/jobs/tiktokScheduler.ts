@@ -321,8 +321,12 @@ export interface CronResult {
  * silenciosamente).
  */
 export async function findTikTokPendingScopes(client: PrismaClient): Promise<CronScope[]> {
+  // `supersededAt: null` alinha a descoberta à semântica de leitura do
+  // executor (`listMemory` filtra `supersededAt: null`): uma linha
+  // PENDING_KEY superada não conta como intenção pendente — senão o cron
+  // apontaria um tenant com trabalho pendente que o próprio tick veria vazio.
   const rows = await client.agentMemory.findMany({
-    where: { kind: 'preference', memoryKey: PENDING_KEY },
+    where: { kind: 'preference', memoryKey: PENDING_KEY, supersededAt: null },
     select: { organizationId: true, userId: true, valueJson: true },
   });
   const scopes = new Map<string, CronScope>();

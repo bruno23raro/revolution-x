@@ -82,13 +82,23 @@ describe('findTikTokPendingScopes (discovery)', () => {
     const scopes = await findTikTokPendingScopes(fakeClient);
 
     expect(findMany).toHaveBeenCalledWith({
-      where: { kind: 'preference', memoryKey: 'pending:tiktok_posts' },
+      where: { kind: 'preference', memoryKey: 'pending:tiktok_posts', supersededAt: null },
       select: { organizationId: true, userId: true, valueJson: true },
     });
     expect(scopes).toEqual([
       { organizationId: 'org-1', userId: 'user-1' },
       { organizationId: 'org-2', userId: 'user-3' },
     ]);
+  });
+
+  it('descoberta filtra linhas superadas no próprio where (mesma semântica de leitura do executor)', async () => {
+    findMany.mockResolvedValue([]);
+    await findTikTokPendingScopes(fakeClient);
+    expect(findMany.mock.calls[0]?.[0]?.where).toMatchObject({
+      kind: 'preference',
+      memoryKey: 'pending:tiktok_posts',
+      supersededAt: null,
+    });
   });
 
   it('deduplica (org,user) repetido na varredura', async () => {

@@ -11,11 +11,19 @@ function slugify(name: string): string {
     + '-' + crypto.randomUUID().substring(0, 6);
 }
 
+interface OnboardingResult {
+  ok: boolean;
+  /** orgId gerado mesmo que o insert falhe — o cleanup de resíduo parcial precisa dele. */
+  orgId?: string;
+  /** Erro original (NUNCA exposto ao client; só log). */
+  error?: unknown;
+}
+
 async function createOnboardingRecords(
   userId: string,
   name: string,
   email: string,
-): Promise<void> {
+): Promise<OnboardingResult> {
   const admin = createServiceRoleClient();
 
   // 1. Sync to public.User (auth.users → public."User")
@@ -27,8 +35,9 @@ async function createOnboardingRecords(
     emailVerified: true,
   });
   if (userError) {
-    // NOT_EXIST constraint = already migrated → idempotent, ignore
-    if (userError.code !== '23505') throw userError;
+    // 23505 = e-mail já em uso por linha anterior → idempotente, ignora.
+    // Qualquer outro erro é real (ex.: banco fora) → falha o onboarding.
+    if (userError.code !== '23505') return { ok: false, error: userError };
   }
 
   // 2. Create default Organization for this user
@@ -40,7 +49,7 @@ async function createOnboardingRecords(
     slug: slugify(orgName),
     status: 'active',
   });
-  if (orgError) throw orgError;
+  if (orgError) return { ok: false, orgId, error: orgError };
 
   // 3. Link user as admin member
   const { error: memberError } = await admin.from('OrganizationMember').insert({
@@ -48,7 +57,9 @@ async function createOnboardingRecords(
     userId,
     role: 'admin',
   });
-  if (memberError) throw memberError;
+  if (memberError) return { ok: false, orgId, error: memberError };
+
+  return { ok: true, orgId };
 }
 
 export async function POST(request: Request) {
@@ -84,16 +95,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'registration_failed' }, { status: 400 });
     }
 
-    // Create public.User + Organization + OrganizationMember for CRM access
+    // Create public.User + Organization + OrganizationMember for CRM access.
+    // NUNCA lança: devolve um resultado — a falha é o ponto de compensação P4-2.
+    let onboarding: OnboardingResult;
     try {
-      await createOnboardingRecords(
+      onboarding = await createOnboardingRecords(
         data.user.id,
         String(name ?? '').trim(),
         normalizedEmail,
       );
     } catch (onboardErr) {
-      // Log but don't fail — user can still log in; onboarding can be retried
-      console.error('[register] onboarding failed:', onboardErr);
+      // createServiceRoleClient() pode lançar (service key ausente) — trata
+      // como onboarding falhado (sem orgId conhecido).
+      onboarding = { ok: false, error: onboardErr };
+    }
+
+    if (!onboarding.ok) {
+      // P4-2 (registro-zumbi): onboarding falhou → usuário com sessão GoTrue
+      // válida mas sem public."User"/Organization (getAuthenticatedUser → null
+      // → bloqueio permanente, sem retry). Compensa em DOIS planos e devolve
+      // 500 honesto em vez de 201 falso, para o e-mail poder re-registrar limpo:
+      //  1. deleteUser mata a sessão GoTrue (meta principal);
+      //  2. o GoTrue NÃO tem cascade para public."User" — apaga também o
+      //     resíduo parcial das linhas públicas (child → parent). Sem isso, a
+      //     linha órfã de public."User" (e-mail UNIQUE) travaria o re-cadastro.
+      console.error('[register] onboarding failed:', onboarding.error);
+      let rolledBack = false;
+      try {
+        const admin = createServiceRoleClient();
+        await admin.auth.admin.deleteUser(data.user.id);
+        rolledBack = true;
+        // Resíduo público parcial (melhor esforço; só loga, não muda o detail):
+        await admin.from('OrganizationMember').delete().eq('userId', data.user.id);
+        if (onboarding.orgId) {
+          await admin.from('Organization').delete().eq('id', onboarding.orgId);
+        }
+        await admin.from('User').delete().eq('id', data.user.id);
+      } catch (rollbackErr) {
+        // Falha do rollback NÃO derruba a resposta: resíduo possível (cleanup
+        // manual). Log sem segredos.
+        console.error('[register] compensating delete left residue:', rollbackErr);
+      }
+      return NextResponse.json(
+        {
+          error: 'registration_failed',
+          detail: rolledBack ? 'onboarding_rolled_back' : 'onboarding_residual',
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({

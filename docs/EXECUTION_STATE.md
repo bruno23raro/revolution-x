@@ -95,6 +95,10 @@ cron multi-tenant) CONCLUÍDAS e push em `origin/main`.**
   contrato `TickDeps` já é o ponto de extensão (executor não muda);
   (c) credenciais `META_*`/`EMAIL_*`/`OMNIROUTER_*` no hpanel +
   `ads_read` + token BAP do TikTok Ads.
+  **Procedimento passo-a-passo do item (a) em
+  `docs/HANEL_SETUP_CRON.md`** (gerar `CRON_SECRET`, definir a env,
+  registrar o cron do hpanel, progressão de verificação 401→503→200 —
+  sem segredos versionados).
 - Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,
   IG/FB/TikTok oficial, tracking de anúncios, Sem API com avisos de
   risco, chatbot visual, n8n/Zapier/Make) estão CONCLUÍDOS nas

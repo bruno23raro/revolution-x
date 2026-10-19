@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 · slice 1 concluídas
+## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 (slices 1–2) concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -144,21 +144,40 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   últimos 50, sem segredos; 401/503/200). UI: card "Agendados
   (executor da fila)" em `/tiktok` (lista + "Processar agendados" +
   "Recarregar"). Jest: `@/jobs` mapeado no `moduleNameMapper`.
+- **FASE 4, slice 2 (retry c/ backoff — commit `cb48089`):**
+  falha de publicação NÃO encerra na hora: `PendingTikTokPost` ganhou
+  `attempts?`; o tick incrementa e, até `maxAttempts` (padrão 3),
+  REAGENDA (`pending` c/ `scheduledAt = now + retryBaseDelayMs *
+  2^(attempts-1)`, base padrão 5 min) — só então `failed` terminal
+  (contador preservado). `TickResult` relata `retried` separado de
+  `failed` (terminais); `ok` considera só encerrados. `markPendingTikTokPost`
+  aceita patch c/ `attempts`/`scheduledAt` (módulo segue puro). UI:
+  contador "tentativa N" por item + "reagendado(s)" no resultado do tick.
+  10 testes novos: 5 de retry/backoff + 5 de FLUXO PRINCIPAL
+  (`tiktokScheduler.flow.test.ts` exercita `bindTikTokSchedulerDeps`
+  real, AgentMemory → núcleo, com `TaskQueueUnavailableError` REAL p/
+  `instanceof`: wiring exato do tenant/kind/key, falha → fila gravada c/
+  item reagendado, save 503, projeção p/ UI).
 - **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) + 8 novos
   (Meta Ads) + 12 novos (TikTok Ads) + 18 novos (fluxo/vars/quickReplies)
   + 8 novos (auto-reply) + 6 novos (botões) + **16 novos (executores de saída)**
   + **3 novos (scraper público)** + **23 novos (FASE 4: executor + rota + projeção)**
-  → suíte total **33 suítes / 425 testes PASS**; `tsc` 0 erros.
+  + **10 novos (FASE 4 · slice 2: retry/backoff + fluxo principal)**
+  → suíte total **34 suítes / 435 testes PASS**; `tsc` 0 erros.
 - **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
   OAuth; sem isso as rotas degradam honestamente (409/503). O TikTok usa as
   chaves do AgentMemory (provider `tiktok`) — sem dependência de credencial
   externa de terceiros.
-- **Próximo passo autônomo: FASE 4 · slice 2** (disparo periódico do tick —
-  cron; retry/backoff + contador `attempts` p/ posts `failed`; adaptador
-  BullMQ c/ `REDIS_URL` e/ou Inngest c/ `INNGEST_*` — credenciais [HUMANO]).
-  Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,
-  IG/FB/TikTok oficial, tracking de anúncios, Sem API com avisos de risco,
-  chatbot visual, n8n/Zapier/Make/webhooks) estão CONCLUÍDOS nas FASE 1–3.
+- **Próximo passo autônomo: FASE 4 · slice 3** — disparo periódico do tick
+  (cron/scheduler do próprio servidor Hostinger ou `vercel-cron`-like; o
+  tick atual é manual via card "Processar agendados" + `POST /api/tiktok/tick`
+  c/ auth, que já é o gatilho pronto). Depois, com credenciais [HUMANO]
+  (`REDIS_URL` e/ou `INNGEST_*`): adaptadores BullMQ/Inngest plugando no
+  MESMO contrato `TickDeps` (executor não muda). Demais itens do PROMPT
+  MESTRE (hub de integrações, WhatsApp completo, IG/FB/TikTok oficial,
+  tracking de anúncios, Sem API com avisos de risco, chatbot visual,
+  n8n/Zapier/Make/webhooks, retry c/ backoff da fila) estão CONCLUÍDOS nas
+  FASE 1–4 (slice 1–2).
 
 ### FASE 1 (backend + UI) — concluída (referência)
 

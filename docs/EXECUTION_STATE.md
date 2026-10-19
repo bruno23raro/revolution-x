@@ -6,8 +6,8 @@
 ## Etapa atual
 
 > **Atualizado 2026-10-19:** a etapa mais recente está no bloco
-> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 1
-> concluída, commit `0e3de63`). O texto original a seguir cobre FASE A–I
+> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 2
+> concluída, commit `cb48089`). O texto original a seguir cobre FASE A–I
 > da missão de 2026-10-15/16 (histórico).
 
 FASES A/B/C/D/F/G **concluídas**. **FASE H concluída** (close-out em
@@ -38,8 +38,8 @@ do banco ficou CONCLUÍDO 2026-10-17** (`GET /api/admin/tasks` → 200
 ## 2026-10-19 — FASE 2–4 do PROMPT MESTRE (hub de integrações)
 
 **Etapa atual: FASE 2 (IG/FB/TikTok oficial), FASE 3 (slices 1–4) e
-FASE 4 · slice 1 (executor do agendamento TikTok) CONCLUÍDAS e push em
-`origin/main`.**
+FASE 4 · slices 1–2 (executor do agendamento TikTok c/ retry+backoff)
+CONCLUÍDAS e push em `origin/main`.**
 
 - Commits: `3648f3a` (FASE 3 · slice 2 — chatbot visual + auto-reply no
   webhook Meta) → `0ccc12a` (slice 3 — executores de saída n8n/Zapier/Make/
@@ -48,7 +48,8 @@ FASE 4 · slice 1 (executor do agendamento TikTok) CONCLUÍDAS e push em
   usado por `qrCodeGenerator.ts`) → `5e649af` (slice 4 —
   `publicScraper.ts` c/ guarda SSRF, seção Sem API/Avançado) →
   `8fcd3a4` (teste live OmniRouter resiliente a 503/5xx: retry + adiar
-  honesto) → `0e3de63` (**FASE 4 · slice 1**).
+  honesto) → `0e3de63` (**FASE 4 · slice 1**) → `cb48089`
+  (**FASE 4 · slice 2**).
 - **FASE 4 · slice 1** (`0e3de63`): `src/jobs/tiktokScheduler.ts`
   (núcleo puro `selectDuePosts` + executor `runDueTikTokPosts` c/
   `TickDeps` injetáveis; persistência na AgentMemory/Postgres EXISTENTE
@@ -59,11 +60,23 @@ FASE 4 · slice 1 (executor do agendamento TikTok) CONCLUÍDAS e push em
   Semântica: acesso indisponível preserva a intenção (itens seguem
   pendentes); publicação ok → `published`+`publishId`; falha →
   `failed`+motivo; fila ausente → `queue_unavailable` (503 honesto).
-- **Evidências**: suíte total **33 suítes / 425 testes PASS**; `tsc` 0
-  erros; push `8fcd3a4..0e3de63` (deploy automático do hpanel).
-- **Próximo autônomo (FASE 4 · slice 2)**: disparo periódico do tick
-  (cron) + retry/backoff c/ contador `attempts` p/ posts `failed`.
-  Depois, com credenciais [HUMANO] (se o usuário fornecer
+- **FASE 4 · slice 2** (`cb48089`): RETRY c/ BACKOFF EXPONENCIAL —
+  `PendingTikTokPost.attempts?`; `markPendingTikTokPost` aceita
+  `attempts`/`scheduledAt`; `TickOptions.maxAttempts` (padrão 3) /
+  `retryBaseDelayMs` (padrão 5 min): falha incrementa `attempts` e, até o
+  teto, REAGENDA (`scheduledAt = now + base * 2^(attempts-1)`), só então
+  `failed` terminal; `TickResult.retried` separado de `failed` (terminais),
+  `ok` só por terminais; `PendingTikTokView.attempts` + UI c/ contador
+  "tentativa N" e "reagendado(s)". 10 testes novos (5 retry/backoff + 5
+  FLUXO PRINCIPAL: `tiktokScheduler.flow.test.ts` exercita
+  `bindTikTokSchedulerDeps` real com `TaskQueueUnavailableError` REAL
+  p/ `instanceof`).
+- **Evidências**: suíte total **34 suítes / 435 testes PASS**; `tsc` 0
+  erros; push `ed16d66..cb48089` (deploy automático do hpanel).
+- **Próximo autônomo (FASE 4 · slice 3)**: disparo periódico do tick
+  (cron; o tick atual é gatilho manual pronto — card "Processar
+  agendados" + `POST /api/tiktok/tick` c/ auth). Depois, com
+  credenciais [HUMANO] (se o usuário fornecer
   `REDIS_URL`/`INNGEST_*`): adaptadores BullMQ/Inngest plugando no
   MESMO contrato `TickDeps` (executor não muda).
 - Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,

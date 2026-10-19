@@ -16,7 +16,7 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 (slices 1–2) concluídas
+## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 (slices 1–3) concluídas
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -158,26 +158,47 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   real, AgentMemory → núcleo, com `TaskQueueUnavailableError` REAL p/
   `instanceof`: wiring exato do tenant/kind/key, falha → fila gravada c/
   item reagendado, save 503, projeção p/ UI).
+- **FASE 4, slice 3 (cron multi-tenant + gatilho secreto — commit `042ec94`):**
+  disparo periódico do tick, a parte que ainda faltava do FASE 4.
+  `findTikTokPendingScopes(client)`: descobre em AgentMemory TODOS os
+  (org,user) com item PENDING em `pending:tiktok_posts` (o backend é
+  **user-scoped** — migration 014; a varredura é nível-sistema de
+  propósito, por isso só existe atrás do segredo).
+  `runTikTokCronForAll(client, opts?)`: 1 tick por escopo — cada tick roda
+  de volta no contexto RLS de SEU usuário (`bindTikTokSchedulerDeps`);
+  isolamento por tenant (1 falha não bloqueia os demais); agregado
+  `{ ok, tenants, published, failed, retried, reasons }` com
+  `queue_unavailable`/`list_failed`/`tenant_failed`; **nunca lança**.
+  Rota `POST /api/cron/tiktok`: env `CRON_SECRET` ausente → 503
+  `cron_not_configured` (degradação honesta); header `x-cron-secret` com
+  comparação **em tempo constante** (guarda de tamanho +
+  `crypto.timingSafeEqual`, padrão dos webhooks Meta) → 401; 200 com a
+  agregação; `queue_unavailable` → 503; `GET` → 405. **Resíduo [HUMANO]**:
+  definir `CRON_SECRET` no hpanel + registrar o job de cron do Hostinger
+  (ex.: a cada 5 min) chamando a rota — a rota e o runner já estão prontos.
+  20 testes novos (10 cron flow + 10 rota).
 - **Testes**: 16 novos (IG) + 12 novos (FB) + 15 novos (TikTok) + 8 novos
   (Meta Ads) + 12 novos (TikTok Ads) + 18 novos (fluxo/vars/quickReplies)
   + 8 novos (auto-reply) + 6 novos (botões) + **16 novos (executores de saída)**
   + **3 novos (scraper público)** + **23 novos (FASE 4: executor + rota + projeção)**
   + **10 novos (FASE 4 · slice 2: retry/backoff + fluxo principal)**
-  → suíte total **34 suítes / 435 testes PASS**; `tsc` 0 erros.
+  + **20 novos (FASE 4 · slice 3: cron multi-tenant + gatilho secreto)**
+  → suíte total **36 suítes / 455 testes PASS**; `tsc` 0 erros.
 - **P0 [HUMANO]**: `META_*` no hpanel + conta IG **e** Página FB vinculadas via
   OAuth; sem isso as rotas degradam honestamente (409/503). O TikTok usa as
   chaves do AgentMemory (provider `tiktok`) — sem dependência de credencial
   externa de terceiros.
-- **Próximo passo autônomo: FASE 4 · slice 3** — disparo periódico do tick
-  (cron/scheduler do próprio servidor Hostinger ou `vercel-cron`-like; o
-  tick atual é manual via card "Processar agendados" + `POST /api/tiktok/tick`
-  c/ auth, que já é o gatilho pronto). Depois, com credenciais [HUMANO]
-  (`REDIS_URL` e/ou `INNGEST_*`): adaptadores BullMQ/Inngest plugando no
-  MESMO contrato `TickDeps` (executor não muda). Demais itens do PROMPT
-  MESTRE (hub de integrações, WhatsApp completo, IG/FB/TikTok oficial,
-  tracking de anúncios, Sem API com avisos de risco, chatbot visual,
-  n8n/Zapier/Make/webhooks, retry c/ backoff da fila) estão CONCLUÍDOS nas
-  FASE 1–4 (slice 1–2).
+- **FASE 4 COMPLETA (slices 1–3)**: executor + retry/backoff + cron
+  multi-tenant (`runTikTokCronForAll`) + gatilho secreto
+  (`POST /api/cron/tiktok`). O PROMPT MESTRE inteiro (hub de integrações,
+  WhatsApp completo, IG/FB/TikTok oficial, tracking de anúncios, Sem API
+  c/ avisos de risco, chatbot visual, n8n/Zapier/Make/webhooks, fila do
+  agendamento c/ retry + disparo periódico) está CONCLUÍDO em código.
+  **Restam só passos [HUMANO]**: (a) `CRON_SECRET` no hpanel + job de cron
+  do Hostinger apontando p/ `POST /api/cron/tiktok` (ex.: a cada 5 min);
+  (b) adaptadores BullMQ (`REDIS_URL`) / Inngest (`INNGEST_*`) — o contrato
+  `TickDeps` já é o ponto de extensão (o executor não muda); (c) credenciais
+  `META_*`/`EMAIL_*`/`OMNIROUTER_*` no hpanel + token BAP do TikTok Ads.
 
 ### FASE 1 (backend + UI) — concluída (referência)
 

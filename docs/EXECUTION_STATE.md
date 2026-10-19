@@ -6,8 +6,8 @@
 ## Etapa atual
 
 > **Atualizado 2026-10-19:** a etapa mais recente está no bloco
-> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 2
-> concluída, commit `cb48089`). O texto original a seguir cobre FASE A–I
+> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 3
+> concluída, commit `042ec94`). O texto original a seguir cobre FASE A–I
 > da missão de 2026-10-15/16 (histórico).
 
 FASES A/B/C/D/F/G **concluídas**. **FASE H concluída** (close-out em
@@ -38,8 +38,8 @@ do banco ficou CONCLUÍDO 2026-10-17** (`GET /api/admin/tasks` → 200
 ## 2026-10-19 — FASE 2–4 do PROMPT MESTRE (hub de integrações)
 
 **Etapa atual: FASE 2 (IG/FB/TikTok oficial), FASE 3 (slices 1–4) e
-FASE 4 · slices 1–2 (executor do agendamento TikTok c/ retry+backoff)
-CONCLUÍDAS e push em `origin/main`.**
+FASE 4 · slices 1–3 (executor do agendamento TikTok c/ retry+backoff +
+cron multi-tenant) CONCLUÍDAS e push em `origin/main`.**
 
 - Commits: `3648f3a` (FASE 3 · slice 2 — chatbot visual + auto-reply no
   webhook Meta) → `0ccc12a` (slice 3 — executores de saída n8n/Zapier/Make/
@@ -49,7 +49,7 @@ CONCLUÍDAS e push em `origin/main`.**
   `publicScraper.ts` c/ guarda SSRF, seção Sem API/Avançado) →
   `8fcd3a4` (teste live OmniRouter resiliente a 503/5xx: retry + adiar
   honesto) → `0e3de63` (**FASE 4 · slice 1**) → `cb48089`
-  (**FASE 4 · slice 2**).
+  (**FASE 4 · slice 2**) → `042ec94` (**FASE 4 · slice 3**).
 - **FASE 4 · slice 1** (`0e3de63`): `src/jobs/tiktokScheduler.ts`
   (núcleo puro `selectDuePosts` + executor `runDueTikTokPosts` c/
   `TickDeps` injetáveis; persistência na AgentMemory/Postgres EXISTENTE
@@ -71,14 +71,30 @@ CONCLUÍDAS e push em `origin/main`.**
   FLUXO PRINCIPAL: `tiktokScheduler.flow.test.ts` exercita
   `bindTikTokSchedulerDeps` real com `TaskQueueUnavailableError` REAL
   p/ `instanceof`).
-- **Evidências**: suíte total **34 suítes / 435 testes PASS**; `tsc` 0
-  erros; push `ed16d66..cb48089` (deploy automático do hpanel).
-- **Próximo autônomo (FASE 4 · slice 3)**: disparo periódico do tick
-  (cron; o tick atual é gatilho manual pronto — card "Processar
-  agendados" + `POST /api/tiktok/tick` c/ auth). Depois, com
-  credenciais [HUMANO] (se o usuário fornecer
-  `REDIS_URL`/`INNGEST_*`): adaptadores BullMQ/Inngest plugando no
-  MESMO contrato `TickDeps` (executor não muda).
+- **FASE 4 · slice 3** (`042ec94`): CRON MULTI-TENANT + GATILHO SECRETO —
+  `findTikTokPendingScopes` descobre em AgentMemory todos os (org,user)
+  com item pendente (o backend é **user-scoped**, migration 014; a
+  varredura é nível-sistema de propósito) e `runTikTokCronForAll` roda
+  1 tick POR ESCOPO, cada um no próprio contexto RLS do usuário;
+  isolamento por tenant (falha em 1 não bloqueia os demais);
+  agregado `{ ok, tenants, published, failed, retried, reasons }`
+  (`queue_unavailable`/`list_failed`/`tenant_failed`; nunca lança).
+  Rota `POST /api/cron/tiktok`: `CRON_SECRET` ausente → 503
+  `cron_not_configured` (degradação honesta); header `x-cron-secret` c/
+  comparação em tempo constante (`crypto.timingSafeEqual` c/ guarda de
+  tamanho, padrão dos webhooks Meta) → 401; agregado em 200 (falhas por
+  tenant ≠ 5xx); `queue_unavailable` → 503; `list_failed` → 500;
+  `GET` → 405. UI `/tiktok`: nota do disparo periódico. 20 testes
+  novos (10 cron flow + 10 rota).
+- **Evidências**: suíte total **36 suítes / 455 testes PASS**; `tsc` 0
+  erros; push `c4a8f7f..042ec94` (deploy automático do hpanel).
+- **Restam SÓ [HUMANO] (limite do escopo autônomo)**:
+  (a) `CRON_SECRET` no hpanel + job de cron do Hostinger (ex.: a cada
+  5 min) chamando `POST /api/cron/tiktok` — a rota/runner estão prontos;
+  (b) adaptadores BullMQ (`REDIS_URL`) / Inngest (`INNGEST_*`) — o
+  contrato `TickDeps` já é o ponto de extensão (executor não muda);
+  (c) credenciais `META_*`/`EMAIL_*`/`OMNIROUTER_*` no hpanel +
+  `ads_read` + token BAP do TikTok Ads.
 - Demais itens do PROMPT MESTRE (hub de integrações, WhatsApp completo,
   IG/FB/TikTok oficial, tracking de anúncios, Sem API com avisos de
   risco, chatbot visual, n8n/Zapier/Make) estão CONCLUÍDOS nas

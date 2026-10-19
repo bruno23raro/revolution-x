@@ -128,9 +128,7 @@ describe('middleware caminho saudável — env presente (sem regressão)', () =>
     (createServiceRoleClient as jest.Mock).mockReturnValue({
       from: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            maybeSingle: jest.fn().mockResolvedValue({ data: { organizationId: 'org-abc' } }),
-          }),
+          eq: jest.fn().mockResolvedValue({ data: [{ organizationId: 'org-abc' }] }),
         }),
       }),
     });
@@ -141,6 +139,29 @@ describe('middleware caminho saudável — env presente (sem regressão)', () =>
     expect(setCookie).toContain('x-organization-id=org-abc');
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie).toMatch(/SameSite=strict/i); // Next serializa como "strict"
+  });
+
+  it('env presente + usuário em MULTIPLAS orgs → define a 1ª, sem lançar (regressão maybeSingle)', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+    env.NODE_ENV = 'test';
+    (createServerClient as jest.Mock).mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } } }) },
+    });
+    (createServiceRoleClient as jest.Mock).mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: [{ organizationId: 'org-first' }, { organizationId: 'org-second' }],
+          }),
+        }),
+      }),
+    });
+
+    const res = await middleware(req('/dashboard'));
+    expect(res.status).toBe(200);
+    // Antes do fix, maybeSingle() lançava (2 linhas) e o catch engolia → sem cookie.
+    expect(res.headers.get('set-cookie') ?? '').toContain('x-organization-id=org-first');
   });
 
   it('env presente + sem usuário → response neutra, sem cookie de org', async () => {

@@ -73,14 +73,18 @@ export async function middleware(request: NextRequest) {
   // can be read (userId is the partition key).
   try {
     const svc = createServiceRoleClient();
-    const { data: member } = await svc
+    // Um usuário pode pertencer a várias organizações: OrganizationMember tem
+    // @@unique([organizationId,userId]), não um userId único. maybeSingle()
+    // lançava para o 2º registro e o catch engolia → multi-org perdia o cookie
+    // de contexto. Buscamos a lista e usamos a primeira como a org ativa.
+    const { data: members } = await svc
       .from('OrganizationMember')
       .select('organizationId')
-      .eq('userId', user.id)
-      .maybeSingle();
+      .eq('userId', user.id);
 
-    if (member?.organizationId) {
-      response.cookies.set('x-organization-id', member.organizationId, {
+    const orgId = members?.[0]?.organizationId;
+    if (orgId) {
+      response.cookies.set('x-organization-id', orgId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',

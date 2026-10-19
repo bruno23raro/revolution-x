@@ -24,9 +24,9 @@ export default function HomePage() {
           <h1>O controle da sua operação, <span>em movimento.</span></h1>
           <p>Conecte relacionamento, vendas, conteúdo e automação em uma experiência construída para times que não param.</p>
           <div className="hero-actions"><Link href="/register" className="button">Começar agora <span>↗</span></Link><a href="#recursos" className="button-ghost">Conhecer a plataforma <span>↓</span></a></div>
-          <div className="hero-note"><span>✦</span> Dados reais. Fluxos inteligentes. Uma visão completa.</div>
+          <div className="hero-note"><span>✦</span> Dados unificados. Fluxos inteligentes. Uma visão completa.</div>
         </div>
-        <div className="product-stage" aria-label="Prévia ilustrativa da plataforma Revolution X">
+        <div className="product-stage" role="img" aria-label="Prévia ilustrativa da plataforma Revolution X">
           <p className="preview-disclaimer">Prévia ilustrativa — números e atividades não são dados da sua conta.</p>
           <div className="dashboard-preview">
             <div className="preview-sidebar"><div className="mini-brand"><span className="brand-mark">R</span></div><div className="side-active">⌂</div><div>◈</div><div>◎</div><div>▣</div><div>◌</div><div className="side-bottom">⚙</div></div>

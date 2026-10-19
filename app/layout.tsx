@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Revolution X — Multi-Tenant SaaS',
-  description: 'Plataforma omnichannel para centralizar operações, CRM, vendas e automação.',
+  title: 'Revolution X — Sua operação em movimento',
+  description: 'Plataforma operacional omnichannel para centralizar relacionamento, vendas, conteúdo e automação.',
   icons: {
     icon: '/icon.svg',
     apple: '/icon.svg',

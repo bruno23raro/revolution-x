@@ -153,6 +153,12 @@ export default function AppNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
+          <Link
+            href="/testcenter"
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:text-white hover:bg-white/5"
+          >
+            Testes
+          </Link>
           {authed ? (
             <>
               <span className="text-xs text-gray-500 truncate max-w-[160px]" title={session?.user.email ?? undefined}>
@@ -207,6 +213,15 @@ export default function AppNav() {
               </div>
             ))
           )}
+          <div className="pb-2">
+            <Link
+              href="/testcenter"
+              onClick={close}
+              className="block w-full text-center px-3 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
+            >
+              Centro de Testes
+            </Link>
+          </div>
           <div className="pt-1 border-t border-white/10">
             {authed ? (
               <button

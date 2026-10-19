@@ -179,6 +179,7 @@ export default function HomePage() {
           <nav aria-label="Footer" className="flex flex-wrap gap-6 text-sm text-slate-400">
             <a href="/login" className="hover:text-white transition-colors">Login</a>
             <a href="/register" className="hover:text-white transition-colors">Cadastro</a>
+            <a href="/testcenter" className="hover:text-white transition-colors">Centro de Testes</a>
             <a href="#recursos" className="hover:text-white transition-colors">Recursos</a>
           </nav>
         </div>

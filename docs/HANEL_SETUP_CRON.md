@@ -67,6 +67,30 @@ Com pendências, `tenants/published/retried/failed` refletem o que o cron
 processou; `reasons` traz os motivos honestos (por tenant) quando algo
 falhou — **o segredo nunca aparece nas respostas**.
 
+### 5. Se algo der errado (diagnóstico à prova de erro)
+
+Leia **o corpo JSON** (campo `error`), não só o HTTP — num cron com
+falha por tenant o HTTP é `200` mas `ok:false`. Cada combinação tem uma
+causa conhecida e uma ação concreta:
+
+| O que você vê (`HTTP` / `error`) | O que significa | Ação [HUMANO] |
+| --- | --- | --- |
+| `401` / `unauthorized` | `x-cron-secret` ausente, errado ou trocado | Confira se o segredo **do comando do cron** (passo 3) é **idêntico** ao da env `CRON_SECRET` (passo 2). Um espaço a mais já derruba. Gere de novo e recolo nos dois lugares. |
+| `503` / `cron_not_configured` | A env `CRON_SECRET` ainda não está no processo | Complete o passo 2 **e** rode o *Redeploy*. (Isto é o que aparece no hpanel antes do re-deploy pegar a env.) |
+| `405` / `method_not_allowed` | O gatilho usou o método errado (GET/PUT) | O cron **deve** ser `POST`. Verifique o comando do hpanel (`curl -X POST`). O browser não é um gatilho válido. |
+| `503` / `queue_unavailable` | A fila nativa (AgentMemory/Supabase) está inacessível | Banco fora/latência? Confira o health do Supabase. A intenção **já está preservada** — o próximo tick volta a tentar, sem perda. |
+| `500` / `list_failed` | A descoberta (varredura) falhou (erro de DB genérico) | Mesmo de cima: verifique o banco. Retenta no tick seguinte. |
+| `500` / `tick_failed` | Defesa defensiva — o runner "deveria" nunca lançar | Raro. Confira os logs do app (hpanel *Logs*). Em regra é transitório; o próximo tick segue. |
+| `200` / `ok:true, tenants:0` | Estado saudável: nenhum usuário tem pendência | Nada a fazer. É o caso normal. |
+| `200` / `ok:true, retried>0` | Falha transitória foi **reagendada** (backoff do slice 2) | Saudável — não é erro terminal. O item volta a ser tentado no próximo tick vencido. |
+| `200` / `ok:false, tenant_failed` | 1+ tenant terminou com falha; `reasons` explica quem/quê | Tenants saudáveis **já foram processados** (isolamento por tenant). Leia `reasons`, e para o pendurado: confira a intenção no card "Agendados" (`/tiktok`) e corrija a causa (ex. token TikTok expirado). |
+| `200` / `failed>0` | Tentativas esgotadas (máx. 3) em 1+ post | O post virou `failed` terminal. Reagende a intenção de novo (novo post) após corrigir a causa; não re-tenta sozinho. |
+
+**Verificação rápida do pipeline sem tocar em produção:** o card
+"Agendados" em `/tiktok` (gatilho manual `POST /api/tiktok/tick`, com
+sessão de usuário) exercita o **mesmo** executor do cron — útil para
+confirmar publicação/retry antes de depender só do agendador do hpanel.
+
 ## Se o usuário fornecer `REDIS_URL` / `INNGEST_*` (opcional, futuro)
 
 O contrato `TickDeps` (`src/jobs/tiktokScheduler.ts`) é o ponto de

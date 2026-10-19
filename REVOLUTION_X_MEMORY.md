@@ -16,7 +16,57 @@ Checkpoint persistente. Não inventar. Não expor secrets.
 4. `git status` + `git log --oneline -5` e conferir o checkpoint abaixo.
 5. `npm test` + `npm run typecheck` para re-validar a base.
 
-## ESTADO ATUAL (2026-10-19) — FASE 2 (IG/FB/TikTok), FASE 3 (slices 1–4) e FASE 4 (slices 1–3) concluídas
+## ESTADO ATUAL (2026-10-19) — FASE 2, FASE 3 (slices 1–4), FASE 4 (slices 1–3) e continuação pós-FASE 4 concluídas
+
+- **Continuação pós-FASE 4 (2026-10-19 — reforço de correção/segurança + docs):**
+  - **`publicScraper` (SSRF endurecida, 5 camadas):** allowlist só `http`/`https`;
+    normalização de IP-literal em notações não-estritas (decimal, octal, hex,
+    IPv4-mapped IPv6 `::ffff:a.b.c.d` + `::ffff:7f00:1` e v6 embutido) antes de
+    checar range; **pré-resolução DNS** por `resolveHost` injetável (mitigação
+    de rebinding — endereço resolvido é o que vai à guarda); redirects **manuais**
+    (`redirect:'manual', max 3`) revalidando cada `Location`; timeout
+    (`AbortController` + detecção `AbortError`) + teto `maxBytes`. Suíte de
+    **29 testes** (`publicScraper.test.ts`, zero DNS real).
+  - **Hardening adversarial (revisão em profundidade):** `isBlockedIp` ganhou o
+    marcador de v4-mapped/compatible em **expansão total** (`0:0:0:0:0:ffff:xx:yy`)
+    no ramo v6 — fecha a forma não-canônica que um resolver INJETADO pode devolver
+    (o resolver default + `new URL` já normalizam p/ `::ffff:a.b.c.d`). Defesa em
+    profundidade; zero falso-positivo sobre v6 global real. Revisão concluiu:
+    **sem bypass determinístico no caminho Node**; único resíduo é o rebinding de
+    TTL curto, **documentado** no header (`resolveHost`/`fetchImpl` são os hooks).
+  - **Correção de consistência `supersededAt`:** `findTikTokPendingScopes`
+    (descoberta do cron) agora filtra `supersededAt: null` — alinhado à
+    semântica de leitura do executor (`listMemory`); antes uma linha
+    `PENDING_KEY` superada contava como pendência que o próprio tick veria
+    vazio. **Bug real, sem credencial.**
+  - **P4-2 registro-zumbi (`/api/auth/register`):** quando o onboarding
+    (`public."User"`+`Organization`+`OrganizationMember`) falha, a rota agora
+    **compensa** com `admin.auth.admin.deleteUser` (melhor esforço, via
+    service-role existente — nenhuma credencial nova) e devolve **500 honesto**
+    (`detail: onboarding_rolled_back` / `onboarding_residual`) em vez de 201
+    falso. Antes o usuário logava em GoTrue mas ficava **bloqueado do app**
+    (`getAuthenticatedUser` → `null`, sem retry). Não enfraquece auth:
+    **endurece a consistência**. A compensação é em **dois planos**: mata o GoTrue
+    (`deleteUser`) E apaga o **resíduo público parcial** (`OrganizationMember` →
+    `Organization` (via `orgId` threadado) → `public."User"`, child→parent) — o
+    GoTrue **não tem cascade** p/ `public."User"` (PK nua, sem FK/trigger), e a
+    linha órfã (e-mail UNIQUE) travaria o re-cadastro do mesmo e-mail.
+    **6 testes** (`register/route.test.ts`, incl. cenário de onboarding parcial
+    User-ok/Org-falha que era intestado antes).
+  - **Dependência órfã removida:** `resend` (v6.33) saía de `package.json`/
+    lock — o `ResendEmailProvider` é **fetch-based** contra a REST
+    (`api.resend.com`, `EMAIL_API_BASE_URL`), sem import do SDK. Limpeza
+    sem credencial, build inalterado.
+  - **Docs [HUMANO] à prova de erro:** `docs/HANEL_SETUP_CRON.md` ganhou a
+    matriz de diagnóstico (§5) — lê o **corpo** (`error`), não só o HTTP;
+    cobre `401/503 cron_not_configured/405/queue_unavailable (503)/list_failed
+    (500)/tick_failed (500)/ok:true retried>0/tenant_failed (200 ok:false)/
+    failed>0` + atalho do gatilho manual `/tiktok` p/ validar o executor.
+  - **`app/page.tsx`** stats atualizados p/ **488/488 PASS** + **28/28 págs**
+    (era 185/185 + 39/39 — defasados).
+  - **Total vigente: 37 suítes / 488 testes PASS; `tsc` 0 erros; `next lint` 0
+    avisos; build limpo (71 rotas = 40 API + 31 não-API; 28 páginas reais
+    excl. `/_not-found`, `/icon.svg`, `/auth/callback`).**
 
 - **FASE 2, slice 1 (Instagram, API oficial):** serviço
   `src/integrations/meta/instagramPublisher.ts` (2 passos: `POST /{ig}/media` →
@@ -198,7 +248,11 @@ Checkpoint persistente. Não inventar. Não expor secrets.
   do Hostinger apontando p/ `POST /api/cron/tiktok` (ex.: a cada 5 min);
   (b) adaptadores BullMQ (`REDIS_URL`) / Inngest (`INNGEST_*`) — o contrato
   `TickDeps` já é o ponto de extensão (o executor não muda); (c) credenciais
-  `META_*`/`EMAIL_*`/`OMNIROUTER_*` no hpanel + token BAP do TikTok Ads.
+  `META_*`/`EMAIL_*`/`OMNIROUTER_*` no hpanel + **escopo Meta `ads_read`
+  (ou `read_insights`)** no app da Meta p/ os insights de anúncios
+  (`GET /{act-id}/insights`) + **token BAP do TikTok** p/ a Business API
+  (`report/object/get` — é um token de Business, distinto do token de
+  usuário do Content Posting).
 
 ### FASE 1 (backend + UI) — concluída (referência)
 

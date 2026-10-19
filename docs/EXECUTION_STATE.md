@@ -6,7 +6,10 @@
 ## Etapa atual
 
 > **Atualizado 2026-10-19:** a etapa mais recente está no bloco
-> **2026-10-19 — FASE 2–4 do PROMPT MESTRE** abaixo (FASE 4 · slice 3
+> **2026-10-19 (continuação) — pós-FASE 4** abaixo (reforço de
+> segurança/correção + 2 hardenings adversariais + docs [HUMANO], total
+> vigente 488/37). Logo depois,
+> o bloco **2026-10-19 — FASE 2–4 do PROMPT MESTRE** (FASE 4 · slice 3
 > concluída, commit `042ec94`). O texto original a seguir cobre FASE A–I
 > da missão de 2026-10-15/16 (histórico).
 
@@ -34,6 +37,62 @@ senha, slug da org); senhas reais existem apenas em refs **locais**
 do banco ficou CONCLUÍDO 2026-10-17** (`GET /api/admin/tasks` → 200
 `{count:0}` na sessão admin de produção; ver bloco **2026-10-17** abaixo). Detalhes:
 `docs/EXECUTION_LOG.md` §FASE I.
+
+## 2026-10-19 (continuação) — pós-FASE 4: reforço de segurança/correção + docs [HUMANO]
+
+Sem credencial nova; tudo o que dá pra fazer sem o passo [HUMANO] foi
+feito. Confirma a base (cron/risk/scraper estáveis), corrige 3 itens
+reais, aplica 2 hardenings de revisão adversarial, limpa 1 órfão e deixa
+o runbook [HUMANO] à prova de erro.
+
+- **`publicScraper` endurecido (5 camadas de guarda SSRF):** além da
+  allowlist `http`/`https`, normaliza IP-literal em notações não-estritas
+  (decimal/octal/hex, IPv4-mapped IPv6 `::ffff:a.b.c.d` + `::ffff:7f00:1`,
+  v6 embutido) e **pré-resolve DNS** (`resolveHost` injetável) antes da
+  guarda — o endereço que vai ser buscado é o validado (mitigação de
+  rebinding); redirects manuais revalidados (max 3) + timeout/`maxBytes`.
+  **Hardening adversarial:** `isBlockedIp` ganhou o marcador de v4-mapped/
+  compatible em expansão total (`0:0:0:0:0:ffff:xx:yy`) no ramo v6 — fecha a
+  forma não-canônica que um resolver injetado pode devolver (o default +
+  `new URL` já normalizam p/ `::ffff:a.b.c.d`). Suíte **29 testes**
+  (`publicScraper.test.ts`, zero DNS real). Veredito da revisão: **sem
+  bypass determinístico** no caminho Node; único resíduo é o rebinding de
+  TTL curto, **documentado** no header (hooks `resolveHost`/`fetchImpl`).
+- **`supersededAt: null` na descoberta do cron** (`findTikTokPendingScopes`):
+  alinha a varredura à semântica de leitura do executor (`listMemory`);
+  uma linha `PENDING_KEY` superada não contava mais como pendência. Bug
+  real de consistência, sem credencial.
+- **P4-2 registro-zumbi** (`/api/auth/register`): onboarding de falha agora
+  **compensa em 2 planos** (melhor esforço, service-role existente): mata o
+  GoTrue (`admin.auth.admin.deleteUser`) E apaga o **resíduo público parcial**
+  (`OrganizationMember` → `Organization` (via `orgId` threadado) →
+  `public."User"`, child→parent) — o GoTrue não tem cascade p/ `public."User"`
+  e a linha órfã (e-mail UNIQUE) travaria o re-cadastro. + **500 honesto**
+  (`onboarding_rolled_back`/`onboarding_residual`) em vez de 201 falso — antes
+  o usuário logava em GoTrue mas ficava bloqueado do app
+  (`getAuthenticatedUser` → `null`, sem retry). Endurece a consistência; não
+  enfraquece auth. **6 testes** (`register/route.test.ts`, incl. onboarding
+  parcial User-ok/Org-falha, antes intestado).
+- **Dependência órfã removida:** `resend` (v6.33) saiu de `package.json`/
+  lock — o `ResendEmailProvider` é fetch-based contra a REST
+  (`api.resend.com`), sem import do SDK. Build inalterado.
+- **`docs/HANEL_SETUP_CRON.md` §5 (matriz de diagnóstico [HUMANO]):** lê o
+  **corpo** (`error`), não só o HTTP — `401 unauthorized` / `503
+  cron_not_configured` / `405 method_not_allowed` / `503 queue_unavailable` /
+  `500 list_failed` / `500 tick_failed` / `200 ok:true retried>0` (saudável,
+  backoff) / `200 ok:false tenant_failed` / `failed>0` (terminal) + atalho do
+  gatilho manual `/tiktok` p/ validar o executor.
+- **`app/page.tsx`** stats p/ **488/488 PASS** + **28/28 págs** (era 185/185 +
+  39/39 — defasados).
+- **Evidências**: suíte total **37 suítes / 488 testes PASS**; `tsc` 0
+  erros; `next lint` 0 avisos; build limpo (71 rotas = 40 API + 31 não-API;
+  28 páginas reais).
+- **Restam SÓ [HUMANO]** (mesmo escopo da FASE 4, agora com docs à prova de
+  erro): (a) `CRON_SECRET` no hpanel + job de cron do Hostinger (runbook em
+  `docs/HANEL_SETUP_CRON.md`, incl. matriz §5); (b) BullMQ `REDIS_URL` /
+  Inngest `INNGEST_*` (opcional); (c) `META_*` (incl. escopo `ads_read` p/
+  insights) / `EMAIL_*` / `OMNIROUTER_*` no hpanel + **token BAP do TikTok
+  Ads** p/ `report/object/get`; claude-mem `/login`.
 
 ## 2026-10-19 — FASE 2–4 do PROMPT MESTRE (hub de integrações)
 

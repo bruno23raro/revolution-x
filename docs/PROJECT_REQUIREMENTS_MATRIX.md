@@ -29,7 +29,7 @@
 | Fase | Requisito | Módulo/evidência | Teste | Estado local | Estado prod | Pendência |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Inicialização | repo + stack | build 37 pág. | ✅ | ✅ | — |
-| 2 | Auth + multi-tenant | Supabase Auth + `public."User"` + membership | auth-security 21; auth rotas | ✅ | ✅ | gap `public."User"` (onboarding fail não derruba registro) |
+| 2 | Auth + multi-tenant | Supabase Auth + `public."User"` + membership | auth-security 21; auth rotas; register 6 | ✅ | ✅ | **P4-2 FECHADO** (continuação 2026-10-19): onboarding de falha compensa em **2 planos** c/ `admin.deleteUser` **+ limpeza do resíduo público** (`OrganizationMember`→`Organization`(via orgId)→`public."User"`, child→parent) + 500 honesto em `/register` (não deixa registro-zumbi nem linha órfã que bloqueie re-registro do mesmo e-mail) |
 | 3 | Banco + CRM | `app/api/crm/*` + `crmRepoReal.ts` | suítes CRM | ✅ | ✅ | repositório usa filtro `where` (BYPASSRLS) — documentado |
 | 4 | Produtos/mídia | rotas produtos | build | ✅ | ✅ | — |
 | 5 | Publicador/calendário | rotas + placeholders UI | build | ✅ | ✅ | — |
@@ -72,7 +72,7 @@
 | G4 | 404 `/onboarding/*` pós-OAuth | **FECHADO** (A; confirmado no preview F) — `onboarding/success` e `onboarding/error` 200 |
 | G5 | email Resend (nomes de env) | **FECHADO** (A) — code + `.env.example` já consistentes (`EMAIL_API_KEY`); pendência = chave no servidor (E) |
 | G6 | `generateState` com `Math.random` | **FECHADO** (A) — CSPRNG `crypto.randomBytes(24)` base64url |
-| G7 | URL de onboarding WhatsApp | **ABERTO** — verificar formato oficial Meta antes de mudar |
+| G7 | URL de onboarding WhatsApp | **ABERTO [HUMANO]** — decidir o formato oficial Meta de deep-link de onboarding antes de mudar (decisão externa; **não confundir c/ P4-2** — o gap de onboarding do `/register` foi FECHADO na continuação 2026-10-19, ver linha 32 acima) |
 | G8 | `dotenv` não declarado | **FECHADO** (A) — devDependency ^17.4.2 |
 | G9 | rascunhos locais sem gitignore | **FECHADO** (A) |
 | G10 | Zernio morto | **DECIDIDO**: manter (MCP zernio ativo na sessão; uso futuro). Sem remoção. |

@@ -145,9 +145,9 @@ export default function HomePage() {
             <h3 className="text-lg font-bold text-white mb-4">Estado do projeto</h3>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between"><span className="text-slate-300">TypeScript</span><span className="font-bold text-emerald-400">0 erros</span></div>
-              <div className="flex items-center justify-between"><span className="text-slate-300">Testes</span><span className="font-bold text-emerald-400">185/185 PASS</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-300">Testes</span><span className="font-bold text-emerald-400">488/488 PASS</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Lint</span><span className="font-bold text-emerald-400">0 avisos</span></div>
-              <div className="flex items-center justify-between"><span className="text-slate-300">Build</span><span className="font-bold text-emerald-400">39/39 págs</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-300">Build</span><span className="font-bold text-emerald-400">28/28 págs</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">RLS (007–015)</span><span className="font-bold text-emerald-400">EM PRODUÇÃO</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">E-mail (Resend)</span><span className="font-bold text-amber-400">PREPARADO</span></div>
               <div className="flex items-center justify-between"><span className="text-slate-300">Repositórios</span><span className="font-bold text-emerald-400">4 REAL</span></div>

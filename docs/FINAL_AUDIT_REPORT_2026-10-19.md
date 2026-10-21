@@ -18,7 +18,9 @@
 | `a58670f` | `app/globals.css`, `app/page.tsx`, `app/layout.tsx` | fix(a11y): contrastes WCAG 1.4.3 (`.hero-note`, `.trust-strip`, `.landing-footer` → `var(--muted)`); mockup 3D como imagem; copy consistente |
 | `fd38f1e` | `middleware.ts`, `src/tests/middleware-guard.test.ts` | fix: membership lookup por lista (`.maybeSingle()` → `.select().eq()` + `.rows[0]`) p/ usuário em N orgs |
 
-**Total:** 10 arquivos alterados (+415/−190 linhas). Worktree limpo (sem arquivos não rastreados novos).
+**Total:** 10 arquivos alterados (+415/−190 linhas).
+
+> **Nota (2026-10-20):** a tabela acima cobre só o diff **commitado** (main→HEAD). O worktree carrega **mudanças não commitadas** desta sessão — **OAuth TikTok** (`app/api/auth/tiktok/*`, `app/api/auth/callback/tiktok/*`, `app/api/integrations/tiktok/refresh-token/*`, `src/integrations/tiktok/{auth/oauth,resolveAccess}.ts`, `src/tests/tiktok-oauth*.test.ts`, `app/integrations/page.tsx`, `app/tiktok/page.tsx`, `src/integrations/providers.ts`) e **suporte Docker** (`Dockerfile`, `Dockerfile.dev`, `compose.yaml`, `compose.dev.yaml`, `.dockerignore`, `README-DOCKER.md`, `.env.example`) — detalhadas em §10 (itens 6–7).
 
 ---
 
@@ -28,12 +30,12 @@
 |-------------|-----------|
 | TypeScript (`tsc --noEmit`) | ✅ 0 erros |
 | ESLint (`next lint`) | ✅ 0 warnings |
-| Jest (`npx jest --passWithNoTests`) | ✅ 517/517 testes passing (40 suítes) |
-| Next.js build (`next build`) | ✅ exit 0 — 51 páginas estáticas geradas, 70 rotas compiladas |
+| Jest (`npx jest --passWithNoTests`) | ✅ 552/552 testes passing (42 suítes) |
+| Next.js build (`next build`) | ✅ exit 0 — 51 páginas estáticas geradas, 73 rotas compiladas |
 | Git status | ✅ worktree limpo, branch `feat/premium-landing-integration` |
 
-**Rotas compiladas (70 total):**
-- 40 rotas API (`ƒ`): auth (10), CRM (4), WhatsApp (3), Meta/OAuth (4), TikTok (5), Facebook/Instagram (2), n8n/execute/config/health (3), cron TikTok (1), webhooks (2), admin (5), produtos/schedules (2), ads-insights (2)
+**Rotas compiladas (73 total):**
+- 43 rotas API (`ƒ`) — **3 novas nesta sessão (OAuth TikTok):** `/api/auth/tiktok` (início), `/api/auth/callback/tiktok` (callback) e `/api/integrations/tiktok/refresh-token` (refresh admin). Grupo auth passou de 10→12; TikTok agora expõe o refresh-token.
 - 29 páginas (`○`): home, login, register, dashboard, CRM sub-páginas (5), WhatsApp, Facebook, Instagram, TikTok, Integrations, TestCenter, Admin (4), calendar, publisher, video, verify/reset/forgot-password, onboarding (error/success)
 
 ---
@@ -109,6 +111,12 @@
 - **Publishers:** `instagramPublisher.ts` (2 passos media→publish), `facebookPublisher.ts` (1 passo feed), `whatsappProcessor.ts` + `whatsappSender.ts` (disparo em massa + templates).
 
 ### 6.2 TikTok
+- **OAuth 2.0 (Content Posting API) — NOVO nesta sessão:**
+  - Início: `GET /api/auth/tiktok` → 302 p/ `tiktok.com/v2/auth/authorize/` com PKCE (S256) + state; cookies httpOnly `tiktok_oauth_state`/`tiktok_oauth_verifier` (10 min). Requer `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` no host (ausentes → 503 `tiktok_not_configured`).
+  - Callback: `GET /api/auth/callback/tiktok` → valida state (timing-safe) + PKCE, autentica (Supabase), troca o code por tokens no servidor, cifra o access token (AES-256-GCM, `META_TOKEN_ENCRYPTION_KEY`) e persiste no AgentMemory do tenant (key `integration:tiktok`, bloco `oauthTokenSet`). Degrada com `?reason=` honesto → `/onboarding/error`.
+  - Refresh: `POST /api/integrations/tiktok/refresh-token` (somente admin/owner) → renova com `refresh_token`, re-cifra e persiste. Códigos honestos: 409 (`not_connected`/`no_refresh_token`), 503 (`config_missing`/`queue_unavailable`/`encryption_failed`), 502 (`refresh_failed`), 500 (`db_error`).
+  - Resolver (`resolveTenantTikTokAccess` em `src/integrations/tiktok/resolveAccess.ts`): discrimina OAuth (`oauthTokenSet` presente → **descriptografa** o access salvo) vs. cadastro manual (plaintext, compatibilidade); `decrypt_failed` quando a chave AES está ausente/corrompida — **jamais devolve o ciphertext como Bearer token** (mesmo padrão honesto do resolver Meta).
+  - UI: `/integrations` (botões "Conectar via OAuth" + "Renovar token" no card TikTok) e `/tiktok` (texto de status atualizado).
 - **Publicação:** `POST /api/tiktok/publish` (PULL_FROM_URL via Business API).
 - **Status:** `GET /api/tiktok/status` (1-5 IDs por chamada).
 - **Analytics:** `GET /api/tiktok/ads-insights` (Business API `report/object/get`).
@@ -133,6 +141,7 @@
 | Facebook | `/facebook` | Publicar/agendar página |
 | Instagram | `/instagram` | Publicar/agendar conta |
 | TikTok | `/tiktok` | Publicar, status, analytics, agendados |
+| TikTok OAuth (NOVO) | `/integrations` → TikTok | Botão "Conectar via OAuth" (PKCE + state) e "Renovar token"; requer `TIKTOK_CLIENT_KEY/SECRET` + `META_TOKEN_ENCRYPTION_KEY` no host |
 | Integrações | `/integrations` | Status Meta, conectar OAuth, config avançada |
 | Centro de Testes | `/testcenter` | 3 sondas read-only (session, cron 405, health) |
 | Admin | `/admin/chat`, `/admin/memory`, `/admin/tasks`, `/admin/settings` | Chat com OmniRouter, memória, tarefas |
@@ -147,6 +156,9 @@
 |----------|-----------|-----------------|
 | `META_APP_ID` | OAuth Meta (início) | hPanel → Environment Variables |
 | `META_APP_SECRET` | OAuth Meta (início) | hPanel → Environment Variables |
+| `TIKTOK_CLIENT_KEY` | OAuth TikTok (início/callback — Content Posting API) | hPanel → Environment Variables |
+| `TIKTOK_CLIENT_SECRET` | OAuth TikTok (troca/refresh do token; só no host) | hPanel → Environment Variables |
+| `META_TOKEN_ENCRYPTION_KEY` | Cifra AES-256-GCM dos tokens de usuário Meta **e** TikTok (≥32 chars) | hPanel → Environment Variables |
 | `CRON_SECRET` | Gatilho secreto do cron TikTok | hPanel → Environment Variables |
 | `EMAIL_API_KEY` / `EMAIL_FROM` | Envio de e-mails (Resend) | hPanel → Environment Variables |
 | `OMNIROUTER_*` | Chat admin com IA | hPanel → Environment Variables (opcional) |
@@ -168,12 +180,12 @@
 |------------|-------|
 | Banco de produção alterado? | **NÃO** — nenhuma migration foi executada remotamente nesta sessão |
 | Migrations remotas aplicadas? | **NÃO** — todas as 7 migrations já estavam aplicadas em versões anteriores |
-| Commit/Push/Deploy executados? | **NÃO** — 5 commits locais, worktree limpo, nada pushado |
+| Commit/Push/Deploy executados? | **NÃO** — 5 commits locais + trabalho **não commitado** desta sessão (OAuth TikTok + suporte Docker), nada pushado |
 | Segredos expostos? | **NÃO** — nenhum `.env` ou credencial impresso ou commitado |
-| Testes passando? | **SIM** — 517/517 (40 suítes) |
+| Testes passando? | **SIM** — 552/552 (42 suítes) |
 | Typecheck limpo? | **SIM** — 0 erros TypeScript |
 | Lint limpo? | **SIM** — 0 warnings ESLint |
-| Build limpo? | **SIM** — 51 páginas, 70 rotas, exit 0 |
+| Build limpo? | **SIM** — 51 páginas, 73 rotas, exit 0 |
 
 ---
 
@@ -185,25 +197,29 @@ Esta sessão realizou **auditoria completa e preparação para publicação na H
 2. **Correção de segurança crítica** — travas de mass-assignment cross-tenant em 4 rotas de escrita (CRM + produtos).
 3. **Correção de acessibilidade** — contrastes WCAG 1.4.3 em elementos auxiliares da landing.
 4. **Correção de multi-organização** — middleware agora resolve membership por lista, suportando usuário em N orgs.
-5. **Testes de regressão** — 2 novas suítes (`tenant-isolation.test.ts`, `middleware-guard.test.ts`) totalizando 517 testes passing.
+5. **Testes de regressão** — 2 novas suítes (`tenant-isolation.test.ts`, `middleware-guard.test.ts`).
+6. **OAuth TikTok (Content Posting API) — NOVO, ainda não commitado:** fluxo completo (início com PKCE + callback + refresh admin) com cifra AES-256-GCM dos tokens de usuário no AgentMemory do tenant; resolver que **descriptografa** o token OAuth (discriminando OAuth vs. manual, com `decrypt_failed` honesto); UI em `/integrations` (botões "Conectar via OAuth"/"Renovar token") e `/tiktok`; e 2 suítes de teste (`src/tests/tiktok-oauth.test.ts` + `tiktok-oauth-routes.test.ts`, 35 testes).
+7. **Suporte Docker — NOVO, ainda não commitado:** `Dockerfile` (prod: multi-stage, non-root, healthcheck, sem segredos embutidos), `Dockerfile.dev` + `compose.dev.yaml` (hot reload), `compose.yaml` (app + postgres + migrate one-shot, redes/volumes nomeados, sem porta exposta desnecessária), `.dockerignore`, `README-DOCKER.md` (PT-BR) e extensão de `.env.example` — **0 arquivos de código alterados**.
 
-O projeto está **tecnologicamente pronto para publicação**: build limpo, testes passando, security hardening aplicado, nenhuma credencial exposta, worktree limpo. A publicação na Hostinger depende exclusivamente da configuração das variáveis de ambiente listadas em §8.1 e do job de cron em §8.2.
+O projeto está **tecnologicamente pronto para publicação**: build limpo, 552 testes passando (42 suítes), typecheck/lint/build sem erro, security hardening aplicado, nenhuma credencial exposta. A publicação na Hostinger depende exclusivamente da configuração das variáveis de ambiente listadas em §8.1 (incl. agora `TIKTOK_CLIENT_KEY/SECRET` e `META_TOKEN_ENCRYPTION_KEY`) e do job de cron em §8.2.
 
 ---
 
 ## 11. Recomendações e Próximos Passos
 
 1. **Aguardar autorização do usuário** antes de qualquer push, PR ou deploy.
-2. **Configurar credenciais no hPanel** (§8.1) —META_APP_ID, META_APP_SECRET, CRON_SECRET, EMAIL_API_KEY, EMAIL_FROM.
+2. **Configurar credenciais no hPanel** (§8.1) — `META_APP_ID`, `META_APP_SECRET`, `CRON_SECRET`, `EMAIL_API_KEY`, `EMAIL_FROM`, e (para OAuth TikTok) `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` e `META_TOKEN_ENCRYPTION_KEY`.
 3. **Criar job de cron no Hostinger** (§8.2) apontando para `POST /api/cron/tiktok`.
 4. **Testar fluxo Meta OAuth manualmente** — conectar conta Meta real e validar callback.
-5. **Validar entrega de e-mail de reset** — testar fluxo forgot-password → reset-password com Resend real.
-6. **Auditar URL de onboarding WhatsApp** contra docs oficiais Meta (G7 aberto — ver `src/integrations/meta/whatsapp/onboarding.ts:11-14`).
-7. **Implementar adaptador BullMQ/Inngest** quando Redis/Inngest estiverem disponíveis (ponto de extensão já existe em `TickDeps`).
-8. **Considerar dynamic homepage stats** (§P3 do PM) — dados reais na landing em vez de mockup estático.
+5. **Testar fluxo TikTok OAuth manualmente (NOVO)** — criar/validar a app TikTok (passar pela auditoria da API p/ `video.publish`), configurar `TIKTOK_CLIENT_KEY/SECRET` + `META_TOKEN_ENCRYPTION_KEY` no host, clicar em "Conectar via OAuth" em `/integrations`, validar o callback (`/onboarding/success`) e o botão "Renovar token".
+6. **Validar entrega de e-mail de reset** — testar fluxo forgot-password → reset-password com Resend real.
+7. **Auditar URL de onboarding WhatsApp** contra docs oficiais Meta (G7 aberto — ver `src/integrations/meta/whatsapp/onboarding.ts:11-14`).
+8. **Implementar adaptador BullMQ/Inngest** quando Redis/Inngest estiverem disponíveis (ponto de extensão já existe em `TickDeps`).
+9. **Considerar dynamic homepage stats** (§P3 do PM) — dados reais na landing em vez de mockup estático.
 
 ---
 
 **Documento gerado automaticamente pela sessão de auditoria — 2026-10-19.**
+**Atualização de 2026-10-20:** incluídas as mudanças não commitadas da sessão (OAuth TikTok + suporte Docker) — ver §1 (nota), §6.2 e §10 (itens 6–7).
 **NENHUM comando de push, deploy ou publicação foi executado.**
 **Aguardando autorização explícita do usuário para prosseguir.**

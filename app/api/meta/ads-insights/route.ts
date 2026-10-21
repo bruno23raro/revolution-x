@@ -29,6 +29,7 @@ const AD_ACCOUNT_DETAILS: Record<string, string | undefined> = {
   decrypt_failed: 'Falha ao descriptografar o token da Meta (credencial inválida).',
   no_ad_account: 'ID da Conta de Anúncios ausente. Preencha em /integrations (Meta Ads).',
   queue_unavailable: 'Memória de integrações indisponível (503) — tabela não migrada aqui.',
+  account_not_found: 'Conta Meta não encontrada neste tenant (parâmetro `account` inválido).',
 };
 
 export async function GET(req: NextRequest) {
@@ -53,7 +54,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const resolved = await resolveTenantMetaAdsAccess(prisma, scope);
+  // MULTICONTAS — `?account=rowId` ancora a conta; ausente → padrão.
+  const account = req.nextUrl.searchParams.get('account')?.trim() || undefined;
+  const resolved = await resolveTenantMetaAdsAccess(prisma, scope, {}, account);
   if (!resolved.ok) {
     const status = resolved.reason === 'queue_unavailable' ? 503 : 409;
     const detail = AD_ACCOUNT_DETAILS[resolved.reason];

@@ -30,7 +30,10 @@ export interface MetaIntegrationRow {
 
 export type ResolveResult =
   | { ok: true; access: TemplatesAccess; row: MetaIntegrationRow }
-  | { ok: false; reason: 'not_connected' | 'no_token' | 'decrypt_failed' };
+  | {
+      ok: false;
+      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'account_not_found';
+    };
 
 interface FetcherLike {
   from: (table: string) => any;
@@ -44,18 +47,25 @@ export interface ResolveDeps {
 export async function resolveTenantMetaAccess(
   organizationId: string,
   deps: ResolveDeps = {},
+  accountId?: string,
 ): Promise<ResolveResult> {
   const service = deps.serviceRole ?? createServiceRoleClient();
-  const { data, error } = await service
+  // MULTICONTAS — seleção determinística: a mais recente (`connected_at` desc)
+  // evita o `.limit(1)` não-ordenado (ordem arbitrária). `accountId` (row id)
+  // ancora a conta específica; ausente → conta padrão.
+  let q = service
     .from('meta_integrations')
     .select('id, provider, phone_number_id, whatsapp_business_account_id, meta_app_id, encrypted_access_token, token_expires_at, status')
     .eq('organization_id', organizationId)
     .in('provider', ['whatsapp', 'facebook'])
     .neq('status', 'DISCONNECTED')
-    .limit(1)
-    .maybeSingle();
+    .order('connected_at', { ascending: false });
+  if (accountId) q = q.eq('id', accountId);
+  const { data, error } = await q.limit(1).maybeSingle();
 
-  if (error || !data) return { ok: false, reason: 'not_connected' };
+  if (error || !data) {
+    return { ok: false, reason: accountId ? 'account_not_found' : 'not_connected' };
+  }
 
   const row = data as unknown as MetaIntegrationRow;
   if (!row.encrypted_access_token) return { ok: false, reason: 'no_token' };
@@ -94,7 +104,7 @@ export type ResolvePublisherResult =
   | { ok: true; access: InstagramAccess; row: PublisherRow }
   | {
       ok: false;
-      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'no_ig_account';
+      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'no_ig_account' | 'account_not_found';
     };
 
 /**
@@ -102,13 +112,16 @@ export type ResolvePublisherResult =
  * via Graph API oficial. Mesma linha privilegiada (`meta_integrations`) e
  * descriptografia do WhatsApp, mas seleciona também os IDs de Instagram.
  * Injetável (`serviceRole`) para testes. Não altera `resolveTenantMetaAccess`.
+ * MULTICONTAS: `accountId` (row id) ancora a conta específica; seleção
+ * determinística por `connected_at desc`.
  */
 export async function resolveTenantPublisherAccess(
   organizationId: string,
   deps: ResolveDeps = {},
+  accountId?: string,
 ): Promise<ResolvePublisherResult> {
   const service = deps.serviceRole ?? createServiceRoleClient();
-  const { data, error } = await service
+  let q = service
     .from('meta_integrations')
     .select(
       'id, provider, meta_page_id, instagram_account_id, encrypted_access_token, token_expires_at, status',
@@ -116,10 +129,13 @@ export async function resolveTenantPublisherAccess(
     .eq('organization_id', organizationId)
     .in('provider', ['instagram', 'facebook', 'whatsapp'])
     .neq('status', 'DISCONNECTED')
-    .limit(1)
-    .maybeSingle();
+    .order('connected_at', { ascending: false });
+  if (accountId) q = q.eq('id', accountId);
+  const { data, error } = await q.limit(1).maybeSingle();
 
-  if (error || !data) return { ok: false, reason: 'not_connected' };
+  if (error || !data) {
+    return { ok: false, reason: accountId ? 'account_not_found' : 'not_connected' };
+  }
 
   const row = data as unknown as PublisherRow;
   if (!row.encrypted_access_token) return { ok: false, reason: 'no_token' };
@@ -146,7 +162,7 @@ export type ResolveFacebookPageResult =
   | { ok: true; access: FacebookPageAccess; row: PublisherRow }
   | {
       ok: false;
-      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'no_fb_page';
+      reason: 'not_connected' | 'no_token' | 'decrypt_failed' | 'no_fb_page' | 'account_not_found';
     };
 
 /**
@@ -154,13 +170,16 @@ export type ResolveFacebookPageResult =
  * posts de Página via Graph API oficial. Mesma linha privilegiada
  * (`meta_integrations`) e descriptografia do WhatsApp; seleciona o ID da
  * Página. Injetável (`serviceRole`) para testes. Não altera as demais funções.
+ * MULTICONTAS: `accountId` (row id) ancora a conta específica; seleção
+ * determinística por `connected_at desc`.
  */
 export async function resolveTenantFacebookPageAccess(
   organizationId: string,
   deps: ResolveDeps = {},
+  accountId?: string,
 ): Promise<ResolveFacebookPageResult> {
   const service = deps.serviceRole ?? createServiceRoleClient();
-  const { data, error } = await service
+  let q = service
     .from('meta_integrations')
     .select(
       'id, provider, meta_page_id, instagram_account_id, encrypted_access_token, token_expires_at, status',
@@ -168,10 +187,13 @@ export async function resolveTenantFacebookPageAccess(
     .eq('organization_id', organizationId)
     .in('provider', ['facebook', 'whatsapp'])
     .neq('status', 'DISCONNECTED')
-    .limit(1)
-    .maybeSingle();
+    .order('connected_at', { ascending: false });
+  if (accountId) q = q.eq('id', accountId);
+  const { data, error } = await q.limit(1).maybeSingle();
 
-  if (error || !data) return { ok: false, reason: 'not_connected' };
+  if (error || !data) {
+    return { ok: false, reason: accountId ? 'account_not_found' : 'not_connected' };
+  }
 
   const row = data as unknown as PublisherRow;
   if (!row.encrypted_access_token) return { ok: false, reason: 'no_token' };
@@ -205,7 +227,8 @@ export type ResolveMetaAdsReason =
   | 'no_token'
   | 'decrypt_failed'
   | 'no_ad_account'
-  | 'queue_unavailable';
+  | 'queue_unavailable'
+  | 'account_not_found';
 
 export type ResolveMetaAdsResult =
   | { ok: true; access: MetaAdsAccess }
@@ -221,6 +244,7 @@ export async function resolveTenantMetaAdsAccess(
   client: PrismaClient,
   scope: OrgScope,
   deps: ResolveDeps = {},
+  accountId?: string,
 ): Promise<ResolveMetaAdsResult> {
   let adAccountId: string | undefined;
   try {
@@ -234,7 +258,7 @@ export async function resolveTenantMetaAdsAccess(
     throw e;
   }
 
-  const base = await resolveTenantMetaAccess(scope.organizationId, deps);
+  const base = await resolveTenantMetaAccess(scope.organizationId, deps, accountId);
   if (!base.ok) return { ok: false, reason: base.reason };
   if (!adAccountId) return { ok: false, reason: 'no_ad_account' };
 

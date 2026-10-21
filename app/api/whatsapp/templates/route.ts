@@ -35,8 +35,16 @@ export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
   if (!user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
-  const resolved = await resolveTenantMetaAccess(user.organizationId);
+  // MULTICONTAS — `account` (?account=rowId) ancora o número; ausente → padrão.
+  const account = new URL(req.url).searchParams.get('account')?.trim() || undefined;
+  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account);
   if (!resolved.ok) {
+    if (resolved.reason === 'account_not_found') {
+      return NextResponse.json(
+        { ok: false, error: 'account_not_found', detail: `Conta Meta "${account}" não encontrada neste tenant.` },
+        { status: 409 },
+      );
+    }
     const status = resolved.reason === 'not_connected' ? 409 : 503;
     return NextResponse.json({ ok: false, error: resolved.reason }, { status });
   }
@@ -85,8 +93,16 @@ export async function POST(req: NextRequest) {
     body: typeof body.body === 'string' ? body.body : undefined,
   };
 
-  const resolved = await resolveTenantMetaAccess(user.organizationId);
+  // MULTICONTAS — `account` (row id) ancora o número; ausente → padrão.
+  const account = body.account ? String(body.account).trim() : undefined;
+  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account);
   if (!resolved.ok) {
+    if (resolved.reason === 'account_not_found') {
+      return NextResponse.json(
+        { ok: false, error: 'account_not_found', detail: `Conta Meta "${account}" não encontrada neste tenant.` },
+        { status: 409 },
+      );
+    }
     const status = resolved.reason === 'not_connected' ? 409 : 503;
     return NextResponse.json({ ok: false, error: resolved.reason }, { status });
   }

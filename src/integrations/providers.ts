@@ -88,13 +88,18 @@ export const PROVIDERS: ProviderDef[] = [
     name: 'TikTok',
     layer: 'official',
     summary:
-      'Agendamento de vídeos e tracking via API oficial do TikTok (client key/secret + token de usuário).',
+      'Agendamento de vídeos e tracking via API oficial do TikTok. Conecte via OAuth (botão "Conectar via OAuth") ou preencha o token de usuário manualmente (client key/secret + access token). O token fica criptografado (AES-256-GCM) no banco.',
     fields: [
       { key: 'clientKey', label: 'Client Key', required: true },
       { key: 'clientSecret', label: 'Client Secret', secret: true, required: true },
       { key: 'accessToken', label: 'Access Token (usuário)', secret: true },
     ],
     probe: 'keys',
+    guidance: [
+      'Recomendado: botão "Conectar via OAuth" — autoriza na sua conta TikTok (escopos video.publish + user.info.basic); o token é cifrado e salvo no tenant automaticamente. Requer TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET no servidor (sem eles, degrada com 503).',
+      'Alternativa manual: crie um app em TikTok for Developers, copie Client Key/Secret e um access token de usuário, e salve aqui.',
+      'O access token expira em ~24h: renove via POST /api/integrations/tiktok/refresh-token (admin) quando tokenExpired ficar true.',
+    ],
   },
   {
     id: 'meta_ads',
@@ -324,6 +329,16 @@ export async function probeProvider(
   }
 
   if (def.probe === 'keys') {
+    // Um token de usuário presente (manual OU OAuth) já habilita a publicação —
+    // reflete o que o resolver usa de verdade. Chaves de app (ex.: clientKey/
+    // clientSecret do TikTok) podem viver no env (TIKTOK_*), então estarem
+    // ausentes no storage NÃO significa "inútil" quando já existe um token.
+    const hasToken =
+      (typeof value.accessToken === 'string' && value.accessToken.length > 0) ||
+      Boolean(value.oauthTokenSet);
+    if (hasToken) {
+      return { provider: def.id, status: 'ok', detail: 'token de usuário presente' };
+    }
     const missing = def.fields.filter((f) => f.required && !value[f.key]);
     if (missing.length > 0) {
       return { provider: def.id, status: 'not_configured', detail: `faltando: ${missing.map((f) => f.key).join(', ')}` };

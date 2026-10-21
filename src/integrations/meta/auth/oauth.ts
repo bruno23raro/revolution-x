@@ -7,7 +7,11 @@ export class MetaOAuthError extends Error {
 }
 
 export function buildMetaAuthUrl(config: MetaAuthConfig, state: string, provider: 'facebook' | 'instagram' | 'whatsapp'): string {
-  const base = 'https://www.facebook.com/v18.0/dialog/oauth';
+  // v26.0 — mesma versão usada no exchange de código (callback/meta) e em
+  // todos os módulos de publicação/insights (facebookPublisher, instagram,
+  // whatsapp, adsInsights). Manter o diálogo e o exchange na MESMA versão
+  // evita incompatibilidade de escopo/parâmetro entre as duas etapas.
+  const base = 'https://www.facebook.com/v26.0/dialog/oauth';
   const scopes = config.scopes.join(',');
   return `${base}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(config.redirectUri)}&state=${state}&scope=${encodeURIComponent(scopes)}`;
 }

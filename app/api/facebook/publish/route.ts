@@ -77,7 +77,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const resolved = await resolveTenantFacebookPageAccess(user.organizationId);
+  // MULTICONTAS — `account` (row id da meta_integrations) ancora a Página;
+  // ausente → conta padrão (mais recente). 409 quando o id não existe no tenant.
+  const account = body.account ? String(body.account).trim() : undefined;
+
+  const resolved = await resolveTenantFacebookPageAccess(user.organizationId, {}, account);
   if (!resolved.ok) {
     if (resolved.reason === 'no_fb_page') {
       return NextResponse.json(
@@ -85,6 +89,16 @@ export async function POST(req: NextRequest) {
           ok: false,
           error: 'no_fb_page',
           detail: 'Nenhuma Página do Facebook vinculada. Conecte via OAuth em /integrations.',
+        },
+        { status: 409 },
+      );
+    }
+    if (resolved.reason === 'account_not_found') {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'account_not_found',
+          detail: `Conta Meta "${account}" não encontrada neste tenant.`,
         },
         { status: 409 },
       );

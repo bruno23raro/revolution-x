@@ -26,10 +26,19 @@ export async function POST(req: NextRequest) {
   const user = await requireAdmin(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // 1) token atual (service_role + decrypt)
-  const resolved = await resolveTenantMetaAccess(user.organizationId);
+  // 1) token atual (service_role + decrypt). MULTICONTAS — `account` (row id)
+  //    renova a conta específica; ausente → conta padrão (mais recente).
+  let account = '';
+  try {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    if (body && typeof body.account === 'string') account = body.account.trim();
+  } catch {
+    /* corpo ausente/inválido → renovam a conta padrão */
+  }
+  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account || undefined);
   if (!resolved.ok) {
-    const status = resolved.reason === 'not_connected' ? 409 : 503;
+    const status =
+      resolved.reason === 'not_connected' || resolved.reason === 'account_not_found' ? 409 : 503;
     return NextResponse.json({ error: resolved.reason }, { status });
   }
 

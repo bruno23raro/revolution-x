@@ -35,21 +35,26 @@ const MOCK_USER = {
   role: 'member',
 };
 
-function makeSupabaseClient(data: Record<string, any> | null = null, error: string | null = null) {
-  // Supabase-js v2 chain: .from().update().eq().eq()
+function makeSupabaseClient(data: Record<string, any> | any[] | null = null, error: string | null = null) {
+  // GET agora usa a cadeia MULTICONTAS: .from().select().eq(org).neq(status).order(connected_at)
+  // devolvendo { data: array | null, error }. (Antigo .maybeSingle() quebra c/ 2+ linhas.)
+  const normalized = data == null ? null : Array.isArray(data) ? data : [data];
+  const orderMock = jest.fn().mockResolvedValue({ data: normalized, error });
+  const neqMock = jest.fn().mockReturnValue({ order: orderMock });
+  const selectEq = jest.fn().mockReturnValue({ neq: neqMock });
+  const select = jest.fn().mockReturnValue({ eq: selectEq });
+
+  // DELETE ainda usa a cadeia .from().update().eq(org).eq(provider).
   const eqBuilder = jest.fn().mockResolvedValue({ error: null });
   const updateBuilder = {
     eq: eqBuilder,
   };
   const updateMock = jest.fn().mockReturnValue(updateBuilder);
-  const selectEq = jest.fn().mockReturnValue({
-    maybeSingle: jest.fn().mockResolvedValue({ data, error }),
-  });
   return {
-    from: jest.fn().mockImplementation((table: string) => ({
-      select: jest.fn().mockReturnValue({ eq: selectEq }),
+    from: jest.fn().mockReturnValue({
+      select,
       update: updateMock,
-    })),
+    }),
   };
 }
 
@@ -124,9 +129,10 @@ describe('Meta integration route — IDOR negative tests', () => {
 
     it('consulta meta_integrations com organization_id do banco, nao de input do usuario', async () => {
       (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
-      const eqMock = jest.fn().mockReturnValue({
-        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      });
+      // Cadeia MULTICONTAS: .select().eq(org).neq(status).order(connected_at).
+      const orderMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const neqMock = jest.fn().mockReturnValue({ order: orderMock });
+      const eqMock = jest.fn().mockReturnValue({ neq: neqMock });
       (createClient as jest.Mock).mockResolvedValue({
         from: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({ eq: eqMock }),

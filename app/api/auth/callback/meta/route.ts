@@ -63,8 +63,11 @@ export async function GET(req: NextRequest) {
   // NUNCA expor token na response/redirect
   let metaToken: string;
   let expiresIn = 0;
-  let pageId = '';
-  let instagramId = '';
+  // MULTICONTAS: uma meta por PÁGINA (não só a [0]). A persistência de 2+
+  // páginas exige a relaxation de UNIQUE(organization_id,provider) da migration
+  // 016 (passo humano). Para 1 página funciona com ou sem 016.
+  type PageTarget = { metaPageId: string | null; instagramAccountId: string | null };
+  let pageTargets: PageTarget[] = [];
 
   try {
     const appId = process.env.META_APP_ID;
@@ -88,24 +91,31 @@ export async function GET(req: NextRequest) {
     metaToken = tokenData.access_token;
     expiresIn = tokenData.expires_in ?? 0;
 
-    // Buscar Facebook Page
+    // MULTICONTAS: busca TODAS as PÁGINAS (não só [0]) e, p/ cada uma, a conta
+    // de Instagram Business vinculada. Persiste 1 meta_integrations por página.
     const pagesRes = await fetch(
       `https://graph.facebook.com/v26.0/me/accounts?access_token=${metaToken}`
     );
     if (pagesRes.ok) {
       const pages = await pagesRes.json() as { data: Array<{ id: string; name: string }> };
-      pageId = pages.data?.[0]?.id ?? '';
-    }
-
-    // Buscar Instagram Business Account (se page existe)
-    if (pageId) {
-      const igRes = await fetch(
-        `https://graph.facebook.com/v26.0/${pageId}?fields=instagram_business_account&access_token=${metaToken}`
-      );
-      if (igRes.ok) {
-        const ig = await igRes.json() as { instagram_business_account?: { id: string } };
-        instagramId = ig.instagram_business_account?.id ?? '';
+      const pageList = (pages.data ?? []).slice(0, 25); // guarda contra abuso
+      for (const pg of pageList) {
+        let igId: string | null = null;
+        if (pg.id) {
+          const igRes = await fetch(
+            `https://graph.facebook.com/v26.0/${pg.id}?fields=instagram_business_account&access_token=${metaToken}`
+          );
+          if (igRes.ok) {
+            const ig = await igRes.json() as { instagram_business_account?: { id: string } };
+            igId = ig.instagram_business_account?.id ?? null;
+          }
+        }
+        pageTargets.push({ metaPageId: pg.id || null, instagramAccountId: igId });
       }
+    }
+    if (pageTargets.length === 0) {
+      // Nenhuma página: mantém o fluxo legado (token sem página).
+      pageTargets.push({ metaPageId: null, instagramAccountId: null });
     }
   } catch (err) {
     console.error('[meta-oauth] token exchange error:', err);
@@ -127,26 +137,53 @@ export async function GET(req: NextRequest) {
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : null;
 
-    const { error: upsertErr } = await serviceSupabase
-      .from('meta_integrations')
-      .upsert(
-        {
-          organization_id: organizationId,
-          provider: 'facebook',
-          meta_page_id: pageId || null,
-          instagram_account_id: instagramId || null,
-          meta_app_id: process.env.META_APP_ID ?? null,
-          encrypted_access_token: encryptedToken,
-          token_expires_at: expiresAt,
-          status: 'CONNECTED' as MetaConnectionStatus,
-          connected_at: new Date().toISOString(),
-        },
-        { onConflict: 'organization_id,provider' }
-      );
+    // MULTICONTAS: 1 linha por Página (check-then-act, idempotente por
+    // meta_page_id). Pré-migration-016 a 2ª+ página viola
+    // UNIQUE(organization_id,provider) → db_error (documentado); 1 página
+    // funciona com ou sem 016.
+    for (const t of pageTargets) {
+      const selectQ = serviceSupabase
+        .from('meta_integrations')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('provider', 'facebook');
+      const found = t.metaPageId
+        ? await selectQ.eq('meta_page_id', t.metaPageId).maybeSingle()
+        : await selectQ.is('meta_page_id', null).maybeSingle();
 
-    if (upsertErr) {
-      console.error('[meta-oauth] db error:', upsertErr);
-      return redirectError(req, 'db_error');
+      const base = {
+        encrypted_access_token: encryptedToken,
+        token_expires_at: expiresAt,
+        status: 'CONNECTED' as MetaConnectionStatus,
+        connected_at: new Date().toISOString(),
+      };
+
+      if (found.data && !found.error) {
+        const up = await serviceSupabase
+          .from('meta_integrations')
+          .update(base)
+          .eq('id', found.data.id);
+        if (up.error) {
+          console.error('[meta-oauth] db error:', up.error);
+          return redirectError(req, 'db_error');
+        }
+      } else {
+        const ins = await serviceSupabase
+          .from('meta_integrations')
+          .insert({
+            organization_id: organizationId,
+            provider: 'facebook',
+            meta_page_id: t.metaPageId,
+            instagram_account_id: t.instagramAccountId,
+            meta_app_id: process.env.META_APP_ID ?? null,
+            ...base,
+          });
+        if (ins.error) {
+          // Pré-migration-016, a 2ª+ página viola UNIQUE(organization_id,provider).
+          console.error('[meta-oauth] db error:', ins.error);
+          return redirectError(req, 'db_error');
+        }
+      }
     }
   } catch (err) {
     console.error('[meta-oauth] db error:', err);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '../../../../src/lib/supabase/server';
+import { resolvePublicSiteOrigin } from '../../../../src/lib/site-origin';
 
 function slugify(name: string): string {
   return name
@@ -74,10 +75,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
     }
     const supabase = await createClient();
-    const host = request.headers.get('host') ?? 'localhost:3000';
-    const isLocalhost = host.includes('localhost');
-    const siteOrigin = `${isLocalhost ? 'http' : 'https'}://${host}`;
-    const emailRedirectTo = `${siteOrigin}/auth/callback?next=/verify-email`;
+    // NUNCA construir a origem do link de confirmação do header Host sem
+    // validação: o proxy interno do Hostinger pode entregar 0.0.0.0:3000
+    // (link de e-mail quebrado). resolvePublicSiteOrigin faz o fallback
+    // para NEXT_PUBLIC_SITE_URL / apex de produção (mesmo padrão do
+    // forgot-password).
+    const host = request.headers.get('host') ?? '';
+    const hostName = host.split(':')[0].toLowerCase();
+    const isLocal = hostName === 'localhost' || hostName === '127.0.0.1';
+    const requestOrigin = host ? `${isLocal ? 'http' : 'https'}://${host}` : '';
+    const emailRedirectTo = `${resolvePublicSiteOrigin(requestOrigin)}/auth/callback?next=/verify-email`;
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: normalizedPassword,

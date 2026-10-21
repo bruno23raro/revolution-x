@@ -3,6 +3,22 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceRoleClient } from './src/lib/supabase/server';
 
 export async function middleware(request: NextRequest) {
+  // Canonical host: apex (revolutionx.com.br), nunca o www. O www serve a
+  // MESMA página hoje (ETag idêntico, sem redirect) → conteúdo duplicado.
+  // 301 aqui (ANTES de qualquer coisa que use Supabase) elimina o duplicado;
+  // o alvo é construído removendo o prefixo www do próprio Host recebido,
+  // portanto o loop é impossível por construção (www.x → x, nunca o
+  // contrário). Preserva protocolo, caminho, query e porta.
+  const host = (request.headers.get('host') ?? '').toLowerCase();
+  if (host.startsWith('www.')) {
+    const target = new URL(request.url);
+    const withoutWww = host.replace(/^www\./, '');
+    const portSep = withoutWww.lastIndexOf(':');
+    target.hostname = portSep > 0 ? withoutWww.slice(0, portSep) : withoutWww;
+    if (portSep > 0) target.port = withoutWww.slice(portSep + 1);
+    return NextResponse.redirect(target, 301);
+  }
+
   let response = NextResponse.next({
     request,
   });

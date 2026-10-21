@@ -1,5 +1,11 @@
 import Link from 'next/link';
 
+export const metadata = {
+  // A landing é a página pública principal indexável (o padrão do layout é
+  // noindex; aqui optamos in).
+  robots: { index: true, follow: true },
+};
+
 const resources = [
   ['CRM e pipeline', 'Contatos, leads, deals e pipelines para manter cada oportunidade em movimento.'],
   ['Operação omnichannel', 'Centralize canais, agenda, publicação e comunicação em um só espaço.'],

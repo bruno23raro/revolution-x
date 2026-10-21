@@ -136,7 +136,7 @@ export default function TestCenterPage() {
               <Link
                 href="/admin/chat"
                 className={`px-4 py-2 text-sm font-semibold rounded-lg border ${
-                  view.isAdmin ? 'border-white/20 text-gray-200 hover:bg-white/5' : 'border-white/10 text-gray-500'
+                  view.isAdmin ? 'border-white/20 text-gray-200 hover:bg-white/5' : 'border-white/10 text-gray-400'
                 }`}
               >
                 {view.isAdmin ? 'Centro IA (admin) →' : 'Centro IA 🔒 (exige admin/owner)'}
@@ -155,7 +155,7 @@ export default function TestCenterPage() {
           <div className="mt-8 space-y-8">
             {sections.map((s) => (
               <section key={s.group} aria-label={s.label}>
-                <h2 className="text-xs uppercase tracking-wider text-gray-500 mb-3">{s.label}</h2>
+                <h2 className="text-xs uppercase tracking-wider text-gray-400 mb-3">{s.label}</h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {s.items.map((p) => (
                     <PartCard key={p.id} part={p} />
@@ -165,7 +165,7 @@ export default function TestCenterPage() {
             ))}
           </div>
 
-          <p className="text-xs text-gray-600 mt-10">
+          <p className="text-xs text-gray-400 mt-10">
             {state.done
               ? 'Sondas read-only executadas. Rota desconhecida → redireciona para a home (app/not-found).'
               : 'Coletando o estado das sondas read-only…'}
@@ -211,7 +211,7 @@ function PartCard({ part }: { part: PartStatus }) {
         <HealthPill status={part.status} detail={part.detail} />
       </div>
 
-      {part.note && <p className="text-xs text-gray-500 mt-2 leading-relaxed">{part.note}</p>}
+      {part.note && <p className="text-xs text-gray-400 mt-2 leading-relaxed">{part.note}</p>}
 
       <div className="mt-3">
         {kindPage && !part.locked ? (
@@ -223,7 +223,7 @@ function PartCard({ part }: { part: PartStatus }) {
           </Link>
         ) : part.locked ? (
           part.adminOnly ? (
-            <span className="inline-block text-xs text-gray-500">
+            <span className="inline-block text-xs text-gray-400">
               🔒 exige papel admin/owner
             </span>
           ) : (
@@ -232,7 +232,7 @@ function PartCard({ part }: { part: PartStatus }) {
             </Link>
           )
         ) : (
-          <span className="inline-block text-xs text-gray-600">endpoint read-only</span>
+          <span className="inline-block text-xs text-gray-400">endpoint read-only</span>
         )}
       </div>
     </div>

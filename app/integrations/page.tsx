@@ -17,11 +17,13 @@ import { providersByLayer, OUTBOUND_PROVIDER_IDS, type ProviderDef, type ProbeSt
 import { useCallback, useEffect, useState } from 'react';
 
 interface MetaIntegration {
+  id: string;
   provider: string;
   metaPageId: string | null;
   instagramAccountId: string | null;
   whatsappBusinessAccountId: string | null;
   phoneNumberId: string | null;
+  displayName?: string | null;
   tokenExpiresAt: string | null;
   status: string | null;
   lastError: string | null;
@@ -141,6 +143,22 @@ export default function IntegrationsPage() {
     }
   };
 
+  // TikTok: renova o access token via refresh_token (só OAuth + admin). Mesmo
+  // padrão da Meta; a rota degrada com 409/503/502 honestos.
+  const refreshTikTokToken = async () => {
+    setNote(null);
+    try {
+      const r = await fetch('/api/integrations/tiktok/refresh-token', { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setNote(`Token do TikTok renovado (expira em ~${d.expiresIn ?? '?'}s).`);
+      else if (r.status === 409) setNote('TikTok não conectado via OAuth neste tenant (nada para renovar).');
+      else if (r.status === 503) setNote('TikTok não configurado ou fila indisponível no servidor.');
+      else setNote(`Falha ao renovar o token do TikTok (HTTP ${r.status}${d.detail ? ` — ${d.detail}` : ''}).`);
+    } catch {
+      setNote('Falha de rede ao renovar o token do TikTok.');
+    }
+  };
+
   const startMetaOAuth = async () => {
     setNote(null);
     const url = '/api/auth/meta?provider=whatsapp';
@@ -155,6 +173,25 @@ export default function IntegrationsPage() {
       else setNote(`Falha ao iniciar o OAuth da Meta (HTTP ${r.status}).`);
     } catch {
       setNote('Falha de rede ao iniciar o OAuth da Meta.');
+    }
+  };
+
+  // TikTok: mesmo padrão da Meta — inicia em /api/auth/tiktok (302 para o
+  // authorize com PKCE), o callback cifra + persiste no AgentMemory do tenant.
+  const startTikTokOAuth = async () => {
+    setNote(null);
+    const url = '/api/auth/tiktok';
+    try {
+      const r = await fetch(url, { redirect: 'manual' });
+      if (r.type === 'opaqueredirect' || (r.status >= 300 && r.status < 400)) {
+        window.location.assign(url);
+        return;
+      }
+      if (r.status === 503) setNote('TikTok não configurado no servidor (TIKTOK_CLIENT_KEY/SECRET ausentes).');
+      else if (r.status === 401) setNote('Faça login para conectar o TikTok.');
+      else setNote(`Falha ao iniciar o OAuth do TikTok (HTTP ${r.status}).`);
+    } catch {
+      setNote('Falha de rede ao iniciar o OAuth do TikTok.');
     }
   };
 
@@ -215,7 +252,7 @@ export default function IntegrationsPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Integrações</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Hub de integrações: condição real, fluxo de integração, health check e renovação de token. Nenhum segredo é exibido.
             </p>
           </div>
@@ -228,15 +265,21 @@ export default function IntegrationsPage() {
           <section className="mb-8">
             <SectionTitle>Conexão Meta (Facebook · Instagram · WhatsApp)</SectionTitle>
             {meta.loading ? (
-              <p className="text-gray-500 text-sm">Carregando…</p>
+              <p className="text-gray-400 text-sm">Carregando…</p>
             ) : meta.denied ? (
-              <div className="p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
+              <div role="status" aria-live="polite" className="p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
                 Faça login para ver as integrações da sua organização.
               </div>
             ) : meta.error ? (
-              <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{meta.error}</div>
+              <div role="status" aria-live="polite" className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{meta.error}</div>
             ) : (
               <div className="space-y-3">
+                {meta.integrations.length > 1 && (
+                  <p className="text-xs text-gray-400">
+                    {meta.integrations.length} contas Meta conectadas. Em cada operação de publicação/disparo
+                    você escolhe a conta (botão “Página / Número / Conta” nos formulários).
+                  </p>
+                )}
                 {meta.integrations.length === 0 && (
                   <div className="p-4 bg-[#0D0915] border border-white/10 rounded-2xl text-sm text-gray-400">
                     Nenhuma integração Meta conectada.
@@ -256,21 +299,24 @@ export default function IntegrationsPage() {
                     </div>
                   </div>
                 )}
-                {meta.integrations.map((i, idx) => (
-                  <div key={idx} className="p-4 bg-[#0D0915] border border-white/10 rounded-2xl text-sm">
+                {meta.integrations.map((i) => (
+                  <div key={i.id} className="p-4 bg-[#0D0915] border border-white/10 rounded-2xl text-sm">
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-200 font-semibold">{providerLabel(i.provider)}</span>
+                        <span className="text-gray-200 font-semibold">
+                          {providerLabel(i.provider)}
+                          {i.displayName ? <span className="text-gray-400 font-normal"> · {i.displayName}</span> : null}
+                        </span>
                         <ApiBadge layer="official" />
                       </div>
                       <HealthPill status={i.status === 'DISCONNECTED' ? 'error' : 'ok'} detail={i.status ?? undefined} />
                     </div>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      <dt className="text-gray-500">Página Meta</dt>
+                      <dt className="text-gray-400">Página Meta</dt>
                       <dd className="text-gray-300 truncate" title={i.metaPageId ?? undefined}>{i.metaPageId ?? '—'}</dd>
-                      <dt className="text-gray-500">WhatsApp Business</dt>
+                      <dt className="text-gray-400">WhatsApp Business</dt>
                       <dd className="text-gray-300 truncate" title={i.whatsappBusinessAccountId ?? undefined}>{i.whatsappBusinessAccountId ?? '—'}</dd>
-                      <dt className="text-gray-500">Token expira</dt>
+                      <dt className="text-gray-400">Token expira</dt>
                       <dd className="text-gray-300">{i.tokenExpiresAt ? new Date(i.tokenExpiresAt).toLocaleString('pt-BR') : '—'}</dd>
                     </dl>
                     {i.lastError && <p className="mt-2 text-xs text-red-400">último erro: {i.lastError}</p>}
@@ -320,6 +366,8 @@ export default function IntegrationsPage() {
                   admin={adminDenied}
                   onSave={saveProvider}
                   onClear={clearProvider}
+                  onOAuth={def.id === 'tiktok' ? startTikTokOAuth : undefined}
+                  onRefresh={def.id === 'tiktok' ? refreshTikTokToken : undefined}
                 />
               ))}
             </div>
@@ -328,7 +376,7 @@ export default function IntegrationsPage() {
           {/* ===== Provedores: Sem API / Avançado ===== */}
           <section className="mb-8">
             <SectionTitle accent tone="warn">Sem API · Avançado</SectionTitle>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-400 mb-3">
               Métodos não oficiais (scraping, QR Code, automação de navegador). Só o parâmetro é
               guardado; a execução é não-oficial e de sua responsabilidade.
             </p>
@@ -382,9 +430,11 @@ interface ProviderCardProps {
   risk?: boolean;
   onSave: (def: ProviderDef, value: Record<string, unknown>) => void;
   onClear: (def: ProviderDef) => void;
+  onOAuth?: () => void;
+  onRefresh?: () => void;
 }
 
-function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: ProviderCardProps) {
+function ProviderCard({ def, state, configured, admin, risk, onSave, onClear, onOAuth, onRefresh }: ProviderCardProps) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [exec, setExec] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -429,7 +479,7 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
             <ApiBadge layer={def.layer} />
             {configured && <HealthPill status="ok" detail="configurado" />}
           </div>
-          <p className="text-xs text-gray-500 mt-1">{def.summary}</p>
+          <p className="text-xs text-gray-400 mt-1">{def.summary}</p>
         </div>
         <HealthPill status={state.status} detail={state.detail} />
       </div>
@@ -463,6 +513,22 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
             >
               {open ? 'Fechar' : 'Integrar'}
             </button>
+            {onOAuth && (
+              <button
+                onClick={() => void onOAuth()}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+              >
+                Conectar via OAuth
+              </button>
+            )}
+            {onRefresh && !admin && configured && (
+              <button
+                onClick={() => void onRefresh()}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+              >
+                Renovar token
+              </button>
+            )}
             {configured && !admin && (
               <button
                 onClick={() => onClear(def)}
@@ -516,7 +582,7 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear }: 
         </div>
       ) : (
         // Provedores oficiais sem campos = geridos por outro fluxo (OAuth da Meta).
-        <div className="mt-3 text-xs text-gray-500">Gerenciado via {def.id === 'whatsapp' ? 'OAuth da Meta + tela /whatsapp' : 'OAuth da Meta'}.</div>
+        <div className="mt-3 text-xs text-gray-400">Gerenciado via {def.id === 'whatsapp' ? 'OAuth da Meta + tela /whatsapp' : 'OAuth da Meta'}.</div>
       )}
     </div>
   );

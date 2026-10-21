@@ -119,6 +119,8 @@ export interface PendingTikTokPost {
   status?: 'pending' | 'published' | 'failed';
   /** Contagem de tentativas de publicação falhas (retry c/ backoff — FASE 4 · slice 2). */
   attempts?: number;
+  /** MULTICONTAS — openId da conta TikTok a publicar (ausente = conta padrão). */
+  account?: string;
 }
 
 /** Acrescenta uma intenção na fila persistente (não modifica `existing`). */

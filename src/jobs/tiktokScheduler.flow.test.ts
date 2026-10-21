@@ -66,6 +66,8 @@ describe('fluxo principal (adaptador → executor)', () => {
       access: { accessToken: 'tk-live' },
       hasClientKey: true,
       hasClientSecret: false,
+      oauth: null,
+      tokenExpired: false,
     });
     jest.mocked(publishTikTokVideo).mockResolvedValue({ ok: true, publishId: 'pub-1' });
 
@@ -97,6 +99,8 @@ describe('fluxo principal (adaptador → executor)', () => {
       access: { accessToken: 'tk-live' },
       hasClientKey: true,
       hasClientSecret: false,
+      oauth: null,
+      tokenExpired: false,
     });
     jest.mocked(publishTikTokVideo).mockResolvedValue({ ok: false, error: 'http_error', errorDetail: 'HTTP 500' });
 
@@ -133,6 +137,8 @@ describe('fluxo principal (adaptador → executor)', () => {
       access: { accessToken: 'tk-live' },
       hasClientKey: true,
       hasClientSecret: false,
+      oauth: null,
+      tokenExpired: false,
     });
     jest.mocked(publishTikTokVideo).mockResolvedValue({ ok: true, publishId: 'pub-1' });
     jest.mocked(saveMemory).mockRejectedValue(new TaskQueueUnavailableError('fila fora (teste)'));
@@ -144,6 +150,89 @@ describe('fluxo principal (adaptador → executor)', () => {
     expect(r.detail).toBe('fila fora (teste)');
     // O item foi publicado antes da gravação falhar — estado parcial, honesto:
     expect(r.published).toBe(1);
+  });
+});
+
+describe('multicontas (item.account roteia a credencial)', () => {
+  it('item c/ account → getAccess(account) resolve a conta certa e publica com O token dela', async () => {
+    // Preflight (2-arg, conta padrão) vs item.account (3-arg) — o adaptador
+    // injeta `resolveTenantTikTokAccess(client, scope, account)` só quando o
+    // item traz `account`; então publicamos com a credencial da conta pedida.
+    jest.mocked(listPendingTikTokPosts).mockResolvedValue([
+      item({ id: 'fl-a', account: 'OID_A' }),
+      item({ id: 'fl-default' }),
+    ]);
+    jest.mocked(resolveTenantTikTokAccess).mockImplementation(async (_client, _scope, account) => {
+      // 3-arg com `account` → conta específica; 2-arg (preflight) → padrão.
+      if (account) {
+        return {
+          ok: true,
+          access: { accessToken: `tk-${account}` },
+          hasClientKey: true,
+          hasClientSecret: false,
+          oauth: null,
+          tokenExpired: false,
+          selectedAccount: { openId: account, source: 'oauth' },
+          accountCount: 2,
+        };
+      }
+      return {
+        ok: true,
+        access: { accessToken: 'tk-default' },
+        hasClientKey: true,
+        hasClientSecret: false,
+        oauth: null,
+        tokenExpired: false,
+      };
+    });
+    jest.mocked(publishTikTokVideo).mockImplementation(async (access, _spec) => ({
+      ok: true,
+      publishId: `pub-${access.accessToken}`,
+    }));
+
+    const r = await runDueTikTokPosts(bindTikTokSchedulerDeps(fakeClient, scope), {
+      now: () => new Date(NOW),
+    });
+
+    expect(r).toEqual({ ok: true, due: 2, published: 2, failed: 0, retried: 0, reasons: [] });
+    // O item com account usou a credencial da conta (3-arg), o outro o padrão.
+    expect(publishTikTokVideo).toHaveBeenCalledWith(
+      { accessToken: 'tk-OID_A' },
+      expect.objectContaining({ videoUrl: expect.any(String) }),
+    );
+    expect(resolveTenantTikTokAccess).toHaveBeenCalledWith(fakeClient, scope, 'OID_A');
+  });
+
+  it('item c/ account que FALHOU no resolver → segue retry/backoff, preserva os demais', async () => {
+    jest.mocked(listPendingTikTokPosts).mockResolvedValue([item({ id: 'fl-x', account: 'OID_X' })]);
+    // Preflight ok; conta OID_X não existe (account_not_found).
+    jest.mocked(resolveTenantTikTokAccess).mockImplementation(async (_client, _scope, account) => {
+      if (account) return { ok: false, reason: 'account_not_found' };
+      return {
+        ok: true,
+        access: { accessToken: 'tk-default' },
+        hasClientKey: true,
+        hasClientSecret: false,
+        oauth: null,
+        tokenExpired: false,
+      };
+    });
+
+    const r = await runDueTikTokPosts(bindTikTokSchedulerDeps(fakeClient, scope), {
+      now: () => new Date(NOW),
+    });
+
+    expect(r).toMatchObject({ ok: true, due: 1, published: 0, failed: 0, retried: 1 });
+    expect(r.reasons[0]).toContain('OID_X');
+    expect(saveMemory).toHaveBeenCalledWith(
+      fakeClient,
+      scope,
+      'preference',
+      PENDING_KEY,
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'fl-x', status: 'pending', attempts: 1 }),
+      ]),
+    );
   });
 });
 

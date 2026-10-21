@@ -15,6 +15,16 @@ import type { PendingTikTokPost } from '@/integrations/tiktok/tiktokPublisher';
 
 const NOW = Date.parse('2026-10-19T12:00:00Z');
 
+/** Mock de acesso TikTok compatível com `ResolveTikTokResult` (cadastro manual). */
+const accessOk = () => ({
+  ok: true as const,
+  access: { accessToken: 'tk-live' },
+  hasClientKey: true,
+  hasClientSecret: false,
+  oauth: null,
+  tokenExpired: false,
+});
+
 const post = (id: string, over: Partial<PendingTikTokPost> = {}): PendingTikTokPost => ({
   id,
   createdAt: '2026-10-19T08:00:00Z',
@@ -44,7 +54,7 @@ function makeDeps(list: PendingTikTokPost[], overrides: Partial<TickDeps> = {}):
       calls.save += 1;
       calls.saved.push(items);
     },
-    getAccess: async () => ({ ok: true as const, access: { accessToken: 'tk-live' }, hasClientKey: true, hasClientSecret: false }),
+    getAccess: async () => accessOk(),
     publish: async (_access, spec) => {
       calls.publish += 1;
       calls.publishSpecs.push({ id: String((spec as { videoUrl?: string }).videoUrl ?? ''), url: spec.videoUrl ?? '' });

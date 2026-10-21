@@ -1,0 +1,90 @@
+# =============================================================================
+# REVOLUTION X — compose de DESENVOLVIMENTO (hot reload)
+#
+#   docker compose -f compose.dev.yaml up
+#
+# App em modo dev (`next dev`, port 3000 exposta) + Postgres 17 local.
+# O código é montado como volume — edite no host, o browser recarrega.
+# Sem afetar o fluxo local atual (npm run dev continua valendo fora do Docker).
+# =============================================================================
+
+name: revolution-x-dev
+
+networks:
+  revx-dev:
+    driver: bridge
+
+volumes:
+  revx_dev_pgdata:
+    driver: local
+  # Mantém os módulos do container isolados do node_modules do host
+  # (evita que o bind mount de `/app` esconda a instalação do container).
+  revx_dev_node_modules:
+    driver: local
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    networks: [revx-dev]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-revolution_x}
+      POSTGRES_USER: ${POSTGRES_USER:-revx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-revx_dev}
+    volumes:
+      - revx_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # Dev: exposto no host para tooling local (psql, DBeaver, scripts de teste)
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        # Build-time (inline no bundle dev) — valores do .env local
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+    image: revolution-x-dev:local
+    restart: unless-stopped
+    networks: [revx-dev]
+    depends_on:
+      db:
+        condition: service_healthy
+    # Código do host com hot reload + node_modules isolado no volume
+    volumes:
+      - .:/app
+      - revx_dev_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD:-revx_dev}@db:5432/${POSTGRES_DB:-revolution_x}
+      DIRECT_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD:-revx_dev}@db:5432/${POSTGRES_DB:-revolution_x}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:-}
+      META_TOKEN_ENCRYPTION_KEY: ${META_TOKEN_ENCRYPTION_KEY:-}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      OMNIROUTER_BASE_URL: ${OMNIROUTER_BASE_URL:-}
+      OMNIROUTER_API_KEY: ${OMNIROUTER_API_KEY:-}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      # Bancos de teste (suites RLS usam — veja README-DOCKER.md §Testes)
+      TEST_DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD:-revx_dev}@db:5432/${POSTGRES_DB:-revolution_x}
+      TEST_ADMIN_DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD:-revx_dev}@db:5432/${POSTGRES_DB:-revolution_x}
+    ports:
+      - "3000:3000"

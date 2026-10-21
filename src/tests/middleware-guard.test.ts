@@ -178,3 +178,61 @@ describe('middleware caminho saudável — env presente (sem regressão)', () =>
     expect((res.headers.get('set-cookie') ?? '')).not.toContain('x-organization-id');
   });
 });
+
+describe('middleware www → apex (301 canônico; porta interna do proxy não vaza)', () => {
+  const saved = {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anon: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    node: process.env.NODE_ENV,
+  };
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = saved.url;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = saved.anon;
+    env.NODE_ENV = saved.node;
+    jest.resetAllMocks();
+  });
+
+  // O construtor do NextRequest não define o header Host (depende do runtime
+  // do Next no middleware real); em teste, definimos host + url no mesmo
+  // formato que o proxy entrega: url e Host com a mesma origem/porta.
+  function hostReq(url: string, hostHeader: string): NextRequest {
+    const r = new NextRequest(url);
+    r.headers.set('host', hostHeader);
+    return r;
+  }
+
+  it('proxy Hostinger (Host com porta interna :3000) → 301 p/ apex SEM porta', async () => {
+    // Reproduz o que o proxy do Hostinger reporta: request.url e Host
+    // chegam com a porta interna do app. O usuário chega por 443/80, então
+    // a porta NÃO pode aparecer no 301 (URL morta no ar).
+    const res = await middleware(hostReq('http://www.revolutionx.com.br:3000/integrations?tab=meta', 'www.revolutionx.com.br:3000'));
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe('http://revolutionx.com.br/integrations?tab=meta');
+  });
+
+  it('www limpo (sem porta) → 301 p/ apex preservando caminho e query', async () => {
+    const res = await middleware(hostReq('http://www.example.com/a/b?c=1', 'www.example.com'));
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe('http://example.com/a/b?c=1');
+  });
+
+  it('www local (dev) → porta preservada (a stack local expõe :3000)', async () => {
+    const res = await middleware(hostReq('http://www.localhost:3000/x', 'www.localhost:3000'));
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/x');
+  });
+
+  it('apex (sem www) NUNCA vira 301 de volta (propriedade anti-loop)', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key-test';
+    env.NODE_ENV = 'test';
+    (createServerClient as jest.Mock).mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) },
+    });
+    (createServiceRoleClient as jest.Mock).mockReturnValue({ from: jest.fn() });
+
+    const res = await middleware(hostReq('http://revolutionx.com.br:3000/', 'revolutionx.com.br:3000'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
+});

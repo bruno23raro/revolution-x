@@ -352,36 +352,85 @@ exercitado contra plataforma real; **nada** foi aplicado a produção.
 
 ---
 
-## 10. Declaração de prontidão
+## 10. Declaração de prontidão final (2026-10-21, pós-lançamento)
 
-- **Pronto (código + testes):** multicontas e seleção de conta em todos
-  os 5 canais; callback OAuth multi-Página; endpoint de listagem de contas
-  TikTok; separação oficial/sem-API com probes honestos; arquivos Docker
-  isolados. Validação local: `tsc` 0 · `npm test` 578/578 (44 suítes) ·
-  `build` limpo · `lint` limpo.
-- **Validado ao vivo (Docker instalado):** stack de teste com `db`
-  (Postgres 17) e `app` `healthy`; URL real `http://localhost:3000` respondendo;
-  banco de teste (29 tabelas) alcançado via `prisma db push`; migração 016
-  **validada em banco descartável** (registro completo em §9.1; **NÃO** aplicada
-  ao banco de teste principal nem à produção).
-- **Exige Supabase/credencial (não é falta de ferramenta):** o teste
-  **funcional ao vivo** (register/login/org/CRM + 2 contas reais) depende de um
-  **projeto Supabase de desenvolvimento** + credencial/aprovação de plataforma
-  → **humano** (checklist §9, H1–H5; guia para iniciante no
-  `docs/GUIA_INICIANTE_REVOLUTION_X.md` §8).
-- **Exige humano:** criar o projeto Supabase dev + aplicar migrations SQL
-  (001→016), copiar as 3 chaves p/ `.env.docker.test` (sem versionar), aprovações
-  de plataforma (login/2FA/CAPTCHA), **migração 016 em produção** (só com
-  autorização), credenciais de servidor, deploy/DNS/cron.
-- **Integridade preservada:** nenhum segredo impresso, nenhum commit/push/PR
-  feito, RLS/multi-tenant intactos, volumes e trabalho do usuário preservados;
-  **produção NÃO foi tocada** (migração 016 em produção e deploy nunca
-  executados).
+Substitui a seção anterior (escrita antes do lançamento). Evidência: auditoria
+ao vivo em 2026-10-21 (site real + browser desktop/mobile) + workflow de
+verificação adversarial `wwkz9y9i5` (11/11 afirmações confirmadas, 0 correções).
 
-> Próximo passo recomendado (checklist §9, H1–H5): **criar um projeto Supabase
-> de desenvolvimento**, aplicar as migrations SQL oficiais nele, copiar as 3
-> chaves para o `.env.docker.test` **sem versionar** e então rodar o teste
-> funcional ao vivo. A parte local/Docker/016-descartável **já está feita**.
+1. **Commit/branch integrados** — `main` = `2451ccf` (PR #2 mesclado: 301 do
+   `www` sem porta interna). Publicação vigente no ar: `2451ccf`
+   (auto-deploy Hostinger, build `01a15f96`).
+2. **PR #3** — este relatório + correções deste lançamento, integrados no
+   PR #3 (URL registrada no relatório final entregue ao dono do repositório).
+3. **Resultado do CI** — no `2451ccf`: todos os gates verdes
+   (`tsc --noEmit` 0 · `next lint` limpo · `jest` **582/582** em 44 suítes ·
+   `next build` limpo, 70 rotas). CI do PR #3 aguarda confirmação pós-abertura.
+4. **Commit publicado na Hostinger** — `2451ccf` no ar; o commit de
+   merge do PR #3 será publicado pelo auto-deploy (~3 min) após o merge.
+5. **URL de produção verificada** — `https://revolutionx.com.br/` → **200**;
+   `https://www.revolutionx.com.br` → **301** para apex **sem** `:3000`;
+   `sitemap.xml` e `robots.txt` → **200**.
+6. **Resultados reais de build/testes** — como no item 3 (gates rodados no
+   host, sem mocks de banco: Postgres 17 do CI).
+7. **Fluxos cadastro/login/organização/CRM (produção)** — **cadastro
+   quebrado**: `POST /api/auth/register` responde **400 `registration_failed`**
+   com dois e-mails distintos testados ao vivo em 2026-10-21 (`@example.com`
+   e `@revolutionx.com.br`). O erro vem do `signUp` do GoTrue — o onboarding
+   (usuário público/organização) **não é executado** → nenhum resíduo criado.
+   Causa raiz isolada via diagnóstico novo deste lançamento (`code`/`status`
+   no runtime log do hPanel); principal suspeita: **mailer não configurado no
+   projeto Supabase de produção**. Login em produção não exercitado
+   (sem credenciais de teste; senhas não são solicitadas por chat);
+   organização/CRM bloqueados pelo cadastro. **Usuários existentes
+   (6 confirmados) não são afetados** — o login/sessão deles segue
+   independente do `signUp`.
+8. **Estado das migrations** — produção (`ardpabjoepzhkpmkgwgu`): **001–014
+   aplicadas; 015/016 NÃO aplicadas** (gate humano; 016 validada em banco
+   descartável com rollback pronto, §9.1). Aplicação DEV bloqueada em PAM
+   (kit de colar: `supabase/.temp/dev_paste_apply.sql`). Nenhuma sequence de
+   banco vazio foi aplicada em produção.
+9. **Integrações e multicontas** — código pronto para multicontas nos 5
+   canais com seleção explícita e validação backend; em produção **não
+   exercitado** (015/016 ausentes + aprovações de provider pendentes); a UI
+   informa o bloqueio com honestidade (ex.: probes `routerConfigured:false`),
+   sem simular sucesso. Cross-tenant: RLS validada localmente
+   (FORCE em 21 tabelas, fail-closed por GUC).
+10. **SEO técnico + Search Console** — canonical/HTTPS/301 `www`/sitemap/
+    robots conforme item 5; landing indexável (demais rotas privadas com
+    `noindex`, intencional); Lighthouse mobile 98–100 após correções.
+    **GSC NÃO verificado nesta sessão** (sem sessão Google autenticada no
+    auditor) → nenhum claim de indexação feito; passos para iniciante no
+    item 11.
+11. **Pendências externas reais** — (a) **mailer no Supabase de produção**
+    (provedor Resend/SES/SMTP no dashboard, Auth → E-mail, ou `mailer_autoconfirm`)
+    — fecha o item 7; (b) **aplicar 015/016 em produção** com o protocolo de
+    7 passos (autorização do dono); (c) envs ausentes no hPanel
+    (`NEXT_PUBLIC_SITE_URL`, `TIKTOK_*`, `CRON_SECRET`, `OMNIROUTER_*`/
+    `ANTHROPIC_*`); (d) **rotação coordenada** de credenciais expostas em
+    inspeções passadas (`service_role` do DEV + senha do pooler da produção);
+    (e) GSC (adicionar domínio, verificar TXT/HTML, submeter sitemap).
+12. **Riscos residuais + rollback** — este lançamento não altera schema;
+    rollback = push de `2451ccf` novamente para `main` (auto-deploy ~3 min).
+    O 400 de cadastro afeta apenas novos cadastros. 016 tem rollback
+    validado; nenhuma operação destrutiva tocou dados de clientes.
+13. **Preservação de dados** — confirmada: os 6 usuários confirmados,
+    organizações e CRM existente estão intactos; nada foi excluído da
+    produção; a limpeza de testes locais (Docker/descartáveis) foi reversível.
+
+**Correções integradas com este relatório (PR #3):**
+- Diagnóstico do `signUp` GoTrue no cadastro: `code`/`status` do erro em
+  `console.error` rastreável no runtime log do hPanel — resposta ao cliente
+  segue 400 genérico (evita enumeração), sem segredo nem PII no log.
+- Acessibilidade da landing (Lighthouse): ordem de headings
+  (`h3`→parágrafo na prévia do dashboard) e contraste nome/rótulo da marca
+  (`aria-hidden` na marca + remoção de `aria-label` redundante).
+- Teste da rota de cadastro cobrindo a nova linha de log.
+
+**Limites deste relatório:** afirmações "verificadas" referem-se ao
+site real em 2026-10-21; onde não houve acesso (GSC, dashboard do
+Supabase, hPanel envs), o estado é declarado como "não verificado" ou
+"pendência externa" — nada foi inferido como concluído.
 
 ---
 

@@ -95,14 +95,21 @@ describe('POST /api/auth/register', () => {
     expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
-  it('signUp com erro → 400 registration_failed (onboarding não chega a rodar)', async () => {
+  it('signUp com erro → 400 registration_failed (onboarding não chega a rodar) + erro rastreado no log', async () => {
     createClient.mockResolvedValue({
       auth: { signUp: jest.fn(async () => ({ data: null, error: { code: '23505', message: 'email em uso' } })) },
     });
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const res = await POST(mkReq({ name: 'N', email: 'nova@exemplo.com', password: 'segredo' }));
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: 'registration_failed' });
     expect(createServiceRoleClient).not.toHaveBeenCalled();
+    // Diagnóstico sem segredo/PII: metadados do erro GoTrue no runtime log (hPanel).
+    expect(spy).toHaveBeenCalledWith(
+      '[register] GoTrue signUp failed:',
+      expect.objectContaining({ code: '23505' }),
+    );
+    spy.mockRestore();
   });
 
   it('caminho feliz: onboarding ok → 201, deleteUser E deletes públicos NÃO chamados', async () => {

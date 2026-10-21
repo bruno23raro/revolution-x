@@ -96,6 +96,14 @@ export async function POST(request: Request) {
       }
     });
     if (error) {
+      // Diagnóstico SEM segredo e SEM PII: a resposta segue 400 genérico
+      // (evita enumeração), mas a metadados do erro GoTrue (code/status)
+      // fica rastreável no runtime log do hPanel — ex.: mailer quebrado,
+      // rate limit ou signup desabilitado no dashboard do Supabase.
+      console.error('[register] GoTrue signUp failed:', {
+        code: error.code ?? null,
+        status: error.status ?? null,
+      });
       return NextResponse.json({ error: 'registration_failed' }, { status: 400 });
     }
     if (!data || !data.user) {

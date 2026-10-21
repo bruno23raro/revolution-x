@@ -47,8 +47,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const resolved = await resolveTenantMetaAccess(user.organizationId);
+  // MULTICONTAS — `account` (row id da meta_integrations) ancora o número de
+  // WhatsApp; ausente → conta padrão (mais recente).
+  const account = body.account ? String(body.account).trim() : undefined;
+
+  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account);
   if (!resolved.ok) {
+    if (resolved.reason === 'account_not_found') {
+      return NextResponse.json(
+        { ok: false, error: 'account_not_found', detail: `Conta Meta "${account}" não encontrada neste tenant.`, total: 0, sent: 0, failed: 0 },
+        { status: 409 },
+      );
+    }
     const status = resolved.reason === 'not_connected' ? 409 : 503;
     return NextResponse.json({ error: resolved.reason, total: 0, sent: 0, failed: 0 }, { status });
   }

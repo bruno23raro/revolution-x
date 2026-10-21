@@ -60,6 +60,8 @@ const accessOk = () => ({
   access: { accessToken: 'tk-live' },
   hasClientKey: true,
   hasClientSecret: false,
+  oauth: null,
+  tokenExpired: false,
 } as const);
 
 beforeEach(() => {

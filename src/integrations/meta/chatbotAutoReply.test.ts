@@ -106,8 +106,10 @@ describe('maybeAutoReply', () => {
           eq: () => ({
             in: () => ({
               neq: () => ({
-                limit: () => ({
-                  maybeSingle: async () => ({ data: null, error: null }),
+                order: () => ({
+                  limit: () => ({
+                    maybeSingle: async () => ({ data: null, error: null }),
+                  }),
                 }),
               }),
             }),

@@ -137,18 +137,18 @@ export default function AppNav() {
         {/* Desktop */}
         <nav className="hidden md:flex items-center gap-1 flex-wrap">
           {loading ? (
-            <span className="text-xs text-gray-500 px-2">carregando…</span>
+            <span className="text-xs text-gray-400 px-2">carregando…</span>
           ) : authed ? (
             groups.map((g) => (
               <div key={g.label} className="flex items-center gap-1 mx-1 border-l border-white/10 pl-2">
-                <span className="text-[10px] uppercase tracking-wider text-gray-600 w-14 shrink-0">{g.label}</span>
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 w-14 shrink-0">{g.label}</span>
                 {g.items.map((it) => (
                   <NavLink key={it.href} item={it} active={pathname === it.href} />
                 ))}
               </div>
             ))
           ) : (
-            <span className="text-xs text-gray-500">Área pública</span>
+            <span className="text-xs text-gray-400">Área pública</span>
           )}
         </nav>
 
@@ -161,7 +161,7 @@ export default function AppNav() {
           </Link>
           {authed ? (
             <>
-              <span className="text-xs text-gray-500 truncate max-w-[160px]" title={session?.user.email ?? undefined}>
+              <span className="text-xs text-gray-400 truncate max-w-[160px]" title={session?.user.email ?? undefined}>
                 {session?.user.email ?? '…'}
               </span>
               <button
@@ -197,14 +197,14 @@ export default function AppNav() {
       {open && (
         <div className="md:hidden border-t border-white/10 bg-[#08040F] px-4 py-3 space-y-3">
           {authed && (
-            <div className="text-xs text-gray-500 truncate">{session?.user.email}</div>
+            <div className="text-xs text-gray-400 truncate">{session?.user.email}</div>
           )}
           {loading ? (
-            <p className="text-xs text-gray-500">Carregando seu menu…</p>
+            <p className="text-xs text-gray-400">Carregando seu menu…</p>
           ) : (
             groups.map((g) => (
               <div key={g.label}>
-                <div className="text-[10px] uppercase tracking-wider text-gray-600 mb-1">{g.label}</div>
+                <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">{g.label}</div>
                 <div className="grid grid-cols-2 gap-1">
                   {g.items.map((it) => (
                     <NavLink key={it.href} item={it} active={pathname === it.href} onNavigate={close} />

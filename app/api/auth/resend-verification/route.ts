@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { generateSecureToken, getMailProvider } from '@/lib/email';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 
 const VERIFICATION_TOKEN_TTL_MS = 3600_000; // 1 hour
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -65,14 +66,10 @@ export async function POST(request: NextRequest) {
     await svc.from('EmailVerificationToken')
       .insert({ userId: userRow.id, tokenHash, expiresAt });
 
-    // Prefer NEXT_PUBLIC_SITE_URL (set by operator to the public origin);
-    // otherwise use request.nextUrl.origin only when it is not the
-    // internal Hostinger address (0.0.0.0:3000); hard-fallback to the
-    // known production domain.
-    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-      || (request.nextUrl.origin !== 'http://0.0.0.0:3000' && request.nextUrl.origin !== 'https://0.0.0.0')
-        ? request.nextUrl.origin
-        : 'https://revolutionx.com.br';
+    // resolvePublicSiteOrigin: env NEXT_PUBLIC_SITE_URL tem prioridade;
+    // senão, a origem da request — exceto valores quebrados de proxy
+    // interno (0.0.0.0:3000); senão, apex de produção.
+    const siteOrigin = resolvePublicSiteOrigin(request.nextUrl.origin);
     const verifyLink = `${siteOrigin}/verify-email?token=${tokenRaw}`;
 
     try {

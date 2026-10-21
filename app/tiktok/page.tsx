@@ -21,6 +21,7 @@
 import AppNav from '@/components/AppNav';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
+import { toLocalInputValue } from '@/lib/format-local-datetime';
 import { useEffect, useState } from 'react';
 
 const PRIVACY_LEVELS: Array<{ value: string; label: string }> = [
@@ -38,7 +39,7 @@ export default function TikTokPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">TikTok</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Publicação e tracking de vídeos — 100% pela API oficial do TikTok. O agendamento persiste a
               intenção (a API oficial não publica em hora marcada).
             </p>
@@ -63,28 +64,40 @@ export default function TikTokPage() {
 /* ------------------------------------------------------------------ */
 
 function ConnectionStatusCard() {
-  const [state, setState] = useState<{ loading: boolean; msg: string | null; configured: boolean }>({
+  const [state, setState] = useState<{ loading: boolean; msg: string | null; configured: boolean; count: number; expired: boolean }>({
     loading: true,
     msg: null,
     configured: false,
+    count: 0,
+    expired: false,
   });
 
   const load = () => {
-    fetch('/api/integrations/config')
+    // /api/integrations/tiktok exige apenas a sessão (devolve as contas do
+    // tenant + tokenExpired). O antigo /api/integrations/config era admin-only
+    // (requireAdmin → 401) e mentia "não conectado" para membros logados
+    // não-admin.
+    fetch('/api/integrations/tiktok')
       .then(async (r) => {
         if (r.status === 401) {
-          setState({ loading: false, msg: 'Faça login para ver a conexão.', configured: false });
+          setState({ loading: false, msg: 'Faça login para ver a conexão.', configured: false, count: 0, expired: false });
           return;
         }
         if (r.status === 503) {
-          setState({ loading: false, msg: 'Memória de integrações indisponível (503) — tabela não migrada aqui.', configured: false });
+          setState({ loading: false, msg: 'Memória de integrações indisponível (503).', configured: false, count: 0, expired: false });
           return;
         }
-        const d = await r.json().catch(() => ({}));
-        const hit = Array.isArray(d.providers) ? d.providers.find((p: { id: string }) => p.id === 'tiktok') : null;
-        setState({ loading: false, msg: null, configured: Boolean(hit?.configured) });
+        const d = await r.json().catch(() => ({ accounts: [] } as { accounts?: Array<{ tokenExpired?: boolean }> }));
+        const accounts = Array.isArray(d.accounts) ? d.accounts : [];
+        setState({
+          loading: false,
+          msg: null,
+          configured: accounts.length > 0,
+          count: accounts.length,
+          expired: accounts.some((a) => a.tokenExpired),
+        });
       })
-      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexão.', configured: false }));
+      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexão.', configured: false, count: 0, expired: false }));
   };
 
   useEffect(load, []);
@@ -96,17 +109,24 @@ function ConnectionStatusCard() {
         <ApiBadge layer="official" />
       </div>
       {state.loading ? (
-        <p className="text-xs text-gray-500">Carregando…</p>
+        <p className="text-xs text-gray-400">Carregando…</p>
       ) : state.msg ? (
         <p className="text-xs text-amber-300">{state.msg}</p>
       ) : state.configured ? (
-        <p className="text-xs text-green-300">
-          Provedor TikTok configurado (clientKey/secret). Para publicar, um Access Token de usuário é
-          necessário — confira em /integrations.
-        </p>
+        <div className="text-xs space-y-1">
+          <p className="text-green-300">
+            Provedor TikTok conectado ({state.count} conta{state.count > 1 ? 's' : ''}). O token de usuário já está guardado (via OAuth ou manual) — dá para publicar.
+          </p>
+          {state.expired && (
+            <p className="text-amber-300">
+              Token de acesso expirou (expira em ~24h) — renove em /integrations → TikTok → “Renovar token”.
+            </p>
+          )}
+        </div>
       ) : (
         <div className="text-xs text-gray-400">
-          Provedor TikTok ainda não conectado.
+          Provedor TikTok ainda não conectado. Conecte via OAuth (botão “Conectar via OAuth” em /integrations) ou
+          preencha client key/secret + access token manualmente.
           <div className="mt-2">
             <a
               href="/integrations"
@@ -135,12 +155,26 @@ function PublishCard() {
   const [scheduleAt, setScheduleAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // MULTICONTAS — seletor de conta TikTok (só aparece com 2+ contas).
+  const [accounts, setAccounts] = useState<Array<{ openId: string; tokenExpired: boolean }>>([]);
+  const [account, setAccount] = useState('');
 
-  const minLocal = () => {
-    const d = new Date(Date.now() + 2 * 60 * 1000);
-    d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/integrations/tiktok')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && Array.isArray(d?.accounts) && d.accounts.length > 1) {
+          setAccounts(d.accounts);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const minLocal = () => toLocalInputValue(new Date(Date.now() + 2 * 60 * 1000));
 
   const canSubmit = videoUrl.trim().length > 0 && (!schedule || scheduleAt.length > 0);
 
@@ -153,6 +187,7 @@ function PublishCard() {
       body.disableComment = disableComment;
       body.aigc = aigc;
       if (schedule && scheduleAt) body.scheduledAt = new Date(scheduleAt).toISOString();
+      if (account) body.account = account; // MULTICONTAS — ancora a conta escolhida
 
       const r = await fetch('/api/tiktok/publish', {
         method: 'POST',
@@ -200,9 +235,23 @@ function PublishCard() {
 
       <div className="space-y-3">
         <label className="block text-xs text-gray-400">
-          URL pública do vídeo <span className="text-gray-600">(o TikTok puxa por URL)</span>
+          URL pública do vídeo <span className="text-gray-400">(o TikTok puxa por URL)</span>
           <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://cdn.seusite.com/video.mp4" className={inputCls} />
         </label>
+
+        {accounts.length > 1 && (
+          <label className="block text-xs text-gray-400">
+            Conta TikTok <span className="text-gray-400">(publica nesta conta)</span>
+            <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls + ' !mt-1'}>
+              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
+              {accounts.map((a) => (
+                <option key={a.openId} value={a.openId} className="bg-[#0D0915]">
+                  {a.openId.slice(0, 12)}…{a.tokenExpired ? ' (token expirado)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="block text-xs text-gray-400">
           Legenda (opcional)
@@ -238,7 +287,14 @@ function PublishCard() {
             Agendar
           </label>
           {schedule && (
-            <input type="datetime-local" value={scheduleAt} min={minLocal()} onChange={(e) => setScheduleAt(e.target.value)} className={inputCls + '!mt-0 w-auto'} />
+            <input
+              type="datetime-local"
+              value={scheduleAt}
+              min={minLocal()}
+              aria-label="Data e hora de agendamento"
+              onChange={(e) => setScheduleAt(e.target.value)}
+              className={inputCls + '!mt-0 w-auto'}
+            />
           )}
         </div>
 
@@ -250,7 +306,7 @@ function PublishCard() {
           >
             {busy ? 'Enviando…' : schedule ? 'Agendar' : 'Publicar agora'}
           </button>
-          <span className="text-xs text-gray-600">
+          <span className="text-xs text-gray-400">
             {schedule
               ? 'A API oficial não publica em hora marcada — a intenção é guardada e o executor processa no card "Agendados".'
               : 'Publicação imediata via PULL_FROM_URL.'}
@@ -259,6 +315,8 @@ function PublishCard() {
 
         {msg && (
           <div
+            role="status"
+            aria-live="polite"
             className={`p-3 text-sm rounded-lg border ${
               msg.ok ? 'bg-green-400/10 border-green-400/25 text-green-300' : 'bg-amber-400/10 border-amber-400/25 text-amber-300'
             }`}
@@ -368,13 +426,13 @@ function ScheduledCard() {
         Falhas <em>não</em> encerram na hora: o item é reagendado com backoff exponencial (até 3 tentativas); só
         então vira <span className="text-red-300">failed</span> terminal.
       </p>
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-xs text-gray-400 mb-3">
         Disparo <em>periódico</em>: <code className="text-gray-400">POST /api/cron/tiktok</code> (gatilho de
         sistema multi-tenant, protegido pelo segredo <code className="text-gray-400">CRON_SECRET</code>). O
         registro do cron e a definição do segredo no hpanel são passos [HUMANO] — sem eles, use o botão abaixo.
       </p>
 
-      {queueState === 'loading' && <p className="text-xs text-gray-500">Carregando fila…</p>}
+      {queueState === 'loading' && <p className="text-xs text-gray-400">Carregando fila…</p>}
       {queueState === 'unauth' && <p className="text-xs text-amber-300">Faça login para ver os agendados.</p>}
       {queueState === 'unavailable' && (
         <p className="text-xs text-amber-300">Memória/fila de integrações indisponível no servidor (503).</p>
@@ -398,13 +456,13 @@ function ScheduledCard() {
               >
                 [{p.status}]
               </span>
-              <span className="text-gray-500">{new Date(p.scheduledAt).toLocaleString('pt-BR')}</span>
-              <span className="text-gray-600 truncate" title={p.videoUrl}>
+              <span className="text-gray-400">{new Date(p.scheduledAt).toLocaleString('pt-BR')}</span>
+              <span className="text-gray-400 truncate" title={p.videoUrl}>
                 {p.videoUrl}
               </span>
-              {p.publishId && <span className="text-gray-600">pub {p.publishId}</span>}
+              {p.publishId && <span className="text-gray-400">pub {p.publishId}</span>}
               {typeof p.attempts === 'number' && p.attempts > 0 && (
-                <span className="text-gray-500">(tentativa {p.attempts})</span>
+                <span className="text-gray-400">(tentativa {p.attempts})</span>
               )}
             </li>
           ))}
@@ -430,6 +488,8 @@ function ScheduledCard() {
 
       {tickOut && (
         <div
+          role="status"
+          aria-live="polite"
           className={`mt-3 p-3 text-xs rounded-lg border ${
             tickOut.includes('falha') || tickOut.includes('Falha') || tickOut.includes('indisponível')
               ? 'bg-amber-400/10 border-amber-400/25 text-amber-300'
@@ -517,26 +577,26 @@ function TrackingCard() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs text-gray-400">Estado de um vídeo (publish_id)</label>
+          <label htmlFor="tiktok-status-id" className="block text-xs text-gray-400">Estado de um vídeo (publish_id)</label>
           <div className="flex gap-2 mt-1">
-            <input value={statusId} onChange={(e) => setStatusId(e.target.value)} placeholder="734123…" className={inputCls + '!mt-0'} />
+            <input id="tiktok-status-id" value={statusId} onChange={(e) => setStatusId(e.target.value)} placeholder="734123…" className={inputCls + '!mt-0'} />
             <button onClick={() => void checkStatus()} disabled={busyS || !statusId.trim()} className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40">
               {busyS ? '…' : 'Estado'}
             </button>
           </div>
-          {statusOut && <p className="mt-2 text-xs text-gray-300 whitespace-pre-wrap">{statusOut}</p>}
+          {statusOut && <p role="status" aria-live="polite" className="mt-2 text-xs text-gray-300 whitespace-pre-wrap">{statusOut}</p>}
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400">Métricas (até 5 publish_ids, separados por vírgula)</label>
+          <label htmlFor="tiktok-analytics-ids" className="block text-xs text-gray-400">Métricas (até 5 publish_ids, separados por vírgula)</label>
           <div className="flex gap-2 mt-1">
-            <input value={analyticsIds} onChange={(e) => setAnalyticsIds(e.target.value)} placeholder="734123, 734124" className={inputCls + '!mt-0'} />
+            <input id="tiktok-analytics-ids" value={analyticsIds} onChange={(e) => setAnalyticsIds(e.target.value)} placeholder="734123, 734124" className={inputCls + '!mt-0'} />
             <button onClick={() => void fetchAnalytics()} disabled={busyA || !analyticsIds.trim()} className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40">
               {busyA ? '…' : 'Métricas'}
             </button>
           </div>
           {analyticsOut && (
-            <pre className="mt-2 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{analyticsOut}</pre>
+            <pre role="status" aria-live="polite" className="mt-2 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{analyticsOut}</pre>
           )}
         </div>
       </div>
@@ -696,7 +756,7 @@ function ScrapingCard() {
           Guardar parâmetro
         </button>
       </div>
-      {msg && <p className="mt-2 text-xs text-gray-400">{msg}</p>}
+      {msg && <p role="status" aria-live="polite" className="mt-2 text-xs text-gray-400">{msg}</p>}
     </Card>
   );
 }

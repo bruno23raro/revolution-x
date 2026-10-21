@@ -72,7 +72,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const resolved = await resolveTenantTikTokAccess(prisma, scope);
+  // MULTICONTAS — `account` (openId do TikTok) seleciona a conta; ausente →
+  // conta padrão (mais recente). `default` é um valor válido explícito.
+  const account = body.account ? String(body.account).trim() : '';
+
+  const resolved = await resolveTenantTikTokAccess(prisma, scope, account);
   if (!resolved.ok) {
     const status = resolved.reason === 'queue_unavailable' ? 503 : 409;
     const detail =
@@ -80,7 +84,9 @@ export async function POST(req: NextRequest) {
         ? 'Provedor TikTok não conectado. Preencha clientKey/clientSecret/accessToken em /integrations.'
         : resolved.reason === 'no_token'
           ? 'accessToken do TikTok ausente. Conecte em /integrations.'
-          : undefined;
+          : resolved.reason === 'account_not_found'
+            ? `Conta TikTok "${account}" não encontrada neste usuário/tenant.`
+            : undefined;
     return NextResponse.json({ ok: false, error: resolved.reason, detail }, { status });
   }
 
@@ -101,6 +107,8 @@ export async function POST(req: NextRequest) {
       scheduledAt,
       spec,
       status: 'pending',
+      // MULTICONTAS — registra a conta resolvida para o agendador publicar lá.
+      account: resolved.selectedAccount?.openId || undefined,
     };
     try {
       await addPendingTikTokPost(prisma, scope, item);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { withUserContext } from '@/lib/prisma';
 import { generateSecureToken, getMailProvider } from '@/lib/email';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 
 const RESET_TOKEN_TTL_MS = 3600_000; // 1 hour
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
@@ -76,16 +77,11 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // Build reset link (token is in the URL — not in the DB)
-    // Use the operator-configured public origin when available;
-    // otherwise hard-fallback to the known production domain.
-    // Hostinger's internal request object can yield 0.0.0.0:3000,
-    // so we never silently use request.nextUrl.origin without a
-    // verified origin above.
-    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-      || (request.nextUrl.origin !== 'http://0.0.0.0:3000' && request.nextUrl.origin !== 'https://0.0.0.0')
-        ? request.nextUrl.origin
-        : 'https://revolutionx.com.br';
+    // Build reset link (token is in the URL — not in the DB).
+    // resolvePublicSiteOrigin: env NEXT_PUBLIC_SITE_URL tem prioridade;
+    // senão, a origem da request — exceto valores quebrados de proxy
+    // interno (0.0.0.0:3000); senão, apex de produção.
+    const siteOrigin = resolvePublicSiteOrigin(request.nextUrl.origin);
     const resetLink = `${siteOrigin}/reset-password?token=${tokenRaw}`;
 
     // Send email (pluggable; may be no-op until provider wired)

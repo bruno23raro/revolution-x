@@ -3,13 +3,55 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceRoleClient } from './src/lib/supabase/server';
 
 export async function middleware(request: NextRequest) {
+  // Canonical host: apex (revolutionx.com.br), nunca o www. O www serve a
+  // MESMA página hoje (ETag idêntico, sem redirect) → conteúdo duplicado.
+  // 301 aqui (ANTES de qualquer coisa que use Supabase) elimina o duplicado;
+  // o alvo é construído removendo o prefixo www do próprio Host recebido,
+  // portanto o loop é impossível por construção (www.x → x, nunca o
+  // contrário). Preserva protocolo, caminho, query e porta.
+  const host = (request.headers.get('host') ?? '').toLowerCase();
+  if (host.startsWith('www.')) {
+    const target = new URL(request.url);
+    const withoutWww = host.replace(/^www\./, '');
+    const portSep = withoutWww.lastIndexOf(':');
+    target.hostname = portSep > 0 ? withoutWww.slice(0, portSep) : withoutWww;
+    if (portSep > 0) target.port = withoutWww.slice(portSep + 1);
+    return NextResponse.redirect(target, 301);
+  }
+
   let response = NextResponse.next({
     request,
   });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    const pathname = request.nextUrl.pathname;
+    const isPublicRoute =
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/forgot-password' ||
+      pathname === '/reset-password' ||
+      pathname === '/verify-email' ||
+      pathname.startsWith('/onboarding');
+
+    // A preview without Supabase may render public pages, but must never make
+    // protected UI appear authenticated in a production-like runtime.
+    if (process.env.NODE_ENV === 'production' && !isPublicRoute) {
+      if (pathname.startsWith('/api/')) {
+        return new NextResponse('Authentication service is not configured', { status: 503 });
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -47,14 +89,18 @@ export async function middleware(request: NextRequest) {
   // can be read (userId is the partition key).
   try {
     const svc = createServiceRoleClient();
-    const { data: member } = await svc
+    // Um usuário pode pertencer a várias organizações: OrganizationMember tem
+    // @@unique([organizationId,userId]), não um userId único. maybeSingle()
+    // lançava para o 2º registro e o catch engolia → multi-org perdia o cookie
+    // de contexto. Buscamos a lista e usamos a primeira como a org ativa.
+    const { data: members } = await svc
       .from('OrganizationMember')
       .select('organizationId')
-      .eq('userId', user.id)
-      .maybeSingle();
+      .eq('userId', user.id);
 
-    if (member?.organizationId) {
-      response.cookies.set('x-organization-id', member.organizationId, {
+    const orgId = members?.[0]?.organizationId;
+    if (orgId) {
+      response.cookies.set('x-organization-id', orgId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',

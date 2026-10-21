@@ -1,0 +1,37 @@
+# =============================================================================
+# REVOLUTION X — Imagem de DESENVOLVIMENTO (hot reload)
+#
+# Estratégia: o CÓDIGO NÃO vai na imagem — é montado por volume pelo
+# compose.dev.yaml (`.` → /app). A imagem só carrega runtime + node_modules
+# (instalação determinística via npm ci, que roda `prisma generate`).
+#
+# `next dev` (o comando atual do package.json) observa as mudanças no volume
+# e recompila em hot reload. O volume nomeado para /app/node_modules evita
+# que o mount do host (Windows) esconda os módulos instalados no container.
+#
+# Não afeta o ambiente local existente: tudo roda dentro do Docker Desktop.
+# =============================================================================
+
+FROM node:20-slim AS dev
+WORKDIR /app
+ENV NODE_ENV=development \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000
+
+# Deps determinísticas (postinstall gera o cliente Prisma — precisa do schema).
+COPY package.json package-lock.json ./
+COPY prisma/ ./prisma/
+COPY prisma.config.ts ./
+COPY tsconfig.json ./
+
+RUN npm ci && mkdir -p .next/cache && chown -R node:node /app
+
+# Código montado em runtime (compose.dev.yaml): /app
+USER node
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
+  CMD node -e "const p=process.env.PORT||3000;require('http').get('http://127.0.0.1:'+p+'/',r=>{process.exit(r.statusCode>=200&&r.statusCode<500?0:1)}).on('error',()=>process.exit(1))"
+
+CMD ["npm", "run", "dev"]

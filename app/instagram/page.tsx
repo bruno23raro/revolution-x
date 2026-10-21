@@ -14,6 +14,7 @@
 import AppNav from '@/components/AppNav';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
+import { toLocalInputValue } from '@/lib/format-local-datetime';
 import { useEffect, useState } from 'react';
 
 export default function InstagramPage() {
@@ -24,7 +25,7 @@ export default function InstagramPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Instagram</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Publicação e agendamento de posts, stories e reels — 100% pela API oficial da Meta (usa a conexão do
               OAuth de /integrations).
             </p>
@@ -79,7 +80,7 @@ function ConnectionStatusCard() {
         <ApiBadge layer="official" />
       </div>
       {state.loading ? (
-        <p className="text-xs text-gray-500">Carregando…</p>
+        <p className="text-xs text-gray-400">Carregando…</p>
       ) : state.msg ? (
         <p className="text-xs text-amber-300">{state.msg}</p>
       ) : state.hasIig ? (
@@ -114,12 +115,29 @@ function PublishCard() {
   const [scheduleAt, setScheduleAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // MULTICONTAS — seletor de conta Meta (Instagram), só com 2+.
+  const [metaList, setMetaList] = useState<Array<{ id: string; provider: string; metaPageId: string | null; instagramAccountId: string | null; displayName?: string | null }>>([]);
+  const [account, setAccount] = useState('');
 
-  const minLocal = () => {
-    const d = new Date(Date.now() + 11 * 60 * 1000);
-    d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/integrations/meta')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && Array.isArray(d?.integrations)) setMetaList(d.integrations);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // O resolver de publisher ancora em instagram|facebook|whatsapp.
+  const igAccounts = metaList.filter((i) =>
+    i.provider === 'instagram' || i.provider === 'facebook' || i.provider === 'whatsapp',
+  );
+
+  const minLocal = () => toLocalInputValue(new Date(Date.now() + 11 * 60 * 1000));
 
   const source = mediaType === 'REEL' ? videoSrc.trim() : imageSrc.trim();
   const canSubmit = source.length > 0 && (!schedule || scheduleAt.length > 0);
@@ -132,6 +150,7 @@ function PublishCard() {
       if (mediaType === 'REEL') body.videoUrl = videoSrc.trim() || imageSrc.trim();
       else body.imageUrl = imageSrc.trim();
       if (schedule && scheduleAt) body.scheduledAt = new Date(scheduleAt).toISOString();
+      if (account) body.account = account; // MULTICONTAS — ancora a conta escolhida
 
       const r = await fetch('/api/instagram/publish', {
         method: 'POST',
@@ -176,6 +195,20 @@ function PublishCard() {
       </div>
 
       <div className="space-y-3">
+        {igAccounts.length > 1 && (
+          <label className="block text-xs text-gray-400">
+            Conta Instagram <span className="text-gray-400">(publica nesta conta)</span>
+            <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls}>
+              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
+              {igAccounts.map((i) => (
+                <option key={i.id} value={i.id} className="bg-[#0D0915]">
+                  {i.displayName || i.instagramAccountId || i.metaPageId || i.provider}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs text-gray-400">
             Tipo
@@ -196,7 +229,7 @@ function PublishCard() {
         </div>
 
         <label className="block text-xs text-gray-400">
-          Legenda <span className="text-gray-600">(opcional)</span>
+          Legenda <span className="text-gray-400">(opcional)</span>
           <textarea rows={2} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="…" className={inputCls} />
         </label>
 
@@ -210,6 +243,7 @@ function PublishCard() {
               type="datetime-local"
               value={scheduleAt}
               min={minLocal()}
+              aria-label="Data e hora de agendamento"
               onChange={(e) => setScheduleAt(e.target.value)}
               className={inputCls + '!mt-0 w-auto'}
             />
@@ -224,11 +258,13 @@ function PublishCard() {
           >
             {busy ? 'Enviando…' : schedule ? 'Agendar' : 'Publicar agora'}
           </button>
-          <span className="text-xs text-gray-600">Agendamento: de 10 min a 75 dias.</span>
+          <span className="text-xs text-gray-400">Agendamento: de 10 min a 75 dias.</span>
         </div>
 
         {msg && (
           <div
+            role="status"
+            aria-live="polite"
             className={`p-3 text-sm rounded-lg border ${
               msg.ok ? 'bg-green-400/10 border-green-400/25 text-green-300' : 'bg-amber-400/10 border-amber-400/25 text-amber-300'
             }`}

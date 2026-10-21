@@ -18,6 +18,7 @@
 import AppNav from '@/components/AppNav';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
+import { toLocalInputValue } from '@/lib/format-local-datetime';
 import { useEffect, useState } from 'react';
 
 export default function FacebookPage() {
@@ -28,7 +29,7 @@ export default function FacebookPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Facebook</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Publicação e agendamento de posts de Página — 100% pela API oficial da Meta (usa a conexão
               do OAuth de /integrations).
             </p>
@@ -84,7 +85,7 @@ function ConnectionStatusCard() {
         <ApiBadge layer="official" />
       </div>
       {state.loading ? (
-        <p className="text-xs text-gray-500">Carregando…</p>
+        <p className="text-xs text-gray-400">Carregando…</p>
       ) : state.msg ? (
         <p className="text-xs text-amber-300">{state.msg}</p>
       ) : state.hasPage ? (
@@ -117,12 +118,27 @@ function PublishCard() {
   const [scheduleAt, setScheduleAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // MULTICONTAS — seletor de conta Meta (Páginas), só com 2+.
+  const [metaList, setMetaList] = useState<Array<{ id: string; provider: string; metaPageId: string | null; displayName?: string | null }>>([]);
+  const [account, setAccount] = useState('');
 
-  const minLocal = () => {
-    const d = new Date(Date.now() + 11 * 60 * 1000);
-    d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/integrations/meta')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && Array.isArray(d?.integrations)) setMetaList(d.integrations);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // O resolver de Página ancora em provider facebook|whatsapp.
+  const fbAccounts = metaList.filter((i) => i.provider === 'facebook' || i.provider === 'whatsapp');
+
+  const minLocal = () => toLocalInputValue(new Date(Date.now() + 11 * 60 * 1000));
 
   const canSubmit = (message.trim().length > 0 || link.trim().length > 0) && (!schedule || scheduleAt.length > 0);
 
@@ -134,6 +150,7 @@ function PublishCard() {
       if (message.trim()) body.message = message.trim();
       if (link.trim()) body.link = link.trim();
       if (schedule && scheduleAt) body.scheduledAt = new Date(scheduleAt).toISOString();
+      if (account) body.account = account; // MULTICONTAS — ancora a Página escolhida
 
       const r = await fetch('/api/facebook/publish', {
         method: 'POST',
@@ -179,12 +196,26 @@ function PublishCard() {
 
       <div className="space-y-3">
         <label className="block text-xs text-gray-400">
-          Texto do post <span className="text-gray-600">(ou um link)</span>
+          Texto do post <span className="text-gray-400">(ou um link)</span>
           <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Escreva aqui…" className={inputCls} />
         </label>
 
+        {fbAccounts.length > 1 && (
+          <label className="block text-xs text-gray-400">
+            Página <span className="text-gray-400">(publica nesta Página)</span>
+            <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls + ' !mt-1'}>
+              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
+              {fbAccounts.map((i) => (
+                <option key={i.id} value={i.id} className="bg-[#0D0915]">
+                  {i.displayName || i.metaPageId || i.provider}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="block text-xs text-gray-400">
-          Link (URL) <span className="text-gray-600">(opcional)</span>
+          Link (URL) <span className="text-gray-400">(opcional)</span>
           <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" className={inputCls} />
         </label>
 
@@ -198,6 +229,7 @@ function PublishCard() {
               type="datetime-local"
               value={scheduleAt}
               min={minLocal()}
+              aria-label="Data e hora de agendamento"
               onChange={(e) => setScheduleAt(e.target.value)}
               className={inputCls + '!mt-0 w-auto'}
             />
@@ -212,11 +244,13 @@ function PublishCard() {
           >
             {busy ? 'Enviando…' : schedule ? 'Agendar' : 'Publicar agora'}
           </button>
-          <span className="text-xs text-gray-600">Agendamento: de 10 min a 75 dias.</span>
+          <span className="text-xs text-gray-400">Agendamento: de 10 min a 75 dias.</span>
         </div>
 
         {msg && (
           <div
+            role="status"
+            aria-live="polite"
             className={`p-3 text-sm rounded-lg border ${
               msg.ok ? 'bg-green-400/10 border-green-400/25 text-green-300' : 'bg-amber-400/10 border-amber-400/25 text-amber-300'
             }`}

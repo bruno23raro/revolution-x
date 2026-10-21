@@ -1,0 +1,73 @@
+# =============================================================================
+# REVOLUTION X — .dockerignore
+# Só o necessário entra no contexto de build. Nada de segredo, cache ou
+# artefato local vai para a imagem.
+# =============================================================================
+
+# --- Segredos / ambiente (NUNCA para a imagem) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+*.gpg
+cookies*.txt
+prod_*.txt
+
+# --- VCS e metadados ---
+.git/
+.gitignore
+
+# --- Dependências e builds locais (reinstaladas/reconstruídas no container) ---
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+
+# --- Caches de ferramentas auxiliares ---
+graft/
+.claude/
+.claude-memory/
+.agents/
+.cursor/
+.devin/
+.kilo/
+.metamcp/
+.mcp.json
+.playwright-mcp/
+codeql-agent-results/
+
+# --- Conteúdo local/efêmero (não é parte do app) ---
+agency-agents/
+backups/
+backups-pre-*.sql
+_diagnosticos/
+*.bak
+*.log
+*.txt
+memory/
+docs/
+revolution_x_memory.md
+REVOLUTION_X_MEMORY.md
+phase*_verification_report.json
+
+# --- SQL avulsos locais (as migrações oficiais vivem em migrations/) ---
+cleanup.sql
+setup_test_db.sql
+backup-pre-rls-007-009.sql
+
+# --- Scripts avulsos na raiz (não são parte do app) ---
+send.js
+test-whatsapp.js
+test-zernio.js
+zernio-tudo.js
+install-codebase-memory.ps1
+"Novo(a) Documento de Texto.txt"
+
+# --- Sistemas operacionais / IDE ---
+.DS_Store
+Thumbs.db
+*.code-workspace

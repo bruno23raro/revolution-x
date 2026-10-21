@@ -1,0 +1,127 @@
+# =============================================================================
+# REVOLUTION X — compose de TESTE ISOLADO (fase de finalização, 2026-10-20)
+#
+#   docker compose -p revolution-x-test -f compose.test.yaml --env-file .env.docker.test up -d
+#
+# Objetivo: um banco LOCAL, NOVO e vazio de dados de negócio, para testar o
+# app e a migração 016 SEM tocar na produção.
+#
+# Regras garantidas por este arquivo:
+#   • Projeto nomeado `revolution-x-test` e volume próprio `revx_test_pgdata`
+#     → nunca reutiliza silenciosamente um volume de outro projeto.
+#   • `DATABASE_URL`/`DIRECT_URL` apontam para `db:5432` (Postgres local do
+#     compose), JAMAS para o Supabase de produção.
+#   • As variáveis de Supabase são deixadas VAZIAS (via .env.docker.test) → o
+#     app NÃO grava nem lê no Supabase de produção. (Auth + persistência de
+#     `meta_integrations` são a dependência externa registrada.)
+#   • Porta 3000 exposta no host para teste no navegador.
+#   • O banco é publicado no host em 15432 (NÃO 5432) porque este computador
+#     já tem PostgreSQL 14/18 locais ocupando 5432 — 15432 evita a colisão.
+#   • O app usa a rede interna (`db:5432`); 15432 serve apenas a tooling do
+#     host (prisma/psql). A porta 3000 é a URL efetiva do app.
+#   • O schema local do app é aplicado via `prisma db push` (schema.prisma),
+#     NÃO pelo tree hand-SQL (migrations/001–013), que é acoplado ao plano
+#     Supabase (`auth.users`) e não aplica em Postgres vanilla (ver relatório).
+#     O serviço `migrate` (tree hand-SQL) ficou sob o profile `sqltree` p/
+#     documentar, mas não roda no `up` padrão.
+#   • As variáveis de Supabase são deixadas VAZIAS (via .env.docker.test) → o
+#     app NÃO grava nem lê no Supabase de produção. (Auth + persistência de
+#     `meta_integrations` são a dependência externa registrada.)
+
+name: revolution-x-test
+
+networks:
+  revx-test:
+    driver: bridge
+
+volumes:
+  revx_test_pgdata:
+    driver: local
+
+services:
+  # ------------------------------------------------------------------
+  # Postgres 17 local (volume isolado, healthcheck)
+  # ------------------------------------------------------------------
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    networks: [revx-test]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-revolution_x}
+      POSTGRES_USER: ${POSTGRES_USER:-revx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.docker.test}
+    volumes:
+      - revx_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # 15432 no host (evita colisão com o PostgreSQL 14/18 local na 5432)
+    ports:
+      - "15432:5432"
+
+  # ------------------------------------------------------------------
+  # Tree hand-SQL Prisma (migrations/001–013). Fica sob profile `sqltree`
+  # por quê? Este tree é acoplado ao plano Supabase (002 exige auth.users)
+  # e NÃO aplica em Postgres vanilla. O schema local do app vem de
+  # `prisma db push` (schema.prisma), rodado à parte no host. Para rodar
+  # este tree mesmo assim: `docker compose --profile sqltree up migrate`.
+  # ------------------------------------------------------------------
+  migrate:
+    image: postgres:17
+    restart: "no"
+    profiles: ["sqltree"]
+    networks: [revx-test]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-revx}
+      POSTGRES_DB: ${POSTGRES_DB:-revolution_x}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: >
+      sh -c 'set -e; for f in /migrations/*.sql; do
+               echo "==> Aplicando $$f";
+               psql -v ON_ERROR_STOP=1
+                   -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -f "$$f";
+             done; echo "==> Migrations Prisma concluídas"'
+
+  # ------------------------------------------------------------------
+  # Aplicação Next.js (next start) — espera db healthy + migrate ok
+  # ------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+    image: revolution-x-test:local
+    restart: unless-stopped
+    networks: [revx-test]
+    # App espera apenas o banco (schema do app é criado via `prisma db push`).
+    # O tree hand-SQL (`migrate`) não é pré-requisito do app local.
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Banco LOCAL do compose (isolado)
+      DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-revolution_x}
+      DIRECT_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-revolution_x}
+      # Supabase INTENCIONALMENTE vazio no teste isolado (não tocar produção)
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      # Suite de testes de banco/RLS roda contra este Postgres local
+      TEST_DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-revolution_x}
+    ports:
+      - "3000:3000"

@@ -1,0 +1,131 @@
+# =============================================================================
+# REVOLUTION X — compose de PRODUÇÃO (e homologação em ambiente local)
+#
+#   docker compose up -d            # db + migrate + app
+#
+# Regras:
+#   • Nenhum segredo neste arquivo — tudo via interpolação de .env
+#     (docker compose lê .env do diretório de trabalho automaticamente).
+#   • Banco: Postgres LOCAL do compose (jamais aponte DATABASE_URL para a
+#     produção Supabase aqui — ver CLAUDE.md).
+#   • Porta do app NÃO publicada no host por padrão (reverse proxy à
+#     frente). Para acesso direto local: `# ports: - "3000:3000"` abaixo.
+# =============================================================================
+
+name: revolution-x
+
+networks:
+  revx:
+    driver: bridge
+
+volumes:
+  revx_pgdata:
+    driver: local
+
+services:
+  # ------------------------------------------------------------------
+  # Postgres 17 (mesma major da CI) — volume persistente, healthcheck
+  # ------------------------------------------------------------------
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    networks: [revx]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-revolution_x}
+      POSTGRES_USER: ${POSTGRES_USER:-revx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env (local)}
+    volumes:
+      - revx_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # Porta exposta SOMENTE para tooling local (DBeaver/psql). Comente p/ ocultar.
+    ports:
+      - "5432:5432"
+
+  # ------------------------------------------------------------------
+  # Migrações SQL manuais (migrations/*.sql) — job one-shot, na ordem
+  # 001 → 013. Rode contra banco NOVO; psql ON_ERROR_STOP para não
+  # deixar migração parcial. Não é idempotente (ver README-DOCKER.md).
+  # ------------------------------------------------------------------
+  migrate:
+    image: postgres:17
+    restart: "no"
+    networks: [revx]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # psql usa POSTGRES_USER/POSTGRES_DB como usuário/banco de destino
+      POSTGRES_USER: ${POSTGRES_USER:-revx}
+      POSTGRES_DB: ${POSTGRES_DB:-revolution_x}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: >
+      sh -c 'set -e; for f in /migrations/*.sql; do
+               echo "==> Aplicando $$f";
+               psql -v ON_ERROR_STOP=1
+                   -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -f "$$f";
+             done; echo "==> Migrações concluídas"'
+
+  # ------------------------------------------------------------------
+  # Aplicação Next.js (runner não-root) — espera db healthy + migrate ok
+  # ------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Inline-ados no bundle client no BUILD (comportamento Next.js).
+        # Segredos de runtime (DB, service role, ...) NUNCA passam por ARG.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+    image: revolution-x:local
+    restart: unless-stopped
+    networks: [revx]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # A imagem NÃO fixa segredos — lidos em runtime do ambiente.
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Banco interno da rede (substitui o host Supabase neste ambiente)
+      DATABASE_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-revolution_x}
+      DIRECT_URL: postgres://${POSTGRES_USER:-revx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-revolution_x}
+      # Autenticação / Supabase (servidor)
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      # Cron (gatilho externo POST /api/cron/tiktok — agendado FORA do app)
+      CRON_SECRET: ${CRON_SECRET:-}
+      # E-mail transacional
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      EMAIL_API_BASE_URL: ${EMAIL_API_BASE_URL:-}
+      # Meta / WhatsApp
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:-}
+      META_TOKEN_ENCRYPTION_KEY: ${META_TOKEN_ENCRYPTION_KEY:-}
+      # TikTok OAuth (Content Posting API)
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      # IA (Centro Administrativo)
+      OMNIROUTER_BASE_URL: ${OMNIROUTER_BASE_URL:-}
+      OMNIROUTER_API_KEY: ${OMNIROUTER_API_KEY:-}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+    # Descomente para acesso direto (sem reverse proxy):
+    # ports:
+    #   - "3000:3000"

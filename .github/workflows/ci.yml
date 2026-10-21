@@ -1,5 +1,26 @@
 name: CI Pipeline
 
+# ============================================================================
+# CI-ONLY — ESTE WORKFLOW NÃO PUBLICA.
+# SÓ valida: install (npm ci), prisma generate, provision do banco de teste
+# isolado, typecheck, lint, a suíte COMPLETA de testes Jest (npm test) e
+# build de produção do Next.js. Nenhum passo publica a aplicação.
+#
+# Publicação (FORA deste repo / NÃO governada aqui):
+#   • Por docs do projeto (docs/MASTER_PROJECT_AUDIT.md, EXECUTION_LOG.md), a
+#     Git integration do hPanel (Hostinger) está ligada a branch `main` e
+#     dispara deploy automático ao `git push origin main`. Isso é estado
+#     SERVER-SIDE (hPanel), não verificado por nenhum arquivo deste repo.
+#   • Consequência de segurança: push/merge para `main` PODE publicar em
+#     produção se essa integração estiver ativa — não é inofensivo.
+#   • A branch atual (feat/…) NÃO é `main` → o push dela não dispara o hPanel.
+#   • Para publicação estritamente MANUAL: desligar a Git integration no hPanel.
+# Este workflow não deve ganhar etapa de deploy sem uma decisão humana explícita.
+#
+# O passo `npm test` cobre os testes do OAuth TikTok + rotas (no mesmo
+# changeset, ainda não commitados) assim que forem commitados.
+# ============================================================================
+
 on:
   push:
     branches: [main]
@@ -23,9 +44,23 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # O build roda SEM segredos de produção por padrão:
+      #   • variáveis públicas (Supabase anon) usam placeholders de teste;
+      #   • DATABASE_URL aponta para o banco de teste descartável do service
+      #     container — NUNCA a produção.
+      # Se os secrets GitHub existirem, eles sobrepõem estes valores de teste;
+      # se não existirem, o pipeline segue funcionando com os placeholders
+      # (verificados: `next build` passa com apenas as variáveis públicas de teste).
+      # Nenhum valor de teste é uma credencial real; nada de .env é lido aqui.
+      #
+      # DATABASE_URL é SEMPRE o banco descartável do container — de propósito
+      # NÂO lê `secrets.DATABASE_URL`: um secret com esse nome (criado por
+      # engano ou malícia) apontando para produção faria o CI se conectar ao
+      # banco prod em silêncio. O banco do CI vive no service container
+      # (ephemeral, postgres:17, criado por este arquivo).
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/revolution_x_rls_test
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://ci-test.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-test-public-anon-key' }}
       # Disposable CI test database (service container, NEVER production).
       # ADMIN role = postgres/BYPASSRLS: preparation + scoped cleanup only.
       # RLS role = revx_test (NOSUPERUSER NOBYPASSRLS): all RLS assertions.

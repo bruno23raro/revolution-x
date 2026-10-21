@@ -37,7 +37,7 @@ export default function WhatsAppPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">WhatsApp Business</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Disparo em massa, templates oficiais e chatbot configurável — 100% pela API oficial da Meta.
             </p>
           </div>
@@ -68,6 +68,25 @@ function MassSendCard() {
   const [tplVars, setTplVars] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; total: number; sent: number; failed: number; tracked: boolean; msg: string } | null>(null);
+  // MULTICONTAS — seletor de número/conta WhatsApp, só com 2+.
+  const [metaList, setMetaList] = useState<Array<{ id: string; provider: string; phoneNumberId: string | null; whatsappBusinessAccountId: string | null; displayName?: string | null }>>([]);
+  const [account, setAccount] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/integrations/meta')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && Array.isArray(d?.integrations)) setMetaList(d.integrations);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // O resolver de envio ancora em provider whatsapp|facebook.
+  const waAccounts = metaList.filter((i) => i.provider === 'whatsapp' || i.provider === 'facebook');
 
   const parseNumbers = () =>
     numbers
@@ -88,6 +107,7 @@ function MassSendCard() {
       } else if (text.trim()) {
         body.text = text.trim();
       }
+      if (account) body.account = account; // MULTICONTAS — ancorado número escolhido
       const r = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,9 +145,23 @@ function MassSendCard() {
           />
         </label>
         <label className="block text-xs text-gray-400">
-          Mensagem <span className="text-gray-600">(texto simples, se não usar template)</span>
+          Mensagem <span className="text-gray-400">(texto simples, se não usar template)</span>
           <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Olá! ..." className={inputCls} />
         </label>
+
+        {waAccounts.length > 1 && (
+          <label className="block text-xs text-gray-400">
+            Número / conta <span className="text-gray-400">(dispara por este número)</span>
+            <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls}>
+              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
+              {waAccounts.map((i) => (
+                <option key={i.id} value={i.id} className="bg-[#0D0915]">
+                  {i.displayName || i.phoneNumberId || i.whatsappBusinessAccountId || i.provider}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="flex items-center gap-2 text-xs text-gray-300">
           <input type="checkbox" checked={useTemplate} onChange={(e) => setUseTemplate(e.target.checked)} className="accent-purple-500" />
@@ -140,7 +174,7 @@ function MassSendCard() {
               <input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="boas_vindas" className={inputCls} />
             </label>
             <label className="block text-xs text-gray-400">
-              Variáveis <span className="text-gray-600">(uma por linha)</span>
+              Variáveis <span className="text-gray-400">(uma por linha)</span>
               <input value={tplVars} onChange={(e) => setTplVars(e.target.value)} placeholder={'Maria\n1234'} className={inputCls} />
             </label>
           </div>
@@ -154,16 +188,16 @@ function MassSendCard() {
           >
             {busy ? 'Enviando…' : `Enviar ${count > 0 ? `para ${count}` : ''}`}
           </button>
-          <span className="text-xs text-gray-600">Limite: 500 destinatários por disparo.</span>
+          <span className="text-xs text-gray-400">Limite: 500 destinatários por disparo.</span>
         </div>
 
         {result && (
           result.ok ? (
-            <div className="p-3 text-sm rounded-lg bg-green-400/10 border border-green-400/25 text-green-300">
+            <div role="status" aria-live="polite" className="p-3 text-sm rounded-lg bg-green-400/10 border border-green-400/25 text-green-300">
               {result.msg} — {result.sent}/{result.total} enviados, {result.failed} falhas{result.tracked ? ', rastreado' : ' (fila indisponível, envio ok)'}
             </div>
           ) : (
-            <div className="p-3 text-sm rounded-lg bg-amber-400/10 border border-amber-400/25 text-amber-300">{result.msg}</div>
+            <div role="status" aria-live="polite" className="p-3 text-sm rounded-lg bg-amber-400/10 border border-amber-400/25 text-amber-300">{result.msg}</div>
           )
         )}
       </div>
@@ -239,11 +273,11 @@ function TemplatesCard() {
       <div className="space-y-3">
         <div className="max-h-48 overflow-y-auto space-y-1.5">
           {loadMsg && <p className="text-xs text-amber-300">{loadMsg}</p>}
-          {!loadMsg && templates.length === 0 && <p className="text-xs text-gray-600">Nenhum template no escopo atual.</p>}
+          {!loadMsg && templates.length === 0 && <p className="text-xs text-gray-400">Nenhum template no escopo atual.</p>}
           {templates.map((t, i) => (
             <div key={i} className="flex items-center justify-between gap-2 text-xs bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5">
               <span className="text-gray-200 truncate" title={t.name}>{t.name}</span>
-              <span className="text-gray-500 shrink-0">{[t.category, t.status].filter(Boolean).join(' · ') || '—'}</span>
+              <span className="text-gray-400 shrink-0">{[t.category, t.status].filter(Boolean).join(' · ') || '—'}</span>
             </div>
           ))}
         </div>
@@ -251,13 +285,13 @@ function TemplatesCard() {
         <div className="border-t border-white/10 pt-3">
           <p className="text-xs font-semibold text-gray-300 mb-2">Criar template</p>
           <div className="grid grid-cols-2 gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="nome (snake_case)" className={inputCls} />
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+            <input aria-label="Nome do template (snake_case)" value={name} onChange={(e) => setName(e.target.value)} placeholder="nome (snake_case)" className={inputCls} />
+            <select aria-label="Categoria do template" value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c} className="bg-[#0D0915]">{c}</option>
               ))}
             </select>
-            <input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="idioma (ex.: pt_BR)" className={inputCls} />
+            <input aria-label="Idioma do template (ex.: pt_BR)" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="idioma (ex.: pt_BR)" className={inputCls} />
             <button
               onClick={() => void create()}
               disabled={busy || !name.trim()}
@@ -267,7 +301,7 @@ function TemplatesCard() {
             </button>
           </div>
           {msg && (
-            <p className={`mt-2 text-xs ${msg.ok ? 'text-green-300' : 'text-amber-300'}`}>{msg.text}</p>
+            <p role="status" aria-live="polite" className={`mt-2 text-xs ${msg.ok ? 'text-green-300' : 'text-amber-300'}`}>{msg.text}</p>
           )}
         </div>
       </div>
@@ -413,7 +447,7 @@ function ChatbotCard() {
       <CardHeader title="Chatbot configurável" badge="API Oficial" />
       {loadMsg && <p className="text-xs text-amber-300 mb-2">{loadMsg}</p>}
       {!cfg ? (
-        <p className="text-xs text-gray-600">Sem configuração (ou sem acesso admin).</p>
+        <p className="text-xs text-gray-400">Sem configuração (ou sem acesso admin).</p>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -432,11 +466,11 @@ function ChatbotCard() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <input value={cfg.greeting ?? ''} onChange={(e) => set({ greeting: e.target.value })} placeholder="Saudação (1º contato)" className={inputCls} />
-            <input value={cfg.fallback ?? ''} onChange={(e) => set({ fallback: e.target.value })} placeholder="Resposta padrão (fallback)" className={inputCls} />
-            <input value={String(cfg.activeFromHour ?? 9)} onChange={(e) => set({ activeFromHour: Number(e.target.value) })} placeholder="Horário de início" className={inputCls} />
-            <input value={String(cfg.activeToHour ?? 18)} onChange={(e) => set({ activeToHour: Number(e.target.value) })} placeholder="Horário de fim" className={inputCls} />
-            <input value={cfg.timezone ?? ''} onChange={(e) => set({ timezone: e.target.value })} placeholder="Fuso (America/Sao_Paulo)" className={inputCls} />
+            <input aria-label="Saudação (1º contato)" value={cfg.greeting ?? ''} onChange={(e) => set({ greeting: e.target.value })} placeholder="Saudação (1º contato)" className={inputCls} />
+            <input aria-label="Resposta padrão (fallback)" value={cfg.fallback ?? ''} onChange={(e) => set({ fallback: e.target.value })} placeholder="Resposta padrão (fallback)" className={inputCls} />
+            <input aria-label="Horário de início" value={String(cfg.activeFromHour ?? 9)} onChange={(e) => set({ activeFromHour: Number(e.target.value) })} placeholder="Horário de início" className={inputCls} />
+            <input aria-label="Horário de fim" value={String(cfg.activeToHour ?? 18)} onChange={(e) => set({ activeToHour: Number(e.target.value) })} placeholder="Horário de fim" className={inputCls} />
+            <input aria-label="Fuso horário (ex.: America/Sao_Paulo)" value={cfg.timezone ?? ''} onChange={(e) => set({ timezone: e.target.value })} placeholder="Fuso (America/Sao_Paulo)" className={inputCls} />
             <div />
           </div>
 
@@ -447,6 +481,7 @@ function ChatbotCard() {
                 <div key={i} className="p-2 bg-black/20 border border-white/10 rounded-lg space-y-1.5">
                   <div className="grid grid-cols-4 gap-1.5">
                     <select
+                      aria-label={`Regra ${i + 1}: tipo de correspondência`}
                       value={r.matchType}
                       onChange={(e) => setRule(i, { matchType: e.target.value as MatchType })}
                       className={inputCls}
@@ -455,15 +490,16 @@ function ChatbotCard() {
                         <option key={m} value={m} className="bg-[#0D0915]">{m}</option>
                       ))}
                     </select>
-                    <input value={r.pattern} onChange={(e) => setRule(i, { pattern: e.target.value })} placeholder="padrão" className={inputCls} />
+                    <input aria-label={`Regra ${i + 1}: padrão`} value={r.pattern} onChange={(e) => setRule(i, { pattern: e.target.value })} placeholder="padrão" className={inputCls} />
                     {r.matchType === 'regex' ? (
-                      <input value={r.flags ?? ''} onChange={(e) => setRule(i, { flags: e.target.value })} placeholder="flags (i)" className={inputCls} />
+                      <input aria-label={`Regra ${i + 1}: flags de regex (ex.: i)`} value={r.flags ?? ''} onChange={(e) => setRule(i, { flags: e.target.value })} placeholder="flags (i)" className={inputCls} />
                     ) : (
-                      <input value={r.action ?? ''} onChange={(e) => setRule(i, { action: e.target.value })} placeholder="ação (opc.)" className={inputCls} />
+                      <input aria-label={`Regra ${i + 1}: ação (opcional)`} value={r.action ?? ''} onChange={(e) => setRule(i, { action: e.target.value })} placeholder="ação (opc.)" className={inputCls} />
                     )}
                     <button onClick={() => delRule(i)} className="text-xs text-red-400 self-center">remover</button>
                   </div>
                   <input
+                    aria-label={`Regra ${i + 1}: resposta`}
                     value={r.response}
                     onChange={(e) => setRule(i, { response: e.target.value })}
                     placeholder="resposta"
@@ -479,7 +515,7 @@ function ChatbotCard() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs font-semibold text-gray-300">Fluxo visual (etapas)</p>
-              <span className="text-[10px] text-gray-500">
+              <span className="text-[10px] text-gray-400">
                 condição → resposta → próxima · {`{{variavel}}`} aceita
               </span>
             </div>
@@ -490,7 +526,7 @@ function ChatbotCard() {
                     <button
                       onClick={() => moveStep(i, -1)}
                       disabled={i === 0}
-                      className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30"
+                      className="text-xs text-gray-400 hover:text-gray-300 disabled:opacity-30"
                       title="Mover para cima"
                     >
                       ↑
@@ -498,19 +534,20 @@ function ChatbotCard() {
                     <button
                       onClick={() => moveStep(i, 1)}
                       disabled={i >= (cfg.steps ?? []).length - 1}
-                      className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-30"
+                      className="text-xs text-gray-400 hover:text-gray-300 disabled:opacity-30"
                       title="Mover para baixo"
                     >
                       ↓
                     </button>
                     <span className="text-[10px] font-mono text-purple-300">{s.id || `step-${i + 1}`}</span>
-                    {i < (cfg.steps ?? []).length - 1 && <span className="text-gray-600 text-xs">↓</span>}
+                    {i < (cfg.steps ?? []).length - 1 && <span className="text-gray-400 text-xs">↓</span>}
                     <button onClick={() => delStep(i)} className="ml-auto text-xs text-red-400">
                       remover
                     </button>
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     <select
+                      aria-label={`Etapa ${i + 1}: condição`}
                       value={s.matchType ?? ''}
                       onChange={(e) =>
                         setStep(i, {
@@ -527,6 +564,7 @@ function ChatbotCard() {
                       ))}
                     </select>
                     <input
+                      aria-label={`Etapa ${i + 1}: padrão (ex.: preço)`}
                       value={s.pattern ?? ''}
                       onChange={(e) => setStep(i, { pattern: e.target.value || undefined })}
                       placeholder="padrão (ex.: preço)"
@@ -534,6 +572,7 @@ function ChatbotCard() {
                     />
                     {s.matchType === 'regex' ? (
                       <input
+                        aria-label={`Etapa ${i + 1}: flags de regex (ex.: i)`}
                         value={s.flags ?? ''}
                         onChange={(e) => setStep(i, { flags: e.target.value || undefined })}
                         placeholder="flags (i)"
@@ -556,6 +595,7 @@ function ChatbotCard() {
                     <div />
                   </div>
                   <input
+                    aria-label={`Etapa ${i + 1}: resposta (aceita {{variavel}})`}
                     value={s.response ?? ''}
                     onChange={(e) => setStep(i, { response: e.target.value })}
                     placeholder="resposta (aceita {{variavel}})"
@@ -563,6 +603,7 @@ function ChatbotCard() {
                   />
                   <div className="grid grid-cols-2 gap-1.5">
                     <input
+                      aria-label={`Etapa ${i + 1}: quick replies (separadas por vírgula, máx. 3)`}
                       value={(s.quickReplies ?? []).join(', ')}
                       onChange={(e) =>
                         setStep(i, {
@@ -578,6 +619,7 @@ function ChatbotCard() {
                       className={inputCls}
                     />
                     <select
+                      aria-label={`Etapa ${i + 1}: próxima etapa do fluxo`}
                       value={s.nextStepId ?? ''}
                       onChange={(e) => setStep(i, { nextStepId: e.target.value || null })}
                       className={inputCls}
@@ -605,12 +647,13 @@ function ChatbotCard() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs font-semibold text-gray-300">Variáveis</p>
-              <span className="text-[10px] text-gray-500">use {`{{chave}}`} nas respostas das etapas</span>
+              <span className="text-[10px] text-gray-400">use {`{{chave}}`} nas respostas das etapas</span>
             </div>
             <div className="space-y-1.5">
               {Object.entries(cfg.vars ?? {}).map(([k]) => (
                 <div key={k} className="grid grid-cols-2 gap-1.5">
                   <input
+                    aria-label={`Variável ${k}: chave (renomear)`}
                     value={k}
                     onChange={(e) => renameVar(k, e.target.value)}
                     placeholder="chave"
@@ -618,12 +661,13 @@ function ChatbotCard() {
                   />
                   <div className="flex gap-1.5">
                     <input
+                      aria-label={`Variável ${k}: valor`}
                       value={cfg.vars?.[k] ?? ''}
                       onChange={(e) => setVarValue(k, e.target.value)}
                       placeholder="valor"
                       className={inputCls}
                     />
-                    <button onClick={() => delVar(k)} className="text-xs text-red-400">
+                    <button onClick={() => delVar(k)} aria-label={`Remover variável ${k}`} className="text-xs text-red-400">
                       ✕
                     </button>
                   </div>
@@ -642,6 +686,7 @@ function ChatbotCard() {
           {cfg.useAI && (
             <textarea
               rows={2}
+              aria-label="System prompt da IA"
               value={cfg.aiSystemPrompt ?? ''}
               onChange={(e) => set({ aiSystemPrompt: e.target.value })}
               placeholder="System prompt da IA"
@@ -656,7 +701,7 @@ function ChatbotCard() {
           >
             {busy ? 'Salvando…' : 'Salvar chatbot'}
           </button>
-          {msg && <p className="text-xs text-gray-300">{msg}</p>}
+          {msg && <p role="status" aria-live="polite" className="text-xs text-gray-300">{msg}</p>}
         </div>
       )}
     </Card>
@@ -711,7 +756,7 @@ function AdvancedExtractionCard() {
           Guardar parâmetro
         </button>
       </div>
-      {msg && <p className="mt-2 text-xs text-gray-400">{msg}</p>}
+      {msg && <p role="status" aria-live="polite" className="mt-2 text-xs text-gray-400">{msg}</p>}
     </Card>
   );
 }

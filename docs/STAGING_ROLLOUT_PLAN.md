@@ -117,7 +117,8 @@ supabase db restore -f backup-pre-007.sql --db-url <staging-db-url>
 
 ### Snapshot de rollback
 
-- `supabase db dump` requer Docker (não instalado) → usado snapshot de
+- `supabase db dump` requer Docker (hoje instalado; na época dessa decisão não
+  estava) → usado snapshot de
   nível de policy via Management API (idêntico ao rollback deste change):
   - `backups/rls-before-007-009_policies.json` / `..._flags.json` (estado anterior)
   - `backups/rls-after-007-009_policies.json` / `..._flags.json` (estado atual)
@@ -258,3 +259,40 @@ persistidas em `webhook_events`).
 0 linhas na tabela → **zero perda de dados**. Se removido, a rota
 degrada para o fast-path `service_role` + processamento sem claim
 (testes de G3 cobrem essa degradação honesta).
+
+### Nota de drift (2026-10-21)
+
+A 015 foi aplicada em produção **ad-hoc** (`supabase db query`), então o
+índice `uq_webhook_events_meta_event_id` **existe** mas **não está
+registrado** na ledger `supabase_migrations` (o Supabase não o "sabe").
+Consequências:
+
+- **Reaplicar o arquivo 015 é no-op seguro**: `CREATE UNIQUE INDEX
+  IF NOT EXISTS` + guard `to_regclass` — ele roda limpo em DEV
+  (onde a tabela nasce da 002a/005), em produção (índice já existe) e
+  em staging (tabela ausente). Nunca duplique o índice manualmente.
+- **Não rodar `supabase db pull`** na produção (regra de ouro) — o pull
+  poderia reescrever a ledger de forma inconsistente com o estado real.
+- Opcional (gate humano): registrar retroativamente 007–015 em
+  `supabase_migrations` para fechar o drift.
+
+## Migration 016 — Multi-contas Meta (nova, 2026-10-21)
+
+- **Status em produção: NÃO APLICADA** (gate humano: snapshot + revisão do
+  SQL + verificação read-only + plano de rollback em mãos).
+- **Status no DEV: NÃO APLICADA** (bloqueado pela senha do Postgres do
+  DEV — `docs/DEV_APPLY_HUMAN_GUIDE_2026-10-21.md`, turno 5).
+- **O que muda:** remove o `UNIQUE(organization_id, provider)` legado
+  (cobre **os dois nomes possíveis**: `uq_meta_integrations_org_provider`
+  — legado nomeado da produção — e
+  `meta_integrations_organization_id_provider_key` — nome autogerado que
+  a 005 cria em árvores limpas como a do DEV; cada `DROP CONSTRAINT
+  IF EXISTS` é no-op na forma em que o nome não existe), e adiciona:
+  coluna `display_name`; índices de expressão únicos
+  `uq_meta_integrations_page` / `uq_meta_integrations_account`.
+- **Validação local:** cadeia `002a → 005 → 015 → 016` + rollback
+  comprovada em bancos descartáveis locais (duas formas de banco, ver
+  guia do DEV, turno 5). Produção permanece intocada.
+- **Rollback:** `supabase/migrations/016_rollback.sql` (reversão da
+  camada nova em 3 passos: remove índices de expressão, recria o unique
+  legado, remove `display_name`).

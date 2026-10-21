@@ -16,35 +16,40 @@ export async function GET(req: NextRequest) {
     // Usa o client com anon key (sujeito a RLS) — nunca service_role em rotas autenticadas
     const supabase = await createClient();
 
-    const { data: integrations, error } = await supabase
+    // MULTICONTAS — retorna a LISTA de linhas conectadas (não `.maybeSingle()`,
+    // que quebra com mais de uma linha por tenant). Id `id` exposto para o
+    // seletor de contas ancorar operações específicas.
+    const { data: rows, error } = await supabase
       .from('meta_integrations')
       .select(
-        'id, provider, meta_page_id, instagram_account_id, whatsapp_business_account_id, phone_number_id, token_expires_at, connected_at, disconnected_at, status, last_error'
+        'id, provider, meta_page_id, instagram_account_id, whatsapp_business_account_id, phone_number_id, token_expires_at, connected_at, disconnected_at, status, last_error',
       )
       .eq('organization_id', user.organizationId)
-      .maybeSingle();
+      .neq('status', 'DISCONNECTED')
+      .order('connected_at', { ascending: false });
 
-    if (error || !integrations) {
-      return NextResponse.json({ connected: false, integrations: [] });
+    if (error) {
+      return NextResponse.json({ error: 'internal_error' }, { status: 500 });
     }
+
+    const integrations = (rows ?? []).map((r: Record<string, unknown>) => ({
+      id: r.id,
+      provider: r.provider,
+      metaPageId: r.meta_page_id,
+      instagramAccountId: r.instagram_account_id,
+      whatsappBusinessAccountId: r.whatsapp_business_account_id,
+      phoneNumberId: r.phone_number_id,
+      tokenExpiresAt: r.token_expires_at,
+      connectedAt: r.connected_at,
+      disconnectedAt: r.disconnected_at,
+      status: r.status,
+      lastError: r.last_error,
+    }));
 
     // Retornar apenas informações não sensíveis
     return NextResponse.json({
-      connected: true,
-      integrations: [
-        {
-          provider: integrations.provider,
-          metaPageId: integrations.meta_page_id,
-          instagramAccountId: integrations.instagram_account_id,
-          whatsappBusinessAccountId: integrations.whatsapp_business_account_id,
-          phoneNumberId: integrations.phone_number_id,
-          tokenExpiresAt: integrations.token_expires_at,
-          connectedAt: integrations.connected_at,
-          disconnectedAt: integrations.disconnected_at,
-          status: integrations.status,
-          lastError: integrations.last_error,
-        },
-      ],
+      connected: integrations.length > 0,
+      integrations,
     });
   } catch {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });

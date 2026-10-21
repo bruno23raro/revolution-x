@@ -1,3 +1,8 @@
+export const metadata = {
+  title: 'Verificar e-mail',
+  robots: { index: true, follow: true },
+};
+
 export default function VerifyEmailPage() {
   return (
     <main>

@@ -56,8 +56,9 @@ export interface TickDeps {
   listPending: () => Promise<PendingTikTokPost[]>;
   /** Persiste a fila inteira (upsert no mesmo key de AgentMemory). */
   savePending: (items: PendingTikTokPost[]) => Promise<void>;
-  /** Resolve a credencial TikTok do tenant (não lança — retorna ok/reason). */
-  getAccess: () => Promise<ResolveTikTokResult>;
+  /** Resolve a credencial TikTok do tenant (não lança — retorna ok/reason).
+   *  `account` (openId) seleciona uma conta específica; ausente → conta padrão. */
+  getAccess: (account?: string) => Promise<ResolveTikTokResult>;
   /** Publica um vídeo pela API oficial (não lança — retorna ok/error). */
   publish: (access: TikTokAccess, spec: PublishVideoSpec) => Promise<PublishVideoResult>;
 }
@@ -180,7 +181,40 @@ export async function runDueTikTokPosts(deps: TickDeps, opts: TickOptions = {}):
   let retried = 0;
   const reasons: string[] = [];
   for (const item of due) {
-    const r = await deps.publish(resolved.access, item.spec);
+    // MULTICONTAS — resolve a conta do item (`item.account`) quando definida;
+    // senão reutiliza o acesso padrão do preflight. Falha de nível de conta
+    // (account_not_found / decrypt_failed / exceção) segue o retry/backoff do
+    // item, preservando as demais contas.
+    let acc: ResolveTikTokResult = resolved;
+    let accErr: string | null = null;
+    if (item.account) {
+      try {
+        acc = await deps.getAccess(item.account);
+      } catch (e) {
+        acc = { ok: false, reason: 'not_connected' };
+        accErr = String((e as Error)?.message ?? e);
+      }
+    }
+    if (!acc.ok) {
+      const attempts = (item.attempts ?? 0) + 1;
+      const base = accErr
+        ? `exceção ao resolver a conta ${item.account}: ${accErr}`
+        : `conta ${item.account || 'padrão'} indisponível (${acc.reason})`;
+      if (attempts < maxAttempts) {
+        const delayMs = retryBaseDelayMs * 2 ** (attempts - 1);
+        const nextAt = new Date(nowMs + delayMs).toISOString();
+        next = markPendingTikTokPost(next, item.id, { status: 'pending', attempts, scheduledAt: nextAt });
+        retried += 1;
+        reasons.push(`${base} — nova tentativa em ${nextAt} (tentativa ${attempts}/${maxAttempts})`);
+      } else {
+        next = markPendingTikTokPost(next, item.id, { status: 'failed', attempts });
+        failed += 1;
+        reasons.push(`${base} — tentativas esgotadas (${attempts}/${maxAttempts})`);
+      }
+      continue;
+    }
+
+    const r = await deps.publish(acc.access, item.spec);
     if (r.ok) {
       next = markPendingTikTokPost(next, item.id, { status: 'published', publishId: r.publishId });
       published += 1;
@@ -269,7 +303,8 @@ export function bindTikTokSchedulerDeps(client: PrismaClient, scope: OrgScope): 
     listPending: () => listPendingTikTokPosts(client, scope),
     savePending: (items) =>
       saveMemory(client, scope, 'preference', PENDING_KEY, items as unknown as Prisma.JsonValue),
-    getAccess: () => resolveTenantTikTokAccess(client, scope),
+    getAccess: (acc) =>
+      acc ? resolveTenantTikTokAccess(client, scope, acc) : resolveTenantTikTokAccess(client, scope),
     publish: (access, spec) => publishTikTokVideo(access, spec),
   };
 }

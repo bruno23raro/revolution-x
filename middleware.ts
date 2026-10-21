@@ -8,14 +8,22 @@ export async function middleware(request: NextRequest) {
   // 301 aqui (ANTES de qualquer coisa que use Supabase) elimina o duplicado;
   // o alvo é construído removendo o prefixo www do próprio Host recebido,
   // portanto o loop é impossível por construção (www.x → x, nunca o
-  // contrário). Preserva protocolo, caminho, query e porta.
+  // contrário). Preserva protocolo, caminho e query; a porta é preservada
+  // SÓ para hosts locais (dev) — em hosts públicos o proxy interno do
+  // Hostinger reporta o Host com a porta interna do app (ex.: :3000), que
+  // não é alcançável pelo usuário (ele chega por 443/80); expor a porta
+  // no 301 apontaria para uma URL morta.
   const host = (request.headers.get('host') ?? '').toLowerCase();
   if (host.startsWith('www.')) {
     const target = new URL(request.url);
     const withoutWww = host.replace(/^www\./, '');
     const portSep = withoutWww.lastIndexOf(':');
-    target.hostname = portSep > 0 ? withoutWww.slice(0, portSep) : withoutWww;
-    if (portSep > 0) target.port = withoutWww.slice(portSep + 1);
+    const bareHost = portSep > 0 ? withoutWww.slice(0, portSep) : withoutWww;
+    const hostPort = portSep > 0 ? withoutWww.slice(portSep + 1) : '';
+    target.hostname = bareHost;
+    const isLocalHost =
+      bareHost === 'localhost' || bareHost === '127.0.0.1' || bareHost === '::1' || bareHost === '[::1]';
+    target.port = isLocalHost ? hostPort : '';
     return NextResponse.redirect(target, 301);
   }
 

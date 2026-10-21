@@ -284,25 +284,37 @@ describe('sendWhatsAppButton', () => {
 
 describe('runMassSend', () => {
   it('agrega contagens e respeita delay', async () => {
-    const calls: number[] = [];
-    let t = 0;
-    const sendText = async (_a: MetaWABAccess, _to: string, _text?: string) => {
-      t += 10; // simula 10ms de "tempo" entre chamadas
-      calls.push(t);
-      return { ok: true, to: _to };
-    };
-    const start = Date.now();
-    const r = await runMassSend(ACCESS, [{ to: '1' }, { to: '2' }, { to: '3' }], {
-      delayMs: 20,
-      sendText: sendText as unknown as typeof sendWhatsAppText,
-    });
-    const elapsed = Date.now() - start;
-    expect(r.total).toBe(3);
-    expect(r.sent).toBe(3);
-    expect(r.failed).toBe(0);
-    expect(calls.length).toBe(3);
-    // 2 intervalos de 20ms entre 3 envios ≈ 40ms
-    expect(elapsed).toBeGreaterThanOrEqual(40);
+    // Fake timers: os 20ms de delay viram tempo VIRTUAL — a assertiva fica
+    // determinística. Com timers reais, em runner sobrecarregado o elapsed
+    // podia cair 1ms abaixo do limite de 40ms (flake de CI 2026-10-21: 39ms).
+    jest.useFakeTimers();
+    try {
+      const calls: number[] = [];
+      let t = 0;
+      const sendText = async (_a: MetaWABAccess, _to: string, _text?: string) => {
+        t += 10; // simula 10ms de "tempo" entre chamadas
+        calls.push(t);
+        return { ok: true, to: _to };
+      };
+      const start = Date.now(); // relógio virtual (fake timers)
+      const p = runMassSend(ACCESS, [{ to: '1' }, { to: '2' }, { to: '3' }], {
+        delayMs: 20,
+        sendText: sendText as unknown as typeof sendWhatsAppText,
+      });
+      // 2 intervalos de 20ms: avança o relógio virtual e lava os microtasks.
+      await jest.advanceTimersByTimeAsync(20); // 1º delay → 2º envio
+      await jest.advanceTimersByTimeAsync(20); // 2º delay → 3º envio
+      const r = await p;
+      const elapsed = Date.now() - start;
+      expect(r.total).toBe(3);
+      expect(r.sent).toBe(3);
+      expect(r.failed).toBe(0);
+      expect(calls.length).toBe(3);
+      // exatamente 40ms virtuais se passaram → o delay foi respeitado
+      expect(elapsed).toBeGreaterThanOrEqual(40);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('continua mesmo com falhas e conta failed', async () => {

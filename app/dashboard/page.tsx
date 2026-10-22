@@ -123,7 +123,7 @@ export default function DashboardPage() {
     <AppShell>
     <main className="min-h-screen p-8 bg-[#05020A]">
       <h1 className="text-2xl font-bold text-white mb-2">Dashboard</h1>
-      <p className="text-gray-400 mb-8">Visão geral da sua organização (dados reais, isolados por tenant).</p>
+      <p className="text-gray-300 mb-8">Visão geral da sua organização (dados reais, isolados por tenant).</p>
       <div className="grid gap-4 sm:grid-cols-3 max-w-3xl">
         {cards.map((c) => (
           <Link
@@ -147,7 +147,7 @@ export default function DashboardPage() {
         >
           <div>
             <div className="text-sm font-semibold text-gray-200">Centro Administrativo com IA</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-400 mt-1">
               Descreva a tarefa em linguagem natural · acompanhe o progresso real das tarefas ·
               acesso restrito a admin/owner
             </div>
@@ -157,9 +157,9 @@ export default function DashboardPage() {
       </div>
 
       {cards.every((c) => (c.value ?? 0) === 0) && (
-        <p className="text-sm text-gray-500 mt-6">
+        <p className="text-sm text-gray-400 mt-6">
           Ainda não há registros. Comece adicionando{' '}
-          <Link href="/crm/contacts" className="text-purple-400">um contato</Link>.
+          <Link href="/crm/contacts" className="text-purple-400 underline">um contato</Link>.
         </p>
       )}
     </main>

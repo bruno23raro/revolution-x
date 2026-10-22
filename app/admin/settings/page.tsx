@@ -270,7 +270,7 @@ export default function AdminSettingsPage() {
         <dl className="grid grid-cols-2 gap-y-1 text-xs">
           {lines.map((l, i) => (
             <div key={i} className="contents">
-              <dt className="text-gray-500">{l.k}</dt>
+              <dt className="text-gray-300">{l.k}</dt>
               <dd className="text-gray-300 break-words">{l.v}</dd>
             </div>
           ))}
@@ -284,7 +284,7 @@ export default function AdminSettingsPage() {
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white">Configurações administrativas</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-300">
             Estado real dos subsistemas existentes. Somente o que o backend expõe — sem valores de
             segredo.
           </p>
@@ -317,7 +317,7 @@ export default function AdminSettingsPage() {
                 {
                   k: 'Configuração',
                   v: router.configured ? (
-                    <span className="text-gray-500">ativa no servidor</span>
+                    <span className="text-gray-300">ativa no servidor</span>
                   ) : (
                     <a href="#ai-config" className="text-purple-400 hover:underline">
                       configurar abaixo ↓
@@ -408,43 +408,46 @@ export default function AdminSettingsPage() {
             <span className="h-2 w-2 rounded-full bg-purple-400" />
             <h2 className="text-sm font-semibold text-gray-200">Configuração manual de IA</h2>
           </div>
-          <p className="text-xs text-gray-500 mb-4">
+          <p className="text-xs text-gray-300 mb-4">
             Salve uma chave de API manualmente. A configuração é armazenada de forma segura no
             banco de dados (RLS ativo) e usada pelo chat quando o roteador do servidor não está
             configurado. A chave <strong>nunca</strong> é retornada ao navegador.
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Base URL</label>
+              <label htmlFor="ai-base-url" className="block text-xs text-gray-300 mb-1">Base URL</label>
               <input
+                id="ai-base-url"
                 type="url"
                 value={aiBaseUrl}
                 onChange={(e) => setAiBaseUrl(e.target.value)}
                 placeholder="https://api.openai.com"
-                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">API Key</label>
+              <label htmlFor="ai-api-key" className="block text-xs text-gray-300 mb-1">API Key</label>
               <input
+                id="ai-api-key"
                 type="password"
                 value={aiApiKey}
                 onChange={(e) => setAiApiKey(e.target.value)}
                 placeholder="sk-..."
-                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 Campo limpo após salvar com sucesso.
               </p>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Modelo</label>
+              <label htmlFor="ai-model" className="block text-xs text-gray-300 mb-1">Modelo</label>
               <input
+                id="ai-model"
                 type="text"
                 value={aiModel}
                 onChange={(e) => setAiModel(e.target.value)}
                 placeholder="gpt-4o (opcional)"
-                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
@@ -465,14 +468,14 @@ export default function AdminSettingsPage() {
               Limpar
             </button>
           </div>
-          <p className="mt-2 text-xs text-gray-600">
+          <p className="mt-2 text-xs text-gray-400">
             ⚠ Para ativação global no servidor, configure as variáveis de ambiente{' '}
             <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
             <code className="text-purple-300">OMNIROUTER_API_KEY</code> no Hostinger hpanel.
           </p>
         </div>
 
-        <p className="text-xs text-gray-600 mt-6 max-w-4xl">
+        <p className="text-xs text-gray-400 mt-6 max-w-4xl">
           Se o roteador ou a fila estiverem &ldquo;indisponível&rdquo;, normalmente falta credencial
           no ambiente do servidor (ex.: chave do OmniRouter) ou a migration da fila ainda não foi
           aplicada. Nenhuma chave ou segredo é exibido nesta tela.

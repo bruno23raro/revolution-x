@@ -126,7 +126,7 @@ function SideLink({
       className={`block rounded-lg px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
         active
           ? 'border border-purple-500/30 bg-purple-600/20 text-white'
-          : 'border-transparent text-gray-400 hover:bg-white/5 hover:text-white transition-colors'
+          : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white transition-colors'
       }`}
     >
       {item.label}
@@ -169,11 +169,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   // Acessibilidade (§14): Esc fecha o menu mobile + trava o scroll do body
-  // enquanto o drawer está aberto.
+  // enquanto o drawer está aberto. Como o drawer declara aria-modal="true",
+  // o foco fica contido nele (Tab/Shift+Tab em ciclo) e é devolvido ao botão
+  // de origem ao fechar — WCAG 2.1.2 (no keyboard trap perdido/fujão).
   useEffect(() => {
     if (!mobileOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+      const items = Array.from(drawer.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (el) => el.offsetParent !== null || el === drawer
+      );
+      if (items.length === 0) {
+        e.preventDefault();
+        drawer.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === drawer)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (!drawer.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -182,6 +214,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
+      if (opener && typeof opener.focus === 'function') opener.focus();
     };
   }, [mobileOpen]);
 
@@ -197,12 +230,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const sidebarNav = loading ? (
-    <span className="px-3 text-xs text-gray-400">carregando…</span>
+    <span className="px-3 text-xs text-gray-300">carregando…</span>
   ) : authed ? (
     <div className="space-y-4 px-3">
       {groups.map((g) => (
         <div key={g.label}>
-          <div className="px-3 pb-1 text-[10px] uppercase tracking-wider text-gray-400">
+          <div className="px-3 pb-1 text-[10px] uppercase tracking-wider text-gray-300">
             {g.label}
           </div>
           <div className="space-y-1">
@@ -214,7 +247,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       ))}
     </div>
   ) : (
-    <div className="px-3 text-xs text-gray-400">
+    <div className="px-3 text-xs text-gray-300">
       Área pública
       <div className="mt-3">
         <Link
@@ -240,14 +273,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Revolution X
           </Link>
         </div>
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto py-4">
+        <nav aria-label="Menu principal (desktop)" className="flex-1 overflow-y-auto py-4">
           {sidebarNav}
         </nav>
         <div className="shrink-0 border-t border-white/10 p-3">
           {authed ? (
             <>
               <div
-                className="truncate text-xs text-gray-400"
+                className="truncate text-xs text-gray-300"
                 title={session?.user.email ?? undefined}
               >
                 {session?.user.email ?? '…'}
@@ -271,7 +304,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Topbar (mobile) ────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#08040F]/95 px-4 backdrop-blur md:hidden">
+      <header aria-label="Cabeçalho" className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#08040F]/95 px-4 backdrop-blur md:hidden">
         <button
           aria-label="Abrir menu"
           aria-controls="rx-mobile-menu"
@@ -327,7 +360,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <button
                 aria-label="Fechar menu"
                 onClick={closeMobile}
-                className="rounded-lg p-1.5 text-gray-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                className="rounded-lg p-1.5 text-gray-300 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
               >
                 ✕
               </button>
@@ -340,7 +373,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ── Conteúdo da página (desloçado pela sidebar no desktop) ────── */}
-      <div className="md:pl-60">{children}</div>
+      <main aria-label="Conteúdo principal" className="md:pl-60">{children}</main>
     </div>
   );
 }

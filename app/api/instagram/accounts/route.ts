@@ -27,8 +27,8 @@ export async function GET(_req: NextRequest) {
   });
 }
 
-export async function POST(_req: NextRequest) {
-  const user = await getAuthenticatedUser(_req);
+export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -37,7 +37,7 @@ export async function POST(_req: NextRequest) {
   const state = generateOAuthState();
 
   // Build the redirect URI from the request origin
-  const origin = _req.nextUrl.origin;
+  const origin = req.nextUrl.origin;
 
   // Build Meta Auth URL for Instagram connection
   const config: MetaAuthConfig = {
@@ -49,11 +49,20 @@ export async function POST(_req: NextRequest) {
 
   const authUrl = buildMetaAuthUrl(config, state, 'instagram');
 
-  return NextResponse.json({
+  // Set state cookie for callback validation (same pattern as /api/auth/meta)
+  const res = NextResponse.json({
     success: true,
     authUrl,
     state,
     organizationId: user.organizationId,
   });
+  res.cookies.set('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 600, // 10 min
+    path: '/',
+  });
+  return res;
 }
 

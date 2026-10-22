@@ -10,6 +10,7 @@ import { generateInstagramOAuthState, exchangeInstagramCode, getSafeInstagramCon
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { withUserContext } from '@/lib/prisma';
+import { encryptToken } from '@/lib/encryption';
 import type { MetaConnectionStatus, InstagramTokenSet } from '@/integrations/meta/types';
 
 export async function GET(req: NextRequest) {
@@ -23,9 +24,13 @@ export async function GET(req: NextRequest) {
   if (!state) return NextResponse.redirect(new URL('/onboarding/error?reason=state_missing', req.url));
   if (!code) return NextResponse.redirect(new URL('/onboarding/error?reason=code_missing', req.url));
 
-  // State CSRF protection — timing-safe comparison
+  // State CSRF protection — timing-safe comparison with length guard (prevents RangeError DoS)
   const sessionState = req.cookies.get('instagram_oauth_state')?.value ?? '';
-  if (!sessionState || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(sessionState))) {
+  function secureCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  }
+  if (!sessionState || !secureCompare(state, sessionState)) {
     return NextResponse.redirect(new URL('/onboarding/error?reason=state_invalid', req.url));
   }
 
@@ -71,17 +76,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding/error?reason=token_exchange_failed', req.url));
   }
 
-  // Criptografar token antes de persistir
+  // Criptografar token antes de persistir — usa encryptToken() compartilhado (META_TOKEN_ENCRYPTION_KEY)
   let encryptedToken: string;
   try {
-    // Use AES-256-GCM encryption (same mechanism as Meta)
-    const iv = crypto.randomBytes(12);
-    const key = crypto.createHash('sha256').update(process.env.META_APP_SECRET || '').digest();
-    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    let encrypted = cipher.update(tokenResult.accessToken, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-    const authTag = cipher.getAuthTag().toString('base64');
-    encryptedToken = iv.toString('base64') + ':' + authTag + ':' + encrypted;
+    encryptedToken = encryptToken(tokenResult.accessToken);
   } catch {
     return NextResponse.redirect(new URL('/onboarding/error?reason=encryption_failed', req.url));
   }

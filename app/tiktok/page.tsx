@@ -1,47 +1,46 @@
 'use client';
 
-// TikTok — FASE 2 UI (canais principais).
+// TikTok â€” FASE 2 UI (canais principais).
 //
-//  • Publicação (agora) e agendamento de vídeos pela Content Posting API
-//    OFICIAL do TikTok (/api/tiktok/publish). A API não tem horário de
-//    publicação, então o agendamento persiste a intenção e o EXECUTOR fica no
-//    agendador (/api/tiktok/tick — FASE 4), que publica via API oficial e
-//    marca o resultado na própria fila.
-//  • Tracking: estado (`/api/tiktok/status`) e métricas
-//    (`/api/tiktok/analytics`) dos vídeos publicados.
-//  • FASE 3: anúncios em tempo real via Business API (`/api/tiktok/ads-insights`)
-//    — Advertiser ID + token BAP em /integrations (TikTok Ads).
-//  • "Sem API / Avançado": scraping de seguidores/vídeos NÃO existe na API
-//    oficial — é DECLARADO + aviso de risco (provider `scraper_tiktok`); o
-//    produto guarda apenas o parâmetro e não executa a coleta não-oficial em
-//    silêncio (executor ainda ausente).
+//  â€¢ PublicaÃ§Ã£o (agora) e agendamento de vÃ­deos pela Content Posting API
+//    OFICIAL do TikTok (/api/tiktok/publish). A API nÃ£o tem horÃ¡rio de
+//    publicaÃ§Ã£o, entÃ£o o agendamento persiste a intenÃ§Ã£o e o EXECUTOR fica no
+//    agendador (/api/tiktok/tick â€” FASE 4), que publica via API oficial e
+//    marca o resultado na prÃ³pria fila.
+//  â€¢ Tracking: estado (`/api/tiktok/status`) e mÃ©tricas
+//    (`/api/tiktok/analytics`) dos vÃ­deos publicados.
+//  â€¢ FASE 3: anÃºncios em tempo real via Business API (`/api/tiktok/ads-insights`)
+//    â€” Advertiser ID + token BAP em /integrations (TikTok Ads).
+//  â€¢ "Sem API / AvanÃ§ado": scraping de seguidores/vÃ­deos NÃƒO existe na API
+//    oficial â€” Ã© DECLARADO + aviso de risco (provider `scraper_tiktok`); o
+//    produto guarda apenas o parÃ¢metro e nÃ£o executa a coleta nÃ£o-oficial em
+//    silÃªncio (executor ainda ausente).
 //
-// Design: lilás + preto + branco. Nenhum segredo no front-end.
+// Design: lilÃ¡s + preto + branco. Nenhum segredo no front-end.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
 import { toLocalInputValue } from '@/lib/format-local-datetime';
 import { useEffect, useState } from 'react';
 
 const PRIVACY_LEVELS: Array<{ value: string; label: string }> = [
-  { value: 'PUBLIC_TO_EVERYONE', label: 'Público' },
-  { value: 'MUTUAL_FOLLOW_FRIENDS', label: 'Seguidores mútuos' },
+  { value: 'PUBLIC_TO_EVERYONE', label: 'PÃºblico' },
+  { value: 'MUTUAL_FOLLOW_FRIENDS', label: 'Seguidores mÃºtuos' },
   { value: 'FOLLOWER_OF_CREATORS', label: 'Seguidores do criador' },
-  { value: 'SELF_ONLY', label: 'Só eu' },
+  { value: 'SELF_ONLY', label: 'SÃ³ eu' },
 ];
 
 export default function TikTokPage() {
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">TikTok</h1>
             <p className="text-sm text-gray-400">
-              Publicação e tracking de vídeos — 100% pela API oficial do TikTok. O agendamento persiste a
-              intenção (a API oficial não publica em hora marcada).
+              PublicaÃ§Ã£o e tracking de vÃ­deos â€” 100% pela API oficial do TikTok. O agendamento persiste a
+              intenÃ§Ã£o (a API oficial nÃ£o publica em hora marcada).
             </p>
           </div>
 
@@ -55,12 +54,12 @@ export default function TikTokPage() {
           </div>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Condição real do provedor TikTok                                    */
+/* CondiÃ§Ã£o real do provedor TikTok                                    */
 /* ------------------------------------------------------------------ */
 
 function ConnectionStatusCard() {
@@ -73,18 +72,18 @@ function ConnectionStatusCard() {
   });
 
   const load = () => {
-    // /api/integrations/tiktok exige apenas a sessão (devolve as contas do
+    // /api/integrations/tiktok exige apenas a sessÃ£o (devolve as contas do
     // tenant + tokenExpired). O antigo /api/integrations/config era admin-only
-    // (requireAdmin → 401) e mentia "não conectado" para membros logados
-    // não-admin.
+    // (requireAdmin â†’ 401) e mentia "nÃ£o conectado" para membros logados
+    // nÃ£o-admin.
     fetch('/api/integrations/tiktok')
       .then(async (r) => {
         if (r.status === 401) {
-          setState({ loading: false, msg: 'Faça login para ver a conexão.', configured: false, count: 0, expired: false });
+          setState({ loading: false, msg: 'FaÃ§a login para ver a conexÃ£o.', configured: false, count: 0, expired: false });
           return;
         }
         if (r.status === 503) {
-          setState({ loading: false, msg: 'Memória de integrações indisponível (503).', configured: false, count: 0, expired: false });
+          setState({ loading: false, msg: 'MemÃ³ria de integraÃ§Ãµes indisponÃ­vel (503).', configured: false, count: 0, expired: false });
           return;
         }
         const d = await r.json().catch(() => ({ accounts: [] } as { accounts?: Array<{ tokenExpired?: boolean }> }));
@@ -97,7 +96,7 @@ function ConnectionStatusCard() {
           expired: accounts.some((a) => a.tokenExpired),
         });
       })
-      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexão.', configured: false, count: 0, expired: false }));
+      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexÃ£o.', configured: false, count: 0, expired: false }));
   };
 
   useEffect(load, []);
@@ -105,34 +104,34 @@ function ConnectionStatusCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Conexão</h2>
+        <h2 className="text-sm font-bold text-gray-200">ConexÃ£o</h2>
         <ApiBadge layer="official" />
       </div>
       {state.loading ? (
-        <p className="text-xs text-gray-400">Carregando…</p>
+        <p className="text-xs text-gray-400">Carregandoâ€¦</p>
       ) : state.msg ? (
         <p className="text-xs text-amber-300">{state.msg}</p>
       ) : state.configured ? (
         <div className="text-xs space-y-1">
           <p className="text-green-300">
-            Provedor TikTok conectado ({state.count} conta{state.count > 1 ? 's' : ''}). O token de usuário já está guardado (via OAuth ou manual) — dá para publicar.
+            Provedor TikTok conectado ({state.count} conta{state.count > 1 ? 's' : ''}). O token de usuÃ¡rio jÃ¡ estÃ¡ guardado (via OAuth ou manual) â€” dÃ¡ para publicar.
           </p>
           {state.expired && (
             <p className="text-amber-300">
-              Token de acesso expirou (expira em ~24h) — renove em /integrations → TikTok → “Renovar token”.
+              Token de acesso expirou (expira em ~24h) â€” renove em /integrations â†’ TikTok â†’ â€œRenovar tokenâ€.
             </p>
           )}
         </div>
       ) : (
         <div className="text-xs text-gray-400">
-          Provedor TikTok ainda não conectado. Conecte via OAuth (botão “Conectar via OAuth” em /integrations) ou
+          Provedor TikTok ainda nÃ£o conectado. Conecte via OAuth (botÃ£o â€œConectar via OAuthâ€ em /integrations) ou
           preencha client key/secret + access token manualmente.
           <div className="mt-2">
             <a
               href="/integrations"
               className="inline-block px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
             >
-              Conectar →
+              Conectar â†’
             </a>
           </div>
         </div>
@@ -155,7 +154,7 @@ function PublishCard() {
   const [scheduleAt, setScheduleAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // MULTICONTAS — seletor de conta TikTok (só aparece com 2+ contas).
+  // MULTICONTAS â€” seletor de conta TikTok (sÃ³ aparece com 2+ contas).
   const [accounts, setAccounts] = useState<Array<{ openId: string; tokenExpired: boolean }>>([]);
   const [account, setAccount] = useState('');
 
@@ -187,7 +186,7 @@ function PublishCard() {
       body.disableComment = disableComment;
       body.aigc = aigc;
       if (schedule && scheduleAt) body.scheduledAt = new Date(scheduleAt).toISOString();
-      if (account) body.account = account; // MULTICONTAS — ancora a conta escolhida
+      if (account) body.account = account; // MULTICONTAS â€” ancora a conta escolhida
 
       const r = await fetch('/api/tiktok/publish', {
         method: 'POST',
@@ -199,23 +198,23 @@ function PublishCard() {
         setMsg({
           ok: true,
           text: schedule
-            ? `Agendado para ${new Date(scheduleAt).toLocaleString('pt-BR')} (intenção ${d.intentId ?? '—'}). ${d.note ?? ''}`
-            : `Vídeo enviado para publicação (publish_id ${d.publishId ?? '—'}).`,
+            ? `Agendado para ${new Date(scheduleAt).toLocaleString('pt-BR')} (intenÃ§Ã£o ${d.intentId ?? 'â€”'}). ${d.note ?? ''}`
+            : `VÃ­deo enviado para publicaÃ§Ã£o (publish_id ${d.publishId ?? 'â€”'}).`,
         });
       } else if (r.status === 409 && d.error === 'not_connected') {
-        setMsg({ ok: false, text: 'Provedor TikTok não conectado. Preencha em /integrations.' });
+        setMsg({ ok: false, text: 'Provedor TikTok nÃ£o conectado. Preencha em /integrations.' });
       } else if (r.status === 409 && d.error === 'no_token') {
         setMsg({ ok: false, text: 'Access Token do TikTok ausente. Conecte em /integrations.' });
       } else if (r.status === 409) {
-        setMsg({ ok: false, text: d.detail ?? 'TikTok não conectado neste tenant.' });
+        setMsg({ ok: false, text: d.detail ?? 'TikTok nÃ£o conectado neste tenant.' });
       } else if (r.status === 503) {
-        setMsg({ ok: false, text: 'Memória/fila de integrações indisponível no servidor (503).' });
+        setMsg({ ok: false, text: 'MemÃ³ria/fila de integraÃ§Ãµes indisponÃ­vel no servidor (503).' });
       } else if (r.status === 400) {
-        setMsg({ ok: false, text: d.detail ? `Entrada inválida: ${d.detail}` : 'Entrada inválida.' });
+        setMsg({ ok: false, text: d.detail ? `Entrada invÃ¡lida: ${d.detail}` : 'Entrada invÃ¡lida.' });
       } else if (r.status === 401) {
-        setMsg({ ok: false, text: 'Faça login para publicar.' });
+        setMsg({ ok: false, text: 'FaÃ§a login para publicar.' });
       } else if (r.status === 502) {
-        setMsg({ ok: false, text: d.detail ? `A API do TikTok rejeitou: ${d.detail}` : 'A API do TikTok não respondeu (502).' });
+        setMsg({ ok: false, text: d.detail ? `A API do TikTok rejeitou: ${d.detail}` : 'A API do TikTok nÃ£o respondeu (502).' });
       } else {
         setMsg({ ok: false, text: `Falha ao publicar (HTTP ${r.status}).` });
       }
@@ -229,13 +228,13 @@ function PublishCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Publicar ou agendar vídeo</h2>
+        <h2 className="text-sm font-bold text-gray-200">Publicar ou agendar vÃ­deo</h2>
         <ApiBadge layer="official" />
       </div>
 
       <div className="space-y-3">
         <label className="block text-xs text-gray-400">
-          URL pública do vídeo <span className="text-gray-400">(o TikTok puxa por URL)</span>
+          URL pÃºblica do vÃ­deo <span className="text-gray-400">(o TikTok puxa por URL)</span>
           <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://cdn.seusite.com/video.mp4" className={inputCls} />
         </label>
 
@@ -243,10 +242,10 @@ function PublishCard() {
           <label className="block text-xs text-gray-400">
             Conta TikTok <span className="text-gray-400">(publica nesta conta)</span>
             <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls + ' !mt-1'}>
-              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
+              <option value="" className="bg-[#0D0915]">PadrÃ£o (mais recente)</option>
               {accounts.map((a) => (
                 <option key={a.openId} value={a.openId} className="bg-[#0D0915]">
-                  {a.openId.slice(0, 12)}…{a.tokenExpired ? ' (token expirado)' : ''}
+                  {a.openId.slice(0, 12)}â€¦{a.tokenExpired ? ' (token expirado)' : ''}
                 </option>
               ))}
             </select>
@@ -255,7 +254,7 @@ function PublishCard() {
 
         <label className="block text-xs text-gray-400">
           Legenda (opcional)
-          <textarea rows={2} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Fale sobre o vídeo…" className={inputCls} />
+          <textarea rows={2} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Fale sobre o vÃ­deoâ€¦" className={inputCls} />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
@@ -272,7 +271,7 @@ function PublishCard() {
           <div className="flex items-end gap-4 pb-1">
             <label className="flex items-center gap-2 text-xs text-gray-300">
               <input type="checkbox" checked={disableComment} onChange={(e) => setDisableComment(e.target.checked)} className="accent-purple-500" />
-              Bloq. comentários
+              Bloq. comentÃ¡rios
             </label>
             <label className="flex items-center gap-2 text-xs text-gray-300">
               <input type="checkbox" checked={aigc} onChange={(e) => setAigc(e.target.checked)} className="accent-purple-500" />
@@ -304,12 +303,12 @@ function PublishCard() {
             disabled={busy || !canSubmit}
             className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
           >
-            {busy ? 'Enviando…' : schedule ? 'Agendar' : 'Publicar agora'}
+            {busy ? 'Enviandoâ€¦' : schedule ? 'Agendar' : 'Publicar agora'}
           </button>
           <span className="text-xs text-gray-400">
             {schedule
-              ? 'A API oficial não publica em hora marcada — a intenção é guardada e o executor processa no card "Agendados".'
-              : 'Publicação imediata via PULL_FROM_URL.'}
+              ? 'A API oficial nÃ£o publica em hora marcada â€” a intenÃ§Ã£o Ã© guardada e o executor processa no card "Agendados".'
+              : 'PublicaÃ§Ã£o imediata via PULL_FROM_URL.'}
           </span>
         </div>
 
@@ -330,7 +329,7 @@ function PublishCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* FASE 4 · slice 1+2+3 — Agendados (executor c/ retry+backoff + cron) */
+/* FASE 4 Â· slice 1+2+3 â€” Agendados (executor c/ retry+backoff + cron) */
 /* ------------------------------------------------------------------ */
 
 interface PendingView {
@@ -386,19 +385,19 @@ function ScheduledCard() {
       const r = await fetch('/api/tiktok/tick', { method: 'POST' });
       const d = await r.json().catch(() => ({}));
       if (r.status === 401) {
-        setTickOut('Faça login para processar os agendados.');
+        setTickOut('FaÃ§a login para processar os agendados.');
       } else if (r.status === 503) {
-        setTickOut(`Fila indisponível no servidor (503)${d.detail ? ` — ${d.detail}` : ''}.`);
+        setTickOut(`Fila indisponÃ­vel no servidor (503)${d.detail ? ` â€” ${d.detail}` : ''}.`);
       } else if (r.ok && d.ok) {
         setTickOut(
-          `Tick concluído: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).`,
+          `Tick concluÃ­do: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).`,
         );
       } else if (r.ok && d.error === 'queue_unavailable') {
-        setTickOut(`Fila indisponível${d.detail ? ` — ${d.detail}` : ''}.`);
+        setTickOut(`Fila indisponÃ­vel${d.detail ? ` â€” ${d.detail}` : ''}.`);
       } else if (r.ok) {
         const why = Array.isArray(d.reasons) && d.reasons.length > 0 ? ` Motivos: ${d.reasons.join('; ')}.` : '';
         setTickOut(
-          `Tick concluído com falhas: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).${why}`,
+          `Tick concluÃ­do com falhas: ${d.due ?? 0} vencido(s), ${d.published ?? 0} publicado(s), ${d.retried ?? 0} reagendado(s), ${d.failed ?? 0} falha(s).${why}`,
         );
       } else {
         setTickOut(`Falha ao processar (HTTP ${r.status}).`);
@@ -421,21 +420,21 @@ function ScheduledCard() {
       </div>
 
       <p className="text-xs text-gray-400 mb-3">
-        Como a API oficial não publica em hora marcada, o agendamento guarda a <em>intenção</em>. Este card é o
-        executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na própria fila.
-        Falhas <em>não</em> encerram na hora: o item é reagendado com backoff exponencial (até 3 tentativas); só
-        então vira <span className="text-red-300">failed</span> terminal.
+        Como a API oficial nÃ£o publica em hora marcada, o agendamento guarda a <em>intenÃ§Ã£o</em>. Este card Ã© o
+        executor: processa os itens vencidos, publica pela Content Posting API e marca o resultado na prÃ³pria fila.
+        Falhas <em>nÃ£o</em> encerram na hora: o item Ã© reagendado com backoff exponencial (atÃ© 3 tentativas); sÃ³
+        entÃ£o vira <span className="text-red-300">failed</span> terminal.
       </p>
       <p className="text-xs text-gray-400 mb-3">
-        Disparo <em>periódico</em>: <code className="text-gray-400">POST /api/cron/tiktok</code> (gatilho de
+        Disparo <em>periÃ³dico</em>: <code className="text-gray-400">POST /api/cron/tiktok</code> (gatilho de
         sistema multi-tenant, protegido pelo segredo <code className="text-gray-400">CRON_SECRET</code>). O
-        registro do cron e a definição do segredo no hpanel são passos [HUMANO] — sem eles, use o botão abaixo.
+        registro do cron e a definiÃ§Ã£o do segredo no hpanel sÃ£o passos [HUMANO] â€” sem eles, use o botÃ£o abaixo.
       </p>
 
-      {queueState === 'loading' && <p className="text-xs text-gray-400">Carregando fila…</p>}
-      {queueState === 'unauth' && <p className="text-xs text-amber-300">Faça login para ver os agendados.</p>}
+      {queueState === 'loading' && <p className="text-xs text-gray-400">Carregando filaâ€¦</p>}
+      {queueState === 'unauth' && <p className="text-xs text-amber-300">FaÃ§a login para ver os agendados.</p>}
       {queueState === 'unavailable' && (
-        <p className="text-xs text-amber-300">Memória/fila de integrações indisponível no servidor (503).</p>
+        <p className="text-xs text-amber-300">MemÃ³ria/fila de integraÃ§Ãµes indisponÃ­vel no servidor (503).</p>
       )}
       {queueState === 'error' && <p className="text-xs text-amber-300">Falha ao carregar a fila.</p>}
       {queueState === 'ok' && pending && pending.length === 0 && (
@@ -475,7 +474,7 @@ function ScheduledCard() {
           disabled={busy || queueState !== 'ok'}
           className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
         >
-          {busy ? 'Processando…' : 'Processar agendados'}
+          {busy ? 'Processandoâ€¦' : 'Processar agendados'}
         </button>
         <button
           onClick={load}
@@ -491,7 +490,7 @@ function ScheduledCard() {
           role="status"
           aria-live="polite"
           className={`mt-3 p-3 text-xs rounded-lg border ${
-            tickOut.includes('falha') || tickOut.includes('Falha') || tickOut.includes('indisponível')
+            tickOut.includes('falha') || tickOut.includes('Falha') || tickOut.includes('indisponÃ­vel')
               ? 'bg-amber-400/10 border-amber-400/25 text-amber-300'
               : 'bg-green-400/10 border-green-400/25 text-green-300'
           }`}
@@ -504,7 +503,7 @@ function ScheduledCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Tracking (estado + métricas)                                        */
+/* Tracking (estado + mÃ©tricas)                                        */
 /* ------------------------------------------------------------------ */
 
 function TrackingCard() {
@@ -554,15 +553,15 @@ function TrackingCard() {
                 shareCount?: number;
                 commentCount?: number;
               }) =>
-                `${v.publishId} [${v.status ?? '?'}]: ${v.playCount ?? 0} plays, ${v.likeCount ?? 0} curtidas, ${v.shareCount ?? 0} compartilh., ${v.commentCount ?? 0} comentários`,
+                `${v.publishId} [${v.status ?? '?'}]: ${v.playCount ?? 0} plays, ${v.likeCount ?? 0} curtidas, ${v.shareCount ?? 0} compartilh., ${v.commentCount ?? 0} comentÃ¡rios`,
             )
             .join('\n'),
         );
       } else {
-        setAnalyticsOut(d.detail ? `Falha: ${d.detail}` : `Nenhuma métrica (HTTP ${r.status}).`);
+        setAnalyticsOut(d.detail ? `Falha: ${d.detail}` : `Nenhuma mÃ©trica (HTTP ${r.status}).`);
       }
     } catch {
-      setAnalyticsOut('Falha de rede ao consultar métricas.');
+      setAnalyticsOut('Falha de rede ao consultar mÃ©tricas.');
     } finally {
       setBusyA(false);
     }
@@ -571,28 +570,28 @@ function TrackingCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Tracking de vídeos</h2>
+        <h2 className="text-sm font-bold text-gray-200">Tracking de vÃ­deos</h2>
         <ApiBadge layer="official" />
       </div>
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="tiktok-status-id" className="block text-xs text-gray-400">Estado de um vídeo (publish_id)</label>
+          <label htmlFor="tiktok-status-id" className="block text-xs text-gray-400">Estado de um vÃ­deo (publish_id)</label>
           <div className="flex gap-2 mt-1">
-            <input id="tiktok-status-id" value={statusId} onChange={(e) => setStatusId(e.target.value)} placeholder="734123…" className={inputCls + '!mt-0'} />
+            <input id="tiktok-status-id" value={statusId} onChange={(e) => setStatusId(e.target.value)} placeholder="734123â€¦" className={inputCls + '!mt-0'} />
             <button onClick={() => void checkStatus()} disabled={busyS || !statusId.trim()} className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40">
-              {busyS ? '…' : 'Estado'}
+              {busyS ? 'â€¦' : 'Estado'}
             </button>
           </div>
           {statusOut && <p role="status" aria-live="polite" className="mt-2 text-xs text-gray-300 whitespace-pre-wrap">{statusOut}</p>}
         </div>
 
         <div>
-          <label htmlFor="tiktok-analytics-ids" className="block text-xs text-gray-400">Métricas (até 5 publish_ids, separados por vírgula)</label>
+          <label htmlFor="tiktok-analytics-ids" className="block text-xs text-gray-400">MÃ©tricas (atÃ© 5 publish_ids, separados por vÃ­rgula)</label>
           <div className="flex gap-2 mt-1">
             <input id="tiktok-analytics-ids" value={analyticsIds} onChange={(e) => setAnalyticsIds(e.target.value)} placeholder="734123, 734124" className={inputCls + '!mt-0'} />
             <button onClick={() => void fetchAnalytics()} disabled={busyA || !analyticsIds.trim()} className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40">
-              {busyA ? '…' : 'Métricas'}
+              {busyA ? 'â€¦' : 'MÃ©tricas'}
             </button>
           </div>
           {analyticsOut && (
@@ -605,14 +604,14 @@ function TrackingCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* FASE 3 · slice 1 — Anúncios em tempo real (TikTok Business API)    */
+/* FASE 3 Â· slice 1 â€” AnÃºncios em tempo real (TikTok Business API)    */
 /* ------------------------------------------------------------------ */
 
 const AD_ENTITIES: Array<{ value: string; label: string }> = [
   { value: 'AD_ACCOUNT', label: 'Conta (total)' },
   { value: 'CAMPAIGN', label: 'Campanhas' },
-  { value: 'AD_GROUP', label: 'Grupos de anúncios' },
-  { value: 'AD', label: 'Anúncios' },
+  { value: 'AD_GROUP', label: 'Grupos de anÃºncios' },
+  { value: 'AD', label: 'AnÃºncios' },
   { value: 'CREATIVE', label: 'Criativos' },
 ];
 
@@ -633,7 +632,7 @@ function AdsInsightsCard() {
       const d = await r.json().catch(() => ({}));
       if (r.ok && Array.isArray(d.rows)) {
         if (d.rows.length === 0) {
-          setOut(`Advertiser ${d.advertiserId ?? '—'} sem registros no dia ${d.date ?? '?'} (nível ${d.entity ?? '?'}) — sem gasto ou impressões.`);
+          setOut(`Advertiser ${d.advertiserId ?? 'â€”'} sem registros no dia ${d.date ?? '?'} (nÃ­vel ${d.entity ?? '?'}) â€” sem gasto ou impressÃµes.`);
         } else {
           setOut(
             d.rows
@@ -641,28 +640,28 @@ function AdsInsightsCard() {
                 Object.entries(row)
                   .filter(([, x]) => x !== undefined && x !== null)
                   .map(([k, x]) => `${k}=${String(x)}`)
-                  .join(' · '),
+                  .join(' Â· '),
               )
               .join('\n'),
           );
         }
       } else if (r.status === 409 && d.error === 'not_connected') {
-        setOut(`Não conectado. ${d.detail ?? ''}`);
+        setOut(`NÃ£o conectado. ${d.detail ?? ''}`);
       } else if (r.status === 409 && (d.error === 'no_token' || d.error === 'no_advertiser')) {
         setOut(`Credencial incompleta (${d.error}). ${d.detail ?? ''}`);
       } else if (r.status === 409) {
-        setOut(d.detail ?? 'TikTok Ads não conectado neste tenant.');
+        setOut(d.detail ?? 'TikTok Ads nÃ£o conectado neste tenant.');
       } else if (r.status === 503) {
-        setOut(d.detail ?? 'Memória/fila de integrações indisponível no servidor (503).');
+        setOut(d.detail ?? 'MemÃ³ria/fila de integraÃ§Ãµes indisponÃ­vel no servidor (503).');
       } else if (r.status === 502) {
         setOut(`A API do TikTok rejeitou (502): ${d.detail ?? 'sem detalhe'}. Confira o token BAP e o Advertiser ID.`);
       } else if (r.status === 401) {
-        setOut('Faça login para consultar os anúncios.');
+        setOut('FaÃ§a login para consultar os anÃºncios.');
       } else {
         setOut(`Falha (HTTP ${r.status}). ${d.detail ?? ''}`);
       }
     } catch {
-      setOut('Falha de rede ao consultar os anúncios.');
+      setOut('Falha de rede ao consultar os anÃºncios.');
     } finally {
       setBusy(false);
     }
@@ -671,12 +670,12 @@ function AdsInsightsCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Anúncios em tempo real (TikTok Ads)</h2>
+        <h2 className="text-sm font-bold text-gray-200">AnÃºncios em tempo real (TikTok Ads)</h2>
         <ApiBadge layer="official" />
       </div>
       <p className="text-xs text-gray-400 mb-3">
-        Relatórios do Gerenciador de Anúncios do TikTok (Business API) — Advertiser ID e Access Token de
-        Business ficam em /integrations (TikTok Ads). O relatório cobre 1 dia por consulta; deixe vazio
+        RelatÃ³rios do Gerenciador de AnÃºncios do TikTok (Business API) â€” Advertiser ID e Access Token de
+        Business ficam em /integrations (TikTok Ads). O relatÃ³rio cobre 1 dia por consulta; deixe vazio
         para ontem.
       </p>
       <div className="grid grid-cols-2 gap-3">
@@ -685,7 +684,7 @@ function AdsInsightsCard() {
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
         </label>
         <label className="block text-xs text-gray-400">
-          Nível
+          NÃ­vel
           <select value={entity} onChange={(e) => setEntity(e.target.value)} className={inputCls + ' !mt-1'}>
             {AD_ENTITIES.map((o) => (
               <option key={o.value} value={o.value} className="bg-[#0D0915]">
@@ -701,7 +700,7 @@ function AdsInsightsCard() {
           disabled={busy}
           className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
         >
-          {busy ? 'Consultando…' : 'Ver anúncios'}
+          {busy ? 'Consultandoâ€¦' : 'Ver anÃºncios'}
         </button>
       </div>
       {out && <pre className="mt-3 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{out}</pre>}
@@ -710,7 +709,7 @@ function AdsInsightsCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Sem API / Avançado — scraping (declarado)                           */
+/* Sem API / AvanÃ§ado â€” scraping (declarado)                           */
 /* ------------------------------------------------------------------ */
 
 function ScrapingCard() {
@@ -727,7 +726,7 @@ function ScrapingCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: 'scraper_tiktok', value }),
       });
-      if (r.ok) setMsg('Parâmetro guardado. A coleta por scraping é não-oficial e ainda não há executor no produto.');
+      if (r.ok) setMsg('ParÃ¢metro guardado. A coleta por scraping Ã© nÃ£o-oficial e ainda nÃ£o hÃ¡ executor no produto.');
       else if (r.status === 401) setMsg('Somente admin/owner configura.');
       else setMsg(`Falha ao guardar (HTTP ${r.status}).`);
     } catch {
@@ -738,22 +737,22 @@ function ScrapingCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Coleta de seguidores/vídeos (scraping)</h2>
+        <h2 className="text-sm font-bold text-gray-200">Coleta de seguidores/vÃ­deos (scraping)</h2>
         <ApiBadge layer="sem_api" />
       </div>
       <RiskBanner>
-        O TikTok <strong>não expõe coleta de seguidores/vídeos pela API oficial</strong>. O método
-        &quot;Sem API / Avançado&quot; (scraping) viola os Termos de Uso, pode bloquear IP/conta e violar
-        LGPD/GDPR. O produto declara o método e guarda apenas o parâmetro — a execução não-oficial é de
-        responsabilidade do usuário e ainda não está implementada.
+        O TikTok <strong>nÃ£o expÃµe coleta de seguidores/vÃ­deos pela API oficial</strong>. O mÃ©todo
+        &quot;Sem API / AvanÃ§ado&quot; (scraping) viola os Termos de Uso, pode bloquear IP/conta e violar
+        LGPD/GDPR. O produto declara o mÃ©todo e guarda apenas o parÃ¢metro â€” a execuÃ§Ã£o nÃ£o-oficial Ã© de
+        responsabilidade do usuÃ¡rio e ainda nÃ£o estÃ¡ implementada.
       </RiskBanner>
       <div className="grid grid-cols-2 gap-3 mt-3">
         <label className="block text-xs text-gray-400">
           Proxy (opcional)
-          <input value={proxy} onChange={(e) => setProxy(e.target.value)} placeholder="http://…" className={inputCls} />
+          <input value={proxy} onChange={(e) => setProxy(e.target.value)} placeholder="http://â€¦" className={inputCls} />
         </label>
         <button onClick={() => void save()} className="self-end px-3 py-2 text-xs font-semibold rounded-lg border border-amber-400/30 text-amber-300 hover:bg-amber-400/10">
-          Guardar parâmetro
+          Guardar parÃ¢metro
         </button>
       </div>
       {msg && <p role="status" aria-live="polite" className="mt-2 text-xs text-gray-400">{msg}</p>}

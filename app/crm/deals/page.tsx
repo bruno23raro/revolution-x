@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 type Deal = { id: string; title: string; value: number | string; stage: string; createdAt?: string };
 
@@ -68,27 +68,25 @@ export default function DealsPage() {
 
   if (unauthorized) {
     return (
-      <>
-      <AppNav />
+      <AppShell>
       <main className="min-h-screen p-8 bg-[#05020A]">
-        <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
+        <Link href="/crm" className="text-sm text-purple-400">â† Voltar ao CRM</Link>
         <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
-          Faça login para ver os deals da sua organização. <Link href="/login" className="text-purple-400">Entrar</Link>
+          FaÃ§a login para ver os deals da sua organizaÃ§Ã£o. <Link href="/login" className="text-purple-400">Entrar</Link>
         </div>
       </main>
-      </>
+      </AppShell>
     );
   }
 
   return (
-    <>
-    <AppNav />
+    <AppShell>
     <main className="min-h-screen p-8 bg-[#05020A]">
-      <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
+      <Link href="/crm" className="text-sm text-purple-400">â† Voltar ao CRM</Link>
       <h1 className="text-2xl font-bold text-white mb-6 mt-4">Deals</h1>
 
       {loading ? (
-        <p className="text-gray-400">Carregando…</p>
+        <p className="text-gray-400">Carregandoâ€¦</p>
       ) : error ? (
         <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{error}</div>
       ) : items.length === 0 ? (
@@ -98,7 +96,7 @@ export default function DealsPage() {
           <table className="w-full text-sm">
             <thead className="bg-[#0D0915] text-gray-400">
               <tr>
-                <th className="text-left p-3">Título</th>
+                <th className="text-left p-3">TÃ­tulo</th>
                 <th className="text-left p-3">Valor</th>
                 <th className="text-left p-3">Etapa</th>
               </tr>
@@ -120,7 +118,7 @@ export default function DealsPage() {
         <h2 className="text-lg font-semibold text-white mb-4">Novo deal</h2>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-300">Título *</label>
+            <label className="text-sm font-medium text-gray-300">TÃ­tulo *</label>
             <input required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
           </div>
           <div className="space-y-1">
@@ -137,12 +135,12 @@ export default function DealsPage() {
           </div>
           {formError && <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{formError}</div>}
           <button type="submit" disabled={saving} className="py-2 px-4 font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50">
-            {saving ? 'Salvando…' : 'Adicionar'}
+            {saving ? 'Salvandoâ€¦' : 'Adicionar'}
           </button>
         </form>
       </section>
     </main>
-    </>
+    </AppShell>
   );
 }
 

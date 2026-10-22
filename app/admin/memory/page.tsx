@@ -1,10 +1,10 @@
 'use client';
 
-// Memória de agentes — leitura/gravação do que os agentes aprendem (por tenant).
-// GET /api/admin/memory lista; POST grava (upsert). Quando a tabela não existe
+// MemÃ³ria de agentes â€” leitura/gravaÃ§Ã£o do que os agentes aprendem (por tenant).
+// GET /api/admin/memory lista; POST grava (upsert). Quando a tabela nÃ£o existe
 // neste ambiente a API responde 503 e a tela mostra o motivo em vez de fingir.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import { useCallback, useEffect, useState } from 'react';
 
 type MemoryKind = 'decision' | 'preference' | 'lesson' | 'fact';
@@ -19,9 +19,9 @@ interface MemoryItem {
 const KINDS: MemoryKind[] = ['decision', 'preference', 'lesson', 'fact'];
 
 const kindLabel: Record<MemoryKind, string> = {
-  decision: 'decisão',
-  preference: 'preferência',
-  lesson: 'lição',
+  decision: 'decisÃ£o',
+  preference: 'preferÃªncia',
+  lesson: 'liÃ§Ã£o',
   fact: 'fato',
 };
 
@@ -32,7 +32,7 @@ export default function AdminMemoryPage() {
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Formulário de novo registro
+  // FormulÃ¡rio de novo registro
   const [kind, setKind] = useState<MemoryKind>('decision');
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
@@ -51,17 +51,17 @@ export default function AdminMemoryPage() {
         setItems([]);
       } else if (r.status === 503) {
         const d = await r.json().catch(() => null);
-        setUnavailable(d?.detail ?? 'Memória persistente indisponível neste ambiente.');
+        setUnavailable(d?.detail ?? 'MemÃ³ria persistente indisponÃ­vel neste ambiente.');
         setItems([]);
       } else if (!r.ok) {
-        setFetchError(`Falha ao carregar memórias (HTTP ${r.status}).`);
+        setFetchError(`Falha ao carregar memÃ³rias (HTTP ${r.status}).`);
         setItems([]);
       } else {
         const d = await r.json();
         setItems(Array.isArray(d?.items) ? d.items : []);
       }
     } catch {
-      setFetchError('Falha de rede ao carregar memórias.');
+      setFetchError('Falha de rede ao carregar memÃ³rias.');
       setItems([]);
     } finally {
       setLoading(false);
@@ -92,7 +92,7 @@ export default function AdminMemoryPage() {
       });
       const d = await r.json().catch(() => null);
       if (r.status === 201) {
-        setSaveNote({ ok: true, text: `Memória "${key.trim()}" salva.` });
+        setSaveNote({ ok: true, text: `MemÃ³ria "${key.trim()}" salva.` });
         setKey('');
         setValue('');
         await load();
@@ -100,7 +100,7 @@ export default function AdminMemoryPage() {
         setDenied(true);
         setSaveNote({ ok: false, text: 'Acesso negado: exige papel admin/owner.' });
       } else if (r.status === 503) {
-        setUnavailable(d?.detail ?? 'Memória persistente indisponível neste ambiente.');
+        setUnavailable(d?.detail ?? 'MemÃ³ria persistente indisponÃ­vel neste ambiente.');
       } else {
         setSaveNote({ ok: false, text: d?.error ?? `Falha ao salvar (HTTP ${r.status}).` });
       }
@@ -112,20 +112,19 @@ export default function AdminMemoryPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Memória de agentes</h1>
+          <h1 className="text-2xl font-bold text-white">MemÃ³ria de agentes</h1>
           <p className="text-sm text-gray-500">
-            O que os agentes decidiram/aprenderam neste tenant. Escopo do seu usuário; impossível
-            ler a memória de outra pessoa.
+            O que os agentes decidiram/aprenderam neste tenant. Escopo do seu usuÃ¡rio; impossÃ­vel
+            ler a memÃ³ria de outra pessoa.
           </p>
         </div>
 
         {denied && (
           <div className="mb-4 p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            Acesso negado: esta página exige papel admin/owner.
+            Acesso negado: esta pÃ¡gina exige papel admin/owner.
           </div>
         )}
         {unavailable && (
@@ -140,9 +139,9 @@ export default function AdminMemoryPage() {
         )}
 
         {loading ? (
-          <p className="text-gray-400 text-sm">Carregando memórias…</p>
+          <p className="text-gray-400 text-sm">Carregando memÃ³riasâ€¦</p>
         ) : !denied && !unavailable && !fetchError && items.length === 0 ? (
-          <p className="text-gray-500 text-sm mb-6">Nenhuma memória registrada ainda.</p>
+          <p className="text-gray-500 text-sm mb-6">Nenhuma memÃ³ria registrada ainda.</p>
         ) : null}
 
         {!loading && !denied && !unavailable && !fetchError && items.length > 0 && (
@@ -164,7 +163,7 @@ export default function AdminMemoryPage() {
 
         <section className="max-w-3xl p-4 sm:p-6 bg-[#0D0915] border border-white/10 rounded-2xl">
           <h2 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-            Registrar memória
+            Registrar memÃ³ria
           </h2>
           <form onSubmit={save} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -219,11 +218,11 @@ export default function AdminMemoryPage() {
               disabled={saving}
               className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
             >
-              {saving ? 'Salvando…' : 'Salvar'}
+              {saving ? 'Salvandoâ€¦' : 'Salvar'}
             </button>
           </form>
         </section>
       </main>
-    </>
+    </AppShell>
   );
 }

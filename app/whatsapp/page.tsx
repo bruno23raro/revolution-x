@@ -13,7 +13,7 @@
 //
 // Design: lilás + preto + branco. Nenhum segredo no front-end.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import RiskBanner from '@/components/RiskBanner';
 import type {
   ChatbotConfig,
@@ -31,8 +31,7 @@ const uniqueStepId = () => `step-${Date.now().toString(36)}${Math.floor(Math.ran
 
 export default function WhatsAppPage() {
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
@@ -52,7 +51,7 @@ export default function WhatsAppPage() {
           </div>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }
 

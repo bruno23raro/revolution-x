@@ -1,15 +1,15 @@
 'use client';
 
-// Configurações administrativas — status REAL dos subsistemas existentes.
-// Mostra somente o que o backend expõe hoje (roteador de IA, fila, memória,
-// sessão/papel). Nada é inventado: quando um subsistema está indisponível no
+// ConfiguraÃ§Ãµes administrativas â€” status REAL dos subsistemas existentes.
+// Mostra somente o que o backend expÃµe hoje (roteador de IA, fila, memÃ³ria,
+// sessÃ£o/papel). Nada Ã© inventado: quando um subsistema estÃ¡ indisponÃ­vel no
 // ambiente, a tela mostra o motivo exato.
 //
-// Configuração de IA: salva via API segura (AgentMemory no DB) — NUNCA
+// ConfiguraÃ§Ã£o de IA: salva via API segura (AgentMemory no DB) â€” NUNCA
 // no localStorage. A chave de API nunca retorna ao frontend.
 
 import { useEffect, useState } from 'react';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 interface RouterState {
   ok: boolean;
@@ -48,7 +48,7 @@ async function getJson(url: string): Promise<{ status: number; body: any }> {
   try {
     body = await r.json();
   } catch {
-    /* corpo não-JSON */
+    /* corpo nÃ£o-JSON */
   }
   return { status: r.status, body };
 }
@@ -60,7 +60,7 @@ export default function AdminSettingsPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Configuração manual de IA (persistida no DB via API, NÃO no navegador)
+  // ConfiguraÃ§Ã£o manual de IA (persistida no DB via API, NÃƒO no navegador)
   const [aiBaseUrl, setAiBaseUrl] = useState('');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiModel, setAiModel] = useState('');
@@ -100,7 +100,7 @@ export default function AdminSettingsPage() {
           count: typeof b?.count === 'number' ? b.count : null,
           detail:
             queueRes.status === 503
-              ? b?.detail ?? 'fila indisponível'
+              ? b?.detail ?? 'fila indisponÃ­vel'
               : queueRes.status === 401
                 ? 'exige papel admin/owner'
                 : null,
@@ -115,7 +115,7 @@ export default function AdminSettingsPage() {
           count: typeof b?.count === 'number' ? b.count : null,
           detail:
             memoryRes.status === 503
-              ? b?.detail ?? 'memória indisponível'
+              ? b?.detail ?? 'memÃ³ria indisponÃ­vel'
               : memoryRes.status === 401
                 ? 'exige papel admin/owner'
                 : null,
@@ -136,7 +136,7 @@ export default function AdminSettingsPage() {
     };
   }, []);
 
-  // Carregar configuração de IA do servidor (API segura — nunca do localStorage)
+  // Carregar configuraÃ§Ã£o de IA do servidor (API segura â€” nunca do localStorage)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
       if (b?.configured && b?.baseUrl) {
         setAiBaseUrl(b.baseUrl);
         setAiModel(b.model ?? '');
-        // apiKey não é retornado — campo fica vazio por segurança
+        // apiKey nÃ£o Ã© retornado â€” campo fica vazio por seguranÃ§a
       }
     })();
     return () => {
@@ -161,14 +161,14 @@ export default function AdminSettingsPage() {
     setAiError(null);
 
     if (!base || !key) {
-      setAiError('Base URL e API Key são obrigatórios.');
+      setAiError('Base URL e API Key sÃ£o obrigatÃ³rios.');
       return;
     }
 
     try {
       new URL(base);
     } catch {
-      setAiError('Base URL precisa ser uma URL válida (ex: https://api.openai.com).');
+      setAiError('Base URL precisa ser uma URL vÃ¡lida (ex: https://api.openai.com).');
       return;
     }
 
@@ -182,7 +182,7 @@ export default function AdminSettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Falha ao salvar');
       setAiSaved(true);
-      setAiApiKey(''); // limpar campo de senha após salvar
+      setAiApiKey(''); // limpar campo de senha apÃ³s salvar
       setTimeout(() => setAiSaved(false), 3000);
       // Recarregar estado do roteador
       const r = await fetch('/api/admin/chat').catch(() => null);
@@ -224,7 +224,7 @@ export default function AdminSettingsPage() {
         }
       }
     } catch {
-      setAiError('Falha ao remover configuração.');
+      setAiError('Falha ao remover configuraÃ§Ã£o.');
     } finally {
       setAiLoading(false);
     }
@@ -232,12 +232,11 @@ export default function AdminSettingsPage() {
 
   if (loading) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-4 sm:p-8 bg-[#05020A] text-gray-400 text-sm">
-          Verificando configuração…
+          Verificando configuraÃ§Ã£oâ€¦
         </main>
-      </>
+      </AppShell>
     );
   }
 
@@ -281,20 +280,19 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Configurações administrativas</h1>
+          <h1 className="text-2xl font-bold text-white">ConfiguraÃ§Ãµes administrativas</h1>
           <p className="text-sm text-gray-500">
-            Estado real dos subsistemas existentes. Somente o que o backend expõe — sem valores de
+            Estado real dos subsistemas existentes. Somente o que o backend expÃµe â€” sem valores de
             segredo.
           </p>
         </div>
 
         {session !== null && !session.authorized && (
           <div className="mb-4 p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            Faça login para ver a configuração administrativa.
+            FaÃ§a login para ver a configuraÃ§Ã£o administrativa.
           </div>
         )}
 
@@ -310,18 +308,18 @@ export default function AdminSettingsPage() {
                   ) : router.configured ? (
                     <span className="text-green-400">configurado</span>
                   ) : (
-                    <span className="text-amber-400">não configurado</span>
+                    <span className="text-amber-400">nÃ£o configurado</span>
                   ),
                 },
-                { k: 'Modelo', v: router.model ?? '—' },
-                { k: 'Origem', v: router.baseUrl ?? '—' },
+                { k: 'Modelo', v: router.model ?? 'â€”' },
+                { k: 'Origem', v: router.baseUrl ?? 'â€”' },
                 {
-                  k: 'Configuração',
+                  k: 'ConfiguraÃ§Ã£o',
                   v: router.configured ? (
                     <span className="text-gray-500">ativa no servidor</span>
                   ) : (
                     <a href="#ai-config" className="text-purple-400 hover:underline">
-                      configurar abaixo ↓
+                      configurar abaixo â†“
                     </a>
                   ),
                 },
@@ -338,14 +336,14 @@ export default function AdminSettingsPage() {
                   v: !queue.authorized ? (
                     <span className="text-amber-400">exige admin</span>
                   ) : queue.available ? (
-                    <span className="text-green-400">disponível</span>
+                    <span className="text-green-400">disponÃ­vel</span>
                   ) : (
-                    <span className="text-amber-400">indisponível</span>
+                    <span className="text-amber-400">indisponÃ­vel</span>
                   ),
                 },
-                { k: 'Tarefas', v: queue.count !== null ? String(queue.count) : '—' },
+                { k: 'Tarefas', v: queue.count !== null ? String(queue.count) : 'â€”' },
                 {
-                  k: 'Observação',
+                  k: 'ObservaÃ§Ã£o',
                   v: queue.detail ?? (queue.count !== null ? `contando ${queue.count} registro(s)` : 'ok'),
                 },
               ],
@@ -354,45 +352,45 @@ export default function AdminSettingsPage() {
 
           {memory &&
             card(
-              'Memória de agentes',
+              'MemÃ³ria de agentes',
               [
                 {
                   k: 'Status',
                   v: !memory.authorized ? (
                     <span className="text-amber-400">exige admin</span>
                   ) : memory.available ? (
-                    <span className="text-green-400">disponível</span>
+                    <span className="text-green-400">disponÃ­vel</span>
                   ) : (
-                    <span className="text-amber-400">indisponível</span>
+                    <span className="text-amber-400">indisponÃ­vel</span>
                   ),
                 },
-                { k: 'Registros', v: memory.count !== null ? String(memory.count) : '—' },
-                { k: 'Observação', v: memory.detail ?? 'ok' },
+                { k: 'Registros', v: memory.count !== null ? String(memory.count) : 'â€”' },
+                { k: 'ObservaÃ§Ã£o', v: memory.detail ?? 'ok' },
               ],
               memory.authorized ? (memory.available ? 'ok' : 'warn') : 'muted',
             )}
 
           {session &&
             card(
-              'Sessão e papel',
+              'SessÃ£o e papel',
               [
                 {
                   k: 'Autenticado',
                   v: session.authorized ? (
                     <span className="text-green-400">sim</span>
                   ) : (
-                    <span className="text-red-400">não</span>
+                    <span className="text-red-400">nÃ£o</span>
                   ),
                 },
-                { k: 'Papel', v: session.role ?? '—' },
+                { k: 'Papel', v: session.role ?? 'â€”' },
                 {
-                  k: 'Organização',
+                  k: 'OrganizaÃ§Ã£o',
                   v: session.organizationId ? (
                     <span title={session.organizationId} className="truncate">
-                      {session.organizationId.slice(0, 12)}…
+                      {session.organizationId.slice(0, 12)}â€¦
                     </span>
                   ) : (
-                    '—'
+                    'â€”'
                   ),
                 },
               ],
@@ -400,19 +398,19 @@ export default function AdminSettingsPage() {
             )}
         </div>
 
-        {/* Configuração manual de IA — salva no DB, nunca no navegador */}
+        {/* ConfiguraÃ§Ã£o manual de IA â€” salva no DB, nunca no navegador */}
         <div
           id="ai-config"
           className="mt-6 max-w-4xl p-4 bg-[#0D0915] border border-purple-500/20 rounded-2xl"
         >
           <div className="flex items-center gap-2 mb-3">
             <span className="h-2 w-2 rounded-full bg-purple-400" />
-            <h2 className="text-sm font-semibold text-gray-200">Configuração manual de IA</h2>
+            <h2 className="text-sm font-semibold text-gray-200">ConfiguraÃ§Ã£o manual de IA</h2>
           </div>
           <p className="text-xs text-gray-500 mb-4">
-            Salve uma chave de API manualmente. A configuração é armazenada de forma segura no
-            banco de dados (RLS ativo) e usada pelo chat quando o roteador do servidor não está
-            configurado. A chave <strong>nunca</strong> é retornada ao navegador.
+            Salve uma chave de API manualmente. A configuraÃ§Ã£o Ã© armazenada de forma segura no
+            banco de dados (RLS ativo) e usada pelo chat quando o roteador do servidor nÃ£o estÃ¡
+            configurado. A chave <strong>nunca</strong> Ã© retornada ao navegador.
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
@@ -435,7 +433,7 @@ export default function AdminSettingsPage() {
                 className="w-full px-3 py-2 text-sm bg-black/50 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <p className="text-xs text-gray-600 mt-1">
-                Campo limpo após salvar com sucesso.
+                Campo limpo apÃ³s salvar com sucesso.
               </p>
             </div>
             <div>
@@ -456,7 +454,7 @@ export default function AdminSettingsPage() {
               disabled={aiLoading}
               className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
             >
-              {aiSaved ? '✓ Salvo!' : aiLoading ? 'Salvando…' : 'Salvar configuração'}
+              {aiSaved ? 'âœ“ Salvo!' : aiLoading ? 'Salvandoâ€¦' : 'Salvar configuraÃ§Ã£o'}
             </button>
             <button
               onClick={clearAiConfig}
@@ -467,18 +465,18 @@ export default function AdminSettingsPage() {
             </button>
           </div>
           <p className="mt-2 text-xs text-gray-600">
-            ⚠ Para ativação global no servidor, configure as variáveis de ambiente{' '}
+            âš  Para ativaÃ§Ã£o global no servidor, configure as variÃ¡veis de ambiente{' '}
             <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
             <code className="text-purple-300">OMNIROUTER_API_KEY</code> no Hostinger hpanel.
           </p>
         </div>
 
         <p className="text-xs text-gray-600 mt-6 max-w-4xl">
-          Se o roteador ou a fila estiverem &ldquo;indisponível&rdquo;, normalmente falta credencial
-          no ambiente do servidor (ex.: chave do OmniRouter) ou a migration da fila ainda não foi
-          aplicada. Nenhuma chave ou segredo é exibido nesta tela.
+          Se o roteador ou a fila estiverem &ldquo;indisponÃ­vel&rdquo;, normalmente falta credencial
+          no ambiente do servidor (ex.: chave do OmniRouter) ou a migration da fila ainda nÃ£o foi
+          aplicada. Nenhuma chave ou segredo Ã© exibido nesta tela.
         </p>
       </main>
-    </>
+    </AppShell>
   );
 }

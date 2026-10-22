@@ -1,11 +1,11 @@
 'use client';
 
-// Tarefas — fila persistente de agentes (progresso REAL, sem simulação).
-// Lê /api/admin/tasks e /api/admin/tasks/[id]. Quando a fila não existe neste
+// Tarefas â€” fila persistente de agentes (progresso REAL, sem simulaÃ§Ã£o).
+// LÃª /api/admin/tasks e /api/admin/tasks/[id]. Quando a fila nÃ£o existe neste
 // ambiente (migration 014 pendente) a API responde 503 e a tela mostra o motivo
 // exato em vez de inventar dados.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import { useCallback, useEffect, useState } from 'react';
 
 type TaskStatus =
@@ -39,9 +39,9 @@ interface TaskDetail extends TaskSummary {
 const FILTERS: Array<{ value: TaskStatus | ''; label: string }> = [
   { value: '', label: 'todas' },
   { value: 'queued', label: 'na fila' },
-  { value: 'running', label: 'em execução' },
+  { value: 'running', label: 'em execuÃ§Ã£o' },
   { value: 'waiting_human', label: 'aguardando humano' },
-  { value: 'completed', label: 'concluída' },
+  { value: 'completed', label: 'concluÃ­da' },
   { value: 'failed', label: 'falhou' },
   { value: 'canceled', label: 'cancelada' },
 ];
@@ -57,9 +57,9 @@ const statusColor: Record<TaskStatus, string> = {
 
 const statusLabel: Record<TaskStatus, string> = {
   queued: 'na fila',
-  running: 'em execução',
+  running: 'em execuÃ§Ã£o',
   waiting_human: 'aguardando humano',
-  completed: 'concluída',
+  completed: 'concluÃ­da',
   failed: 'falhou',
   canceled: 'cancelada',
 };
@@ -86,7 +86,7 @@ export default function AdminTasksPage() {
         setItems([]);
       } else if (r.status === 503) {
         const d = await r.json().catch(() => null);
-        setUnavailable(d?.detail ?? 'Fila persistente indisponível neste ambiente.');
+        setUnavailable(d?.detail ?? 'Fila persistente indisponÃ­vel neste ambiente.');
         setItems([]);
       } else if (!r.ok) {
         setFetchError(`Falha ao carregar tarefas (HTTP ${r.status}).`);
@@ -112,7 +112,7 @@ export default function AdminTasksPage() {
     if (!r) return;
     if (r.status === 503) {
       const d = await r.json().catch(() => null);
-      setUnavailable(d?.detail ?? 'Fila persistente indisponível neste ambiente.');
+      setUnavailable(d?.detail ?? 'Fila persistente indisponÃ­vel neste ambiente.');
       return;
     }
     if (!r.ok) return;
@@ -121,14 +121,13 @@ export default function AdminTasksPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-white">Tarefas</h1>
             <p className="text-sm text-gray-500">
-              Fila persistente de tarefas de agentes — progresso real, isolado por tenant.
+              Fila persistente de tarefas de agentes â€” progresso real, isolado por tenant.
             </p>
           </div>
           <select
@@ -146,7 +145,7 @@ export default function AdminTasksPage() {
 
         {denied && (
           <div className="mb-4 p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            Acesso negado: esta página exige papel admin/owner.
+            Acesso negado: esta pÃ¡gina exige papel admin/owner.
           </div>
         )}
         {unavailable && (
@@ -161,7 +160,7 @@ export default function AdminTasksPage() {
         )}
 
         {loading ? (
-          <p className="text-gray-400 text-sm">Carregando tarefas…</p>
+          <p className="text-gray-400 text-sm">Carregando tarefasâ€¦</p>
         ) : !denied && !unavailable && !fetchError && items.length === 0 ? (
           <p className="text-gray-500 text-sm">Nenhuma tarefa registrada{filter ? ` para "${statusLabel[filter]}"` : ''}.</p>
         ) : (
@@ -186,8 +185,8 @@ export default function AdminTasksPage() {
                   />
                 </div>
                 <div className="mt-1 text-xs text-gray-500">
-                  {t.progress}%{t.modelUsed ? ` · ${t.modelUsed}` : ''}
-                  {t.completedAt ? ` · concluída em ${new Date(t.completedAt).toLocaleString('pt-BR')}` : ''}
+                  {t.progress}%{t.modelUsed ? ` Â· ${t.modelUsed}` : ''}
+                  {t.completedAt ? ` Â· concluÃ­da em ${new Date(t.completedAt).toLocaleString('pt-BR')}` : ''}
                 </div>
               </li>
             ))}
@@ -221,7 +220,7 @@ export default function AdminTasksPage() {
                               : 'text-gray-600'
                       }
                     >
-                      {s.status === 'done' ? '✔' : s.status === 'running' ? '▶' : s.status === 'failed' ? '✖' : '○'}
+                      {s.status === 'done' ? 'âœ”' : s.status === 'running' ? 'â–¶' : s.status === 'failed' ? 'âœ–' : 'â—‹'}
                     </span>
                     {s.name}
                   </li>
@@ -237,6 +236,6 @@ export default function AdminTasksPage() {
           </div>
         )}
       </main>
-    </>
+    </AppShell>
   );
 }

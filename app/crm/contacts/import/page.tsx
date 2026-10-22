@@ -1,16 +1,16 @@
 'use client';
 
-// FASE 17 â€” ImportaÃ§Ã£o CSV de contatos (Â§8), assistente de 3 etapas.
+// FASE 17 — Importação CSV de contatos (§8), assistente de 3 etapas.
 //
-// Etapa 1: arquivo/colagem + delimitador + anÃ¡lise â†’ sugestÃ£o de mapeamento.
-// Etapa 2: mapeamento editÃ¡vel + "Verificar" (dryRun â€” NADA Ã© gravado).
-// Etapa 3: "Importar" (commit) â†’ sÃ³ linhas vÃ¡lidas e nÃ£o duplicadas.
+// Etapa 1: arquivo/colagem + delimitador + análise → sugestão de mapeamento.
+// Etapa 2: mapeamento editável + "Verificar" (dryRun — NADA é gravado).
+// Etapa 3: "Importar" (commit) → só linhas válidas e não duplicadas.
 //
-// Regras duras (Â§8/Â§11):
-//   * A importaÃ§Ã£o NUNCA dispara campanha/mensagem (operaÃ§Ã£o separada).
+// Regras duras (§8/§11):
+//   * A importação NUNCA dispara campanha/mensagem (operação separada).
 //   * Consentimento fail-closed: linha sem consentimento comprovado nasce
-//     `consentMarketing=false` e NÃƒO Ã© elegÃ­vel para marketing.
-//   * O mapeamento Ã© allow-list server-side (campos protegidos nunca entram).
+//     `consentMarketing=false` e NÃO é elegível para marketing.
+//   * O mapeamento é allow-list server-side (campos protegidos nunca entram).
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
@@ -30,11 +30,11 @@ const TARGETS: Array<{ v: Target; label: string }> = [
   { v: 'company', label: 'Empresa' },
   { v: 'source', label: 'Origem' },
   { v: 'tags', label: 'Tags' },
-  { v: 'preferences', label: 'PreferÃªncias' },
+  { v: 'preferences', label: 'Preferências' },
   { v: 'consentMarketing', label: 'Consentimento de marketing' },
   { v: 'consentSource', label: 'Origem do consentimento' },
   { v: 'optOut', label: 'Opt-out (baixa)' },
-  { v: 'custom', label: 'Campo extra (nÃ£o conhecido)' },
+  { v: 'custom', label: 'Campo extra (não conhecido)' },
 ];
 
 interface AnalyzeResult {
@@ -80,7 +80,7 @@ export default function CsvImportPage() {
     setFileName(f.name);
     f.text()
       .then(setCsvText)
-      .catch(() => setError('NÃ£o foi possÃ­vel ler o arquivo.'));
+      .catch(() => setError('Não foi possível ler o arquivo.'));
   };
 
   async function post(body: Record<string, unknown>): Promise<Record<string, unknown> | null> {
@@ -96,11 +96,11 @@ export default function CsvImportPage() {
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
       const codes: Record<string, string> = {
-        csv_required: 'Informe o conteÃºdo do CSV (arquivo ou colagem).',
-        mapping_invalid_json: 'Mapeamento invÃ¡lido (JSON malformado).',
-        invalid_json: 'Corpo da requisiÃ§Ã£o invÃ¡lido.',
+        csv_required: 'Informe o conteúdo do CSV (arquivo ou colagem).',
+        mapping_invalid_json: 'Mapeamento inválido (JSON malformado).',
+        invalid_json: 'Corpo da requisição inválido.',
       };
-      setError(codes[data.error as string] ?? data.error ?? 'Falha na importaÃ§Ã£o.');
+      setError(codes[data.error as string] ?? data.error ?? 'Falha na importação.');
       return null;
     }
     return data;
@@ -167,7 +167,7 @@ export default function CsvImportPage() {
         <main className="min-h-screen p-8 bg-[#05020A]">
           <BackToContacts />
           <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
-            FaÃ§a login para importar contatos. <Link href="/login" className="text-purple-400">Entrar</Link>
+            Faça login para importar contatos. <Link href="/login" className="text-purple-400">Entrar</Link>
           </div>
         </main>
       </AppShell>
@@ -178,10 +178,10 @@ export default function CsvImportPage() {
     <AppShell>
       <main className="min-h-screen p-8 bg-[#05020A] max-w-5xl mx-auto">
         <BackToContacts />
-        <h1 className="text-2xl font-bold text-white mb-1">ImportaÃ§Ã£o de contatos (CSV)</h1>
+        <h1 className="text-2xl font-bold text-white mb-1">Importação de contatos (CSV)</h1>
         <p className="text-sm text-gray-400 mb-6">
-          A importaÃ§Ã£o cria contatos na sua organizaÃ§Ã£o e NUNCA dispara mensagens: a fila de
-          campanha Ã© uma operaÃ§Ã£o separada (seÃ§Ãµes 8 e 11).
+          A importação cria contatos na sua organização e NUNCA dispara mensagens: a fila de
+          campanha é uma operação separada (seções 8 e 11).
         </p>
 
         {/* Etapas */}
@@ -190,7 +190,7 @@ export default function CsvImportPage() {
             const idx = ['upload', 'mapping', 'check', 'done'].indexOf(step);
             const active = s === step;
             const done = i < idx;
-            const labels = ['Arquivo', 'Mapeamento', 'VerificaÃ§Ã£o', 'Resultado'];
+            const labels = ['Arquivo', 'Mapeamento', 'Verificação', 'Resultado'];
             return (
               <li
                 key={s}
@@ -214,7 +214,7 @@ export default function CsvImportPage() {
           </div>
         )}
 
-        {/* â”€â”€ Etapa 1: arquivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Etapa 1: arquivo ─────────────────────────────────────────────── */}
         {step === 'upload' && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -230,17 +230,17 @@ export default function CsvImportPage() {
             <textarea
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
-              placeholder="â€¦ou cole o conteÃºdo do CSV aqui (linha 1 = cabeÃ§alhos)."
+              placeholder="…ou cole o conteúdo do CSV aqui (linha 1 = cabeçalhos)."
               rows={6}
               className={inputCls}
             />
             <div className="flex items-center gap-3">
               <label className="text-sm text-gray-300">Delimitador</label>
               <select value={delimiter} onChange={(e) => setDelimiter(e.target.value)} className={selectCls}>
-                <option value="auto">AutomÃ¡tico</option>
-                <option value=",">VÃ­rgula (,)</option>
-                <option value=";">Ponto e vÃ­rgula (;)</option>
-                <option value={String.fromCharCode(9)}>TabulaÃ§Ã£o (â‡¥)</option>
+                <option value="auto">Automático</option>
+                <option value=",">Vírgula (,)</option>
+                <option value=";">Ponto e vírgula (;)</option>
+                <option value={String.fromCharCode(9)}>Tabulação (⇥)</option>
                 <option value="|">Pipe (|)</option>
               </select>
               <button
@@ -248,19 +248,19 @@ export default function CsvImportPage() {
                 disabled={busy || csvText.trim().length === 0}
                 className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
               >
-                {busy ? 'Analisandoâ€¦' : 'Analisar CSV'}
+                {busy ? 'Analisando…' : 'Analisar CSV'}
               </button>
             </div>
           </div>
         )}
 
-        {/* â”€â”€ Etapa 2: mapeamento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Etapa 2: mapeamento ──────────────────────────────────────────── */}
         {step === 'mapping' && meta && (
           <div className="space-y-5">
             <div>
               <div className="text-sm text-gray-400 mb-2">
-                Delimitador detectado: <code className="text-purple-300">{meta.delimiter === '\t' ? 'tabulaÃ§Ã£o' : `'${meta.delimiter}'`}</code>
-                {' Â· '}Colunas: {meta.headers.length}
+                Delimitador detectado: <code className="text-purple-300">{meta.delimiter === '\t' ? 'tabulação' : `'${meta.delimiter}'`}</code>
+                {' · '}Colunas: {meta.headers.length}
               </div>
               <div className="border border-white/10 rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
@@ -292,7 +292,7 @@ export default function CsvImportPage() {
               </div>
               {meta.preview.length > 0 && (
                 <details className="text-sm text-gray-400">
-                  <summary className="cursor-pointer text-purple-400">PrÃ©via (primeiras {meta.preview.length} linhas)</summary>
+                  <summary className="cursor-pointer text-purple-400">Prévia (primeiras {meta.preview.length} linhas)</summary>
                   <pre className="mt-2 p-3 bg-black/40 rounded-lg overflow-x-auto text-xs text-gray-300">
                     {JSON.stringify(meta.preview, null, 2)}
                   </pre>
@@ -300,13 +300,13 @@ export default function CsvImportPage() {
               )}
             </div>
             <div className="p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-              Consentimento (fail-closed): contatos importados SEM a coluna Â«Consentimento de
-              marketingÂ» comprovada nascem <strong>nÃ£o elegÃ­veis</strong> para campanhas de
-              marketing. A importaÃ§Ã£o nunca dispara mensagens.
+              Consentimento (fail-closed): contatos importados SEM a coluna «Consentimento de
+              marketing» comprovada nascem <strong>não elegíveis</strong> para campanhas de
+              marketing. A importação nunca dispara mensagens.
             </div>
             <div className="flex gap-2">
               <button onClick={check} disabled={busy} className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50">
-                {busy ? 'Verificandoâ€¦' : 'Verificar (nada Ã© gravado)'}
+                {busy ? 'Verificando…' : 'Verificar (nada é gravado)'}
               </button>
               <button onClick={() => setStep('upload')} className="px-4 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5">
                 Voltar
@@ -315,13 +315,13 @@ export default function CsvImportPage() {
           </div>
         )}
 
-        {/* â”€â”€ Etapa 3: verificaÃ§Ã£o (dryRun) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Etapa 3: verificação (dryRun) ────────────────────────────────── */}
         {step === 'check' && dryRun && (
           <div className="space-y-5">
-            <SummaryBlock summary={dryRun.summary} title="Resultado da verificaÃ§Ã£o (nenhum registro foi gravado)" />
+            <SummaryBlock summary={dryRun.summary} title="Resultado da verificação (nenhum registro foi gravado)" />
             {dryRun.errorReport && dryRun.errorReport.split('\n').length > 1 && (
               <div>
-                <div className="text-sm text-gray-400 mb-2">RelatÃ³rio de erros (baixe para corrigir o arquivo-fonte):</div>
+                <div className="text-sm text-gray-400 mb-2">Relatório de erros (baixe para corrigir o arquivo-fonte):</div>
                 <pre className="p-3 bg-black/40 rounded-lg overflow-x-auto text-xs text-gray-300 max-h-64">
                   {dryRun.errorReport.split('\n').slice(0, 200).join('\n')}
                 </pre>
@@ -329,13 +329,13 @@ export default function CsvImportPage() {
                   onClick={() => downloadErrorReport(dryRun.errorReport)}
                   className="mt-2 px-3 py-1.5 text-xs rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
                 >
-                  Baixar relatÃ³rio (CSV)
+                  Baixar relatório (CSV)
                 </button>
               </div>
             )}
             <div className="flex gap-2">
               <button onClick={commit} disabled={busy || dryRun.summary.valid === 0} className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50">
-                {busy ? 'Importandoâ€¦' : `Importar ${dryRun.summary.valid} contato(s) vÃ¡lido(s)`}
+                {busy ? 'Importando…' : `Importar ${dryRun.summary.valid} contato(s) válido(s)`}
               </button>
               <button onClick={() => setStep('mapping')} className="px-4 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5">
                 Ajustar mapeamento
@@ -344,14 +344,14 @@ export default function CsvImportPage() {
           </div>
         )}
 
-        {/* â”€â”€ Etapa 4: resultado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Etapa 4: resultado ──────────────────────────────────────────── */}
         {step === 'done' && result && (
           <div className="space-y-5">
-            <SummaryBlock summary={result.summary} title="ImportaÃ§Ã£o concluÃ­da" extra={`Gravados: ${result.inserted} contato(s).`} />
+            <SummaryBlock summary={result.summary} title="Importação concluída" extra={`Gravados: ${result.inserted} contato(s).`} />
             <div className="p-3 text-sm text-green-300 bg-green-400/10 border border-green-400/20 rounded-lg">
-              Os contatos estÃ£o disponÃ­veis no <Link href="/crm/contacts" className="text-purple-300 underline">CRM â†’ Contatos</Link>.
-              Para enviar mensagens, crie uma campanha em <Link href="/campaigns" className="text-purple-300 underline">Campanhas</Link> â€” a
-              importaÃ§Ã£o nunca dispara envio.
+              Os contatos estão disponíveis no <Link href="/crm/contacts" className="text-purple-300 underline">CRM → Contatos</Link>.
+              Para enviar mensagens, crie uma campanha em <Link href="/campaigns" className="text-purple-300 underline">Campanhas</Link> — a
+              importação nunca dispara envio.
             </div>
             <button onClick={() => { setStep('upload'); setMeta(null); setDryRun(null); setResult(null); setMapping({}); setCsvText(''); setFileName(''); }} className="px-4 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5">
               Importar outro arquivo
@@ -366,13 +366,13 @@ export default function CsvImportPage() {
 function SummaryBlock({ summary, title, extra }: { summary: Summary; title: string; extra?: string }) {
   return (
     <div>
-      <div className="text-sm text-gray-400 mb-2">{title}{extra ? ` â€” ${extra}` : ''}</div>
+      <div className="text-sm text-gray-400 mb-2">{title}{extra ? ` — ${extra}` : ''}</div>
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
         {[
           ['Linha', summary.total],
-          ['VÃ¡lidas', summary.valid],
+          ['Válidas', summary.valid],
           ['Duplicadas', summary.duplicates],
-          ['InvÃ¡lidas', summary.invalid],
+          ['Inválidas', summary.invalid],
           ['Puladas', summary.skipped],
         ].map(([label, n]) => (
           <div key={label as string} className="p-3 bg-black/40 border border-white/10 rounded-lg">
@@ -382,14 +382,14 @@ function SummaryBlock({ summary, title, extra }: { summary: Summary; title: stri
         ))}
       </div>
       {summary.truncated && (
-        <div className="mt-2 text-xs text-amber-300">O arquivo excedeu o teto de linhas (20.000): sÃ³ a parte inicial foi processada.</div>
+        <div className="mt-2 text-xs text-amber-300">O arquivo excedeu o teto de linhas (20.000): só a parte inicial foi processada.</div>
       )}
     </div>
   );
 }
 
 function BackToContacts() {
-  return <Link href="/crm/contacts" className="text-sm text-purple-400 hover:text-purple-300">â† Voltar aos contatos</Link>;
+  return <Link href="/crm/contacts" className="text-sm text-purple-400 hover:text-purple-300">← Voltar aos contatos</Link>;
 }
 
 function downloadErrorReport(report: string) {

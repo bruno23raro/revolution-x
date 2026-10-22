@@ -126,7 +126,7 @@ function SideLink({
       className={`block rounded-lg px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
         active
           ? 'border border-purple-500/30 bg-purple-600/20 text-white'
-          : 'border border-transparent text-gray-400 hover:bg-white/5 hover:text-white'
+          : 'border-transparent text-gray-400 hover:bg-white/5 hover:text-white transition-colors'
       }`}
     >
       {item.label}
@@ -205,7 +205,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="px-3 pb-1 text-[10px] uppercase tracking-wider text-gray-400">
             {g.label}
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {g.items.map((it) => (
               <SideLink key={it.href} item={it} pathname={pathname} onNavigate={closeMobile} />
             ))}

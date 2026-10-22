@@ -1,19 +1,19 @@
 'use client';
 
-// Facebook â€” FASE 2 UI (canais principais).
+// Facebook — FASE 2 UI (canais principais).
 //
-//  â€¢ PublicaÃ§Ã£o e agendamento de posts de PÃ¡gina pela Graph API oficial da
+//  • Publicação e agendamento de posts de Página pela Graph API oficial da
 //    Meta (/api/facebook/publish): 10 min a 75 dias.
-//  â€¢ FASE 3: tracking de anÃºncios em tempo real via Marketing API
-//    (Ad Manager, /api/meta/ads-insights) â€” exige o ID da conta de
-//    anÃºncios em /integrations (Meta Ads) e a permissÃ£o ads_read.
-//  â€¢ CondiÃ§Ã£o real da PÃ¡gina (vem da conexÃ£o Meta, /api/integrations/meta).
-//  â€¢ "Sem API / AvanÃ§ado": anÃºncios em Marketplace e grupos NÃƒO existem na
-//    API oficial â€” sÃ£o DECLARADOS + aviso de risco (browser automation);
-//    o produto guarda apenas o parÃ¢metro e nÃ£o executa a coleta nÃ£o-oficial
-//    em silÃªncio (executor ainda ausente).
+//  • FASE 3: tracking de anúncios em tempo real via Marketing API
+//    (Ad Manager, /api/meta/ads-insights) — exige o ID da conta de
+//    anúncios em /integrations (Meta Ads) e a permissão ads_read.
+//  • Condição real da Página (vem da conexão Meta, /api/integrations/meta).
+//  • "Sem API / Avançado": anúncios em Marketplace e grupos NÃO existem na
+//    API oficial — são DECLARADOS + aviso de risco (browser automation);
+//    o produto guarda apenas o parâmetro e não executa a coleta não-oficial
+//    em silêncio (executor ainda ausente).
 //
-// Design: lilÃ¡s + preto + branco. Nenhum segredo no front-end.
+// Design: lilás + preto + branco. Nenhum segredo no front-end.
 
 import AppShell from '@/components/AppShell';
 import ApiBadge from '@/components/ApiBadge';
@@ -29,7 +29,7 @@ export default function FacebookPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Facebook</h1>
             <p className="text-sm text-gray-400">
-              PublicaÃ§Ã£o e agendamento de posts de PÃ¡gina â€” 100% pela API oficial da Meta (usa a conexÃ£o
+              Publicação e agendamento de posts de Página — 100% pela API oficial da Meta (usa a conexão
               do OAuth de /integrations).
             </p>
           </div>
@@ -47,7 +47,7 @@ export default function FacebookPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/* CondiÃ§Ã£o real da PÃ¡gina                                             */
+/* Condição real da Página                                             */
 /* ------------------------------------------------------------------ */
 
 function ConnectionStatusCard() {
@@ -61,7 +61,7 @@ function ConnectionStatusCard() {
     fetch('/api/integrations/meta')
       .then(async (r) => {
         if (r.status === 401) {
-          setState({ loading: false, msg: 'FaÃ§a login para ver a conexÃ£o.', hasPage: false });
+          setState({ loading: false, msg: 'Faça login para ver a conexão.', hasPage: false });
           return;
         }
         const d = await r.json().catch(() => ({}));
@@ -72,7 +72,7 @@ function ConnectionStatusCard() {
           hasPage: Boolean(integ?.metaPageId && integ?.status !== 'DISCONNECTED'),
         });
       })
-      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexÃ£o.', hasPage: false }));
+      .catch(() => setState({ loading: false, msg: 'Falha de rede ao carregar a conexão.', hasPage: false }));
   };
 
   useEffect(load, []);
@@ -80,24 +80,24 @@ function ConnectionStatusCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">ConexÃ£o</h2>
+        <h2 className="text-sm font-bold text-gray-200">Conexão</h2>
         <ApiBadge layer="official" />
       </div>
       {state.loading ? (
-        <p className="text-xs text-gray-400">Carregandoâ€¦</p>
+        <p className="text-xs text-gray-400">Carregando…</p>
       ) : state.msg ? (
         <p className="text-xs text-amber-300">{state.msg}</p>
       ) : state.hasPage ? (
-        <p className="text-xs text-green-300">PÃ¡gina do Facebook vinculada via OAuth. PublicaÃ§Ã£o disponÃ­vel.</p>
+        <p className="text-xs text-green-300">Página do Facebook vinculada via OAuth. Publicação disponível.</p>
       ) : (
         <div className="text-xs text-gray-400">
-          Nenhuma PÃ¡gina do Facebook conectada ainda.
+          Nenhuma Página do Facebook conectada ainda.
           <div className="mt-2">
             <a
               href="/integrations"
               className="inline-block px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
             >
-              Conectar via OAuth â†’
+              Conectar via OAuth →
             </a>
           </div>
         </div>
@@ -117,7 +117,7 @@ function PublishCard() {
   const [scheduleAt, setScheduleAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // MULTICONTAS â€” seletor de conta Meta (PÃ¡ginas), sÃ³ com 2+.
+  // MULTICONTAS — seletor de conta Meta (Páginas), só com 2+.
   const [metaList, setMetaList] = useState<Array<{ id: string; provider: string; metaPageId: string | null; displayName?: string | null }>>([]);
   const [account, setAccount] = useState('');
 
@@ -134,7 +134,7 @@ function PublishCard() {
     };
   }, []);
 
-  // O resolver de PÃ¡gina ancora em provider facebook|whatsapp.
+  // O resolver de Página ancora em provider facebook|whatsapp.
   const fbAccounts = metaList.filter((i) => i.provider === 'facebook' || i.provider === 'whatsapp');
 
   const minLocal = () => toLocalInputValue(new Date(Date.now() + 11 * 60 * 1000));
@@ -149,7 +149,7 @@ function PublishCard() {
       if (message.trim()) body.message = message.trim();
       if (link.trim()) body.link = link.trim();
       if (schedule && scheduleAt) body.scheduledAt = new Date(scheduleAt).toISOString();
-      if (account) body.account = account; // MULTICONTAS â€” ancora a PÃ¡gina escolhida
+      if (account) body.account = account; // MULTICONTAS — ancora a Página escolhida
 
       const r = await fetch('/api/facebook/publish', {
         method: 'POST',
@@ -161,21 +161,21 @@ function PublishCard() {
         setMsg({
           ok: true,
           text: schedule
-            ? `Agendado para ${new Date(scheduleAt).toLocaleString('pt-BR')} (post ${d.postId ?? 'â€”'}).`
-            : `Publicado na PÃ¡gina com sucesso (post ${d.postId ?? 'â€”'}).`,
+            ? `Agendado para ${new Date(scheduleAt).toLocaleString('pt-BR')} (post ${d.postId ?? '—'}).`
+            : `Publicado na Página com sucesso (post ${d.postId ?? '—'}).`,
         });
       } else if (r.status === 409 && d.error === 'no_fb_page') {
-        setMsg({ ok: false, text: 'Nenhuma PÃ¡gina do Facebook vinculada. Conecte via OAuth em /integrations.' });
+        setMsg({ ok: false, text: 'Nenhuma Página do Facebook vinculada. Conecte via OAuth em /integrations.' });
       } else if (r.status === 409) {
-        setMsg({ ok: false, text: 'Meta nÃ£o conectada neste tenant. Conecte em /integrations.' });
+        setMsg({ ok: false, text: 'Meta não conectada neste tenant. Conecte em /integrations.' });
       } else if (r.status === 503) {
-        setMsg({ ok: false, text: 'Meta nÃ£o configurada no servidor (META_* / token ausentes) â€” item P0 do hpanel.' });
+        setMsg({ ok: false, text: 'Meta não configurada no servidor (META_* / token ausentes) — item P0 do hpanel.' });
       } else if (r.status === 400) {
-        setMsg({ ok: false, text: d.detail ? `Entrada invÃ¡lida: ${d.detail}` : 'Entrada invÃ¡lida.' });
+        setMsg({ ok: false, text: d.detail ? `Entrada inválida: ${d.detail}` : 'Entrada inválida.' });
       } else if (r.status === 401) {
-        setMsg({ ok: false, text: 'FaÃ§a login para publicar.' });
+        setMsg({ ok: false, text: 'Faça login para publicar.' });
       } else if (r.status === 502) {
-        setMsg({ ok: false, text: d.detail ? `A API da Meta rejeitou: ${d.detail}` : 'A API da Meta nÃ£o respondeu (502).' });
+        setMsg({ ok: false, text: d.detail ? `A API da Meta rejeitou: ${d.detail}` : 'A API da Meta não respondeu (502).' });
       } else {
         setMsg({ ok: false, text: `Falha ao publicar (HTTP ${r.status}).` });
       }
@@ -189,21 +189,21 @@ function PublishCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">Publicar ou agendar na PÃ¡gina</h2>
+        <h2 className="text-sm font-bold text-gray-200">Publicar ou agendar na Página</h2>
         <ApiBadge layer="official" />
       </div>
 
       <div className="space-y-3">
         <label className="block text-xs text-gray-400">
           Texto do post <span className="text-gray-400">(ou um link)</span>
-          <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Escreva aquiâ€¦" className={inputCls} />
+          <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Escreva aqui…" className={inputCls} />
         </label>
 
         {fbAccounts.length > 1 && (
           <label className="block text-xs text-gray-400">
-            PÃ¡gina <span className="text-gray-400">(publica nesta PÃ¡gina)</span>
+            Página <span className="text-gray-400">(publica nesta Página)</span>
             <select value={account} onChange={(e) => setAccount(e.target.value)} className={inputCls + ' !mt-1'}>
-              <option value="" className="bg-[#0D0915]">PadrÃ£o (mais recente)</option>
+              <option value="" className="bg-[#0D0915]">Padrão (mais recente)</option>
               {fbAccounts.map((i) => (
                 <option key={i.id} value={i.id} className="bg-[#0D0915]">
                   {i.displayName || i.metaPageId || i.provider}
@@ -215,7 +215,7 @@ function PublishCard() {
 
         <label className="block text-xs text-gray-400">
           Link (URL) <span className="text-gray-400">(opcional)</span>
-          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://â€¦" className={inputCls} />
+          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" className={inputCls} />
         </label>
 
         <div className="flex items-center gap-3">
@@ -241,7 +241,7 @@ function PublishCard() {
             disabled={busy || !canSubmit}
             className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
           >
-            {busy ? 'Enviandoâ€¦' : schedule ? 'Agendar' : 'Publicar agora'}
+            {busy ? 'Enviando…' : schedule ? 'Agendar' : 'Publicar agora'}
           </button>
           <span className="text-xs text-gray-400">Agendamento: de 10 min a 75 dias.</span>
         </div>
@@ -263,18 +263,18 @@ function PublishCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* FASE 3 Â· slice 1 â€” Tracking de anÃºncios (Meta Ad Manager)          */
+/* FASE 3 · slice 1 — Tracking de anúncios (Meta Ad Manager)          */
 /* ------------------------------------------------------------------ */
 
 const TIME_RANGES: Array<{ value: string; label: string }> = [
   { value: 'today', label: 'Hoje' },
   { value: 'yesterday', label: 'Ontem' },
-  { value: 'last_7d', label: 'Ãšltimos 7 dias' },
-  { value: 'last_28d', label: 'Ãšltimos 28 dias' },
-  { value: 'this_month', label: 'Este mÃªs' },
-  { value: 'last_month', label: 'MÃªs passado' },
-  { value: 'last_quarter', label: 'Ãšltimo trimestre' },
-  { value: 'last_year', label: 'Ãšltimo ano' },
+  { value: 'last_7d', label: 'Últimos 7 dias' },
+  { value: 'last_28d', label: 'Últimos 28 dias' },
+  { value: 'this_month', label: 'Este mês' },
+  { value: 'last_month', label: 'Mês passado' },
+  { value: 'last_quarter', label: 'Último trimestre' },
+  { value: 'last_year', label: 'Último ano' },
 ];
 
 function AdsInsightsCard() {
@@ -290,7 +290,7 @@ function AdsInsightsCard() {
       const d = await r.json().catch(() => ({}));
       if (r.ok && Array.isArray(d.insights)) {
         if (d.insights.length === 0) {
-          setOut(`Conta de anÃºncios ${d.adAccountId ?? 'â€”'} nÃ£o teve registros no perÃ­odo. Nada de gasto ou impressÃµes neste intervalo.`);
+          setOut(`Conta de anúncios ${d.adAccountId ?? '—'} não teve registros no período. Nada de gasto ou impressões neste intervalo.`);
         } else {
           setOut(
             d.insights
@@ -298,28 +298,28 @@ function AdsInsightsCard() {
                 Object.entries(v)
                   .filter(([, x]) => x !== undefined && x !== null)
                   .map(([k, x]) => `${k}=${String(x)}`)
-                  .join(' Â· '),
+                  .join(' · '),
               )
               .join('\n'),
           );
         }
       } else if (r.status === 409 && d.error === 'not_connected') {
-        setOut(`NÃ£o conectado. ${d.detail ?? ''}`);
+        setOut(`Não conectado. ${d.detail ?? ''}`);
       } else if (r.status === 409 && d.error === 'no_ad_account') {
-        setOut(`ID da conta de anÃºncios ausente. ${d.detail ?? ''}`);
+        setOut(`ID da conta de anúncios ausente. ${d.detail ?? ''}`);
       } else if (r.status === 409) {
         setOut(`Credencial Meta incompleta: ${d.error ?? 'erro'}. ${d.detail ?? ''}`);
       } else if (r.status === 503) {
-        setOut(d.detail ?? 'MemÃ³ria/fila de integraÃ§Ãµes indisponÃ­vel no servidor (503).');
+        setOut(d.detail ?? 'Memória/fila de integrações indisponível no servidor (503).');
       } else if (r.status === 502) {
-        setOut(`A API da Meta rejeitou (502): ${d.detail ?? 'sem detalhe'}. Verifique a permissÃ£o ads_read e o ID da conta.`);
+        setOut(`A API da Meta rejeitou (502): ${d.detail ?? 'sem detalhe'}. Verifique a permissão ads_read e o ID da conta.`);
       } else if (r.status === 401) {
-        setOut('FaÃ§a login para consultar os anÃºncios.');
+        setOut('Faça login para consultar os anúncios.');
       } else {
         setOut(`Falha (HTTP ${r.status}). ${d.detail ?? ''}`);
       }
     } catch {
-      setOut('Falha de rede ao consultar os anÃºncios.');
+      setOut('Falha de rede ao consultar os anúncios.');
     } finally {
       setBusy(false);
     }
@@ -328,17 +328,17 @@ function AdsInsightsCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">AnÃºncios em tempo real (Ad Manager)</h2>
+        <h2 className="text-sm font-bold text-gray-200">Anúncios em tempo real (Ad Manager)</h2>
         <ApiBadge layer="official" />
       </div>
       <p className="text-xs text-gray-400 mb-3">
-        MÃ©tricas reais dos anÃºncios da sua conta de anÃºncios Meta (gasto, impressÃµes, cliques, alcance)
-        via Marketing API â€” o ID da conta fica em /integrations (Meta Ads); o token usa a conexÃ£o OAuth.
-        PrÃ©-requisito: permissÃ£o <code className="text-gray-300">ads_read</code> no app da Meta.
+        Métricas reais dos anúncios da sua conta de anúncios Meta (gasto, impressões, cliques, alcance)
+        via Marketing API — o ID da conta fica em /integrations (Meta Ads); o token usa a conexão OAuth.
+        Pré-requisito: permissão <code className="text-gray-300">ads_read</code> no app da Meta.
       </p>
       <div className="flex items-end gap-3">
         <label className="block text-xs text-gray-400">
-          PerÃ­odo
+          Período
           <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={inputCls + ' !mt-1'}>
             {TIME_RANGES.map((o) => (
               <option key={o.value} value={o.value} className="bg-[#0D0915]">
@@ -352,7 +352,7 @@ function AdsInsightsCard() {
           disabled={busy}
           className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
         >
-          {busy ? 'Consultandoâ€¦' : 'Ver anÃºncios'}
+          {busy ? 'Consultando…' : 'Ver anúncios'}
         </button>
       </div>
       {out && <pre className="mt-3 text-xs text-gray-300 whitespace-pre-wrap bg-black/30 border border-white/10 rounded-lg p-2">{out}</pre>}
@@ -361,7 +361,7 @@ function AdsInsightsCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Sem API / AvanÃ§ado â€” Marketplace e grupos (declarado)               */
+/* Sem API / Avançado — Marketplace e grupos (declarado)               */
 /* ------------------------------------------------------------------ */
 
 function MarketplaceCard() {
@@ -378,7 +378,7 @@ function MarketplaceCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: 'browser_automation', value }),
       });
-      if (r.ok) setMsg('ParÃ¢metro guardado. A execuÃ§Ã£o (Marketplace/grupos via browser automation) Ã© nÃ£o-oficial e ainda nÃ£o hÃ¡ executor no produto.');
+      if (r.ok) setMsg('Parâmetro guardado. A execução (Marketplace/grupos via browser automation) é não-oficial e ainda não há executor no produto.');
       else if (r.status === 401) setMsg('Somente admin/owner configura.');
       else setMsg(`Falha ao guardar (HTTP ${r.status}).`);
     } catch {
@@ -389,22 +389,22 @@ function MarketplaceCard() {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-200">AnÃºncios em Marketplace e grupos (delay configurÃ¡vel)</h2>
+        <h2 className="text-sm font-bold text-gray-200">Anúncios em Marketplace e grupos (delay configurável)</h2>
         <ApiBadge layer="sem_api" />
       </div>
       <RiskBanner>
-        A Meta <strong>nÃ£o expÃµe criaÃ§Ã£o de anÃºncios no Marketplace nem em grupos pela API oficial</strong>. O
-        mÃ©todo &quot;Sem API / AvanÃ§ado&quot; (browser automation) viola os Termos de Uso e pode banir a
-        PÃ¡gina/conta; tambÃ©m pode violar LGPD/GDPR. O produto declara o mÃ©todo e guarda apenas o parÃ¢metro
-        â€” a execuÃ§Ã£o nÃ£o-oficial Ã© de responsabilidade do usuÃ¡rio e ainda nÃ£o estÃ¡ implementada.
+        A Meta <strong>não expõe criação de anúncios no Marketplace nem em grupos pela API oficial</strong>. O
+        método &quot;Sem API / Avançado&quot; (browser automation) viola os Termos de Uso e pode banir a
+        Página/conta; também pode violar LGPD/GDPR. O produto declara o método e guarda apenas o parâmetro
+        — a execução não-oficial é de responsabilidade do usuário e ainda não está implementada.
       </RiskBanner>
       <div className="grid grid-cols-2 gap-3 mt-3">
         <label className="block text-xs text-gray-400">
-          Limite de aÃ§Ãµes/hora
+          Limite de ações/hora
           <input value={maxPerHour} onChange={(e) => setMaxPerHour(e.target.value)} placeholder="ex.: 20" className={inputCls} />
         </label>
         <button onClick={() => void save()} className="self-end px-3 py-2 text-xs font-semibold rounded-lg border border-amber-400/30 text-amber-300 hover:bg-amber-400/10">
-          Guardar parÃ¢metro
+          Guardar parâmetro
         </button>
       </div>
       {msg && <p className="mt-2 text-xs text-gray-400">{msg}</p>}

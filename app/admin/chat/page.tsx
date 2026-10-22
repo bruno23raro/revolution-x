@@ -1,9 +1,9 @@
 'use client';
 
-// FASE AGENT â€” Phase 2: Centro Administrativo (UI).
+// FASE AGENT — Phase 2: Centro Administrativo (UI).
 // Chat administrativo via SSE + painel de tarefas com progresso REAL.
 // Funciona mesmo sem IA: o backend responde com mensagem informativa clara.
-// Sem simulaÃ§Ã£o: quando a fila nÃ£o existe no ambiente, mostra o motivo exato.
+// Sem simulação: quando a fila não existe no ambiente, mostra o motivo exato.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AppShell from '@/components/AppShell';
@@ -59,7 +59,7 @@ interface StreamNote {
 }
 
 // ------------------------------------------------------------------
-// SSE reader (fetch + ReadableStream â€” EventSource nÃ£o suporta POST)
+// SSE reader (fetch + ReadableStream — EventSource não suporta POST)
 // ------------------------------------------------------------------
 async function streamChat(
   message: string,
@@ -99,7 +99,7 @@ async function streamChat(
         try {
           onEvent(JSON.parse(t.slice(5).trim()));
         } catch {
-          /* linha parcial/malformada: nÃ£o inventa dado */
+          /* linha parcial/malformada: não inventa dado */
         }
       }
     }
@@ -107,7 +107,7 @@ async function streamChat(
 }
 
 // ------------------------------------------------------------------
-// PÃ¡gina
+// Página
 // ------------------------------------------------------------------
 const OPEN_STATUSES: TaskStatus[] = ['queued', 'running', 'waiting_human'];
 
@@ -122,9 +122,9 @@ const statusColor: Record<TaskStatus, string> = {
 
 const statusLabel: Record<TaskStatus, string> = {
   queued: 'na fila',
-  running: 'em execuÃ§Ã£o',
+  running: 'em execução',
   waiting_human: 'aguardando humano',
-  completed: 'concluÃ­da',
+  completed: 'concluída',
   failed: 'falhou',
   canceled: 'cancelada',
 };
@@ -157,14 +157,14 @@ export default function AdminChatPage() {
         .then(async (r) => {
           if (cancelled) return;
           if (r.status === 401) {
-            setTasksNote('Acesso negado: esta pÃ¡gina exige papel admin/owner.');
+            setTasksNote('Acesso negado: esta página exige papel admin/owner.');
             return;
           }
           if (r.status === 503) {
             const d = await r.json().catch(() => null);
             setTasksNote(
               d?.detail ??
-                'Fila persistente indisponÃ­vel neste ambiente (migration 014 pendente).',
+                'Fila persistente indisponível neste ambiente (migration 014 pendente).',
             );
             setTasks([]);
             return;
@@ -196,7 +196,7 @@ export default function AdminChatPage() {
     if (!r) return;
     if (r.status === 503) {
       const d = await r.json().catch(() => null);
-      setTasksNote(d?.detail ?? 'Fila persistente indisponÃ­vel neste ambiente.');
+      setTasksNote(d?.detail ?? 'Fila persistente indisponível neste ambiente.');
       return;
     }
     if (!r.ok) return;
@@ -214,7 +214,7 @@ export default function AdminChatPage() {
     setInput('');
     setBusy(true);
     setNote({});
-    setMessages((m) => [...m, { role: 'user', text }, { role: 'assistant', text: 'â³ processandoâ€¦' }]);
+    setMessages((m) => [...m, { role: 'user', text }, { role: 'assistant', text: '⏳ processando…' }]);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
@@ -224,7 +224,7 @@ export default function AdminChatPage() {
           setMessages((m) => {
             const copy = m.slice();
             const last = copy.length - 1;
-            if (last >= 0 && copy[last].role === 'assistant' && copy[last].text.startsWith('â³')) {
+            if (last >= 0 && copy[last].role === 'assistant' && copy[last].text.startsWith('⏳')) {
               copy[last] = {
                 role: 'assistant',
                 text: String(ev.text ?? ''),
@@ -245,7 +245,7 @@ export default function AdminChatPage() {
           setMessages((m) => {
             const copy = m.slice();
             const last = copy.length - 1;
-            if (last >= 0 && copy[last].role === 'assistant' && copy[last].text.startsWith('â³')) {
+            if (last >= 0 && copy[last].role === 'assistant' && copy[last].text.startsWith('⏳')) {
               copy[last] = { role: 'assistant', text: '', error: detail };
             } else {
               copy.push({ role: 'assistant', text: '', error: detail });
@@ -304,36 +304,36 @@ export default function AdminChatPage() {
     await openTask(id);
   };
 
-  // Chat SEMPRE habilitado â€” o backend responde com mensagem informativa quando IA nÃ£o estÃ¡ configurada
+  // Chat SEMPRE habilitado — o backend responde com mensagem informativa quando IA não está configurada
   const chatDisabled = busy || !input.trim();
 
   return (
     <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
-        {/* CabeÃ§alho */}
+        {/* Cabeçalho */}
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 max-w-6xl">
           <h1 className="text-2xl font-bold text-white">Centro Administrativo</h1>
           <p className="text-sm text-gray-500">
             {router === null ? (
-              'verificando configuraÃ§Ã£oâ€¦'
+              'verificando configuração…'
             ) : router.routerConfigured ? (
               <>
-                IA ativa Â· <span className="text-purple-400">{router.model}</span>
+                IA ativa · <span className="text-purple-400">{router.model}</span>
               </>
             ) : (
-              <span className="text-amber-400">IA nÃ£o configurada â€” respostas informativas ativas</span>
+              <span className="text-amber-400">IA não configurada — respostas informativas ativas</span>
             )}
           </p>
         </div>
 
-        {/* Aviso quando IA nÃ£o estÃ¡ configurada */}
+        {/* Aviso quando IA não está configurada */}
         {router !== null && !router.routerConfigured && (
           <div className="mb-4 max-w-6xl p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            O mÃ³dulo de IA (OmniRouter) nÃ£o estÃ¡ configurado. As mensagens serÃ£o respondidas com
-            informaÃ§Ãµes operacionais sobre o estado do sistema. Para habilitar IA real, defina{' '}
+            O módulo de IA (OmniRouter) não está configurado. As mensagens serão respondidas com
+            informações operacionais sobre o estado do sistema. Para habilitar IA real, defina{' '}
             <code className="text-purple-300">OMNIROUTER_BASE_URL</code> e{' '}
             <code className="text-purple-300">OMNIROUTER_API_KEY</code> no ambiente do servidor, ou
-            configure uma chave manual em <a href="/admin/settings" className="underline">ConfiguraÃ§Ãµes</a>.
+            configure uma chave manual em <a href="/admin/settings" className="underline">Configurações</a>.
           </div>
         )}
 
@@ -346,8 +346,8 @@ export default function AdminChatPage() {
             <div className="flex-1 overflow-y-auto max-h-[46vh] space-y-3 pr-1">
               {messages.length === 0 && (
                 <p className="text-sm text-gray-500">
-                  Descreva em linguagem natural o que vocÃª precisa (ex: &ldquo;liste os leads abertos&rdquo;,
-                  &ldquo;o que mudou nesta fila?&rdquo;). O sistema responde com informaÃ§Ãµes reais sobre o
+                  Descreva em linguagem natural o que você precisa (ex: &ldquo;liste os leads abertos&rdquo;,
+                  &ldquo;o que mudou nesta fila?&rdquo;). O sistema responde com informações reais sobre o
                   estado atual.
                 </p>
               )}
@@ -362,7 +362,7 @@ export default function AdminChatPage() {
                         : 'mr-8 bg-white/5 border border-white/10 text-gray-200'
                   }`}
                 >
-                  {m.error ? `âš  ${m.error}` : m.text}
+                  {m.error ? `⚠ ${m.error}` : m.text}
                   {m.model && <span className="block mt-1 text-xs text-gray-500">via {m.model}</span>}
                   {m.usage && (
                     <span className="block mt-1 text-xs text-gray-500">
@@ -375,9 +375,9 @@ export default function AdminChatPage() {
                 <div className="mr-8">
                   <div className="text-xs text-gray-400 mb-1">
                     progresso real {note.progress}%
-                    {note.total != null ? ` (${note.progress >= 100 ? 'concluÃ­do' : 'em andamento'})` : ''}
-                    {note.step ? ` Â· etapa: ${note.step}` : ''}
-                    {note.taskId ? ` Â· tarefa ${note.taskId.slice(0, 8)}â€¦` : ''}
+                    {note.total != null ? ` (${note.progress >= 100 ? 'concluído' : 'em andamento'})` : ''}
+                    {note.step ? ` · etapa: ${note.step}` : ''}
+                    {note.taskId ? ` · tarefa ${note.taskId.slice(0, 8)}…` : ''}
                   </div>
                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div
@@ -405,7 +405,7 @@ export default function AdminChatPage() {
                   }
                 }}
                 rows={2}
-                placeholder="Descreva a tarefa em linguagem naturalâ€¦"
+                placeholder="Descreva a tarefa em linguagem natural…"
                 className="flex-1 resize-none text-sm bg-white/5 border border-white/10 rounded-lg p-3 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50"
               />
               <button
@@ -413,7 +413,7 @@ export default function AdminChatPage() {
                 disabled={chatDisabled}
                 className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white disabled:opacity-40 hover:bg-purple-700"
               >
-                {busy ? 'â€¦' : 'Enviar'}
+                {busy ? '…' : 'Enviar'}
               </button>
             </div>
           </section>
@@ -425,7 +425,7 @@ export default function AdminChatPage() {
             </h2>
             {tasksNote && <p className="text-xs text-amber-300 mb-2">{tasksNote}</p>}
             {tasks.length === 0 && !tasksNote && (
-              <p className="text-sm text-gray-500">Nenhuma tarefa em andamento.</p>
+              <p className="text-sm text-gray-500">Nenhuma tarefa em andamento. Descreva uma tarefa em linguagem natural para criar uma nova.</p>
             )}
             <ul className="space-y-3">
               {tasks.map((t) => (
@@ -453,14 +453,14 @@ export default function AdminChatPage() {
                   <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
                     <span>
                       {t.progress}% real
-                      {t.modelUsed ? ` Â· ${t.modelUsed}` : ''}
+                      {t.modelUsed ? ` · ${t.modelUsed}` : ''}
                     </span>
                     {t.status === 'waiting_human' && (
                       <button
                         onClick={() => void act(t.id, 'resume')}
                         className="text-purple-400 hover:underline"
                       >
-                        retomar â†’
+                        retomar →
                       </button>
                     )}
                   </div>
@@ -498,12 +498,12 @@ export default function AdminChatPage() {
                           }
                         >
                           {s.status === 'done'
-                            ? 'âœ”'
+                            ? '✔'
                             : s.status === 'running'
-                              ? 'â–¶'
+                              ? '▶'
                               : s.status === 'failed'
-                                ? 'âœ–'
-                                : 'â—‹'}
+                                ? '✖'
+                                : '○'}
                         </span>
                         {s.name}
                       </li>

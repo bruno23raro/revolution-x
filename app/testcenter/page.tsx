@@ -1,15 +1,15 @@
 'use client';
 
-// Centro de Testes â€” hub funcional para acessar (e redirecionar) TODAS as
-// partes do site, no domÃ­nio da Hostinger, e conferir se estÃ¡ tudo funcionando.
+// Centro de Testes — hub funcional para acessar (e redirecionar) TODAS as
+// partes do site, no domínio da Hostinger, e conferir se está tudo funcionando.
 //
-//  â€¢ PÃ¡gina pÃºblica: mostra o mapa completo; Ã¡reas protegidas exibem o gate
-//    (login / papel) sem quebrar â€” "tudo redirecionando".
-//  â€¢ Sondas read-only (NUNCA segredos, NUNCA efeito colateral):
-//      - GET /api/auth/session         (auth/role/org do prÃ³prio usuÃ¡rio)
-//      - GET /api/cron/tiktok          (responde 405 sem segredo â†’ rota viva)
-//      - GET /api/integrations/health  (sÃ³ estado dos provedores)
-//  â€¢ O nÃºcleo de derivaÃ§Ã£o estÃ¡ em @/lib/testCenter (puro, testado).
+//  • Página pública: mostra o mapa completo; áreas protegidas exibem o gate
+//    (login / papel) sem quebrar — "tudo redirecionando".
+//  • Sondas read-only (NUNCA segredos, NUNCA efeito colateral):
+//      - GET /api/auth/session         (auth/role/org do próprio usuário)
+//      - GET /api/cron/tiktok          (responde 405 sem segredo → rota viva)
+//      - GET /api/integrations/health  (só estado dos provedores)
+//  • O núcleo de derivação está em @/lib/testCenter (puro, testado).
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -30,7 +30,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ status: 
   try {
     body = (await r.json()) as T;
   } catch {
-    body = null; // resposta nÃ£o-JSON (ex.: cron GETâ†’405 devolve JSON, mas por seguranÃ§a)
+    body = null; // resposta não-JSON (ex.: cron GET→405 devolve JSON, mas por segurança)
   }
   return { status: r.status, body };
 }
@@ -49,19 +49,19 @@ export default function TestCenterPage() {
         ),
       ]);
 
-      const session: SessionLike | null = sess.body; // auth/role/org do prÃ³prio usuÃ¡rio (ou null em falha)
+      const session: SessionLike | null = sess.body; // auth/role/org do próprio usuário (ou null em falha)
 
-      // Sinais vivos â€” nenhum segredo; apenas estado.
+      // Sinais vivos — nenhum segredo; apenas estado.
       const signals: Signals = {
         api_session:
           sess.status === 0
-            ? { status: 'error', detail: 'API nÃ£o respondeu' }
-            : { status: 'ok', detail: sess.body?.authenticated ? `autenticado (role ${sess.body.role ?? 'â€”'})` : 'nÃ£o autenticado' },
+            ? { status: 'error', detail: 'API não respondeu' }
+            : { status: 'ok', detail: sess.body?.authenticated ? `autenticado (role ${sess.body.role ?? '—'})` : 'não autenticado' },
         cron_tiktok:
           cron.status === 405
-            ? { status: 'ok', detail: 'GETâ†’405 (rota viva; POST exige x-cron-secret)' }
+            ? { status: 'ok', detail: 'GET→405 (rota viva; POST exige x-cron-secret)' }
             : cron.status === 0
-              ? { status: 'error', detail: 'API nÃ£o respondeu' }
+              ? { status: 'error', detail: 'API não respondeu' }
               : { status: 'error', detail: `esperado 405, veio HTTP ${cron.status}` },
         api_health:
           health.status === 200
@@ -69,7 +69,7 @@ export default function TestCenterPage() {
             : health.status === 401
               ? { status: 'skipped', detail: 'exige papel admin/owner' }
               : health.status === 0
-                ? { status: 'error', detail: 'API nÃ£o respondeu' }
+                ? { status: 'error', detail: 'API não respondeu' }
                 : { status: 'error', detail: `HTTP ${health.status}` },
       };
 
@@ -96,14 +96,14 @@ export default function TestCenterPage() {
             <p className="text-sm text-gray-400 mt-2 max-w-3xl">
               Mapa funcional de <strong className="text-gray-200">todas as partes</strong> da plataforma, com o
               estado vivo de cada sonda read-only e um link que <strong className="text-gray-200">redireciona</strong> para
-              a Ã¡rea. Nada aqui expÃµe segredos nem dispara aÃ§Ã£o de escrita.
+              a área. Nada aqui expõe segredos nem dispara ação de escrita.
             </p>
 
             {/* Resumo */}
             <div className="flex flex-wrap gap-2 mt-5">
               <Chip label="partes" value={view.counts.total} />
               <Chip label="vivas" value={view.counts.live} tone="green" />
-              <Chip label="bloqueadas p/ vocÃª" value={view.counts.locked} tone="amber" />
+              <Chip label="bloqueadas p/ você" value={view.counts.locked} tone="amber" />
               <Chip label="problemas" value={view.counts.problems} tone={view.counts.problems ? 'red' : 'green'} />
             </div>
 
@@ -114,7 +114,7 @@ export default function TestCenterPage() {
                   href="/dashboard"
                   className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
                 >
-                  Ir para o Dashboard â†’
+                  Ir para o Dashboard →
                 </Link>
               ) : (
                 <>
@@ -122,7 +122,7 @@ export default function TestCenterPage() {
                     href="/login"
                     className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
                   >
-                    Entrar (Ã¡rea logada)
+                    Entrar (área logada)
                   </Link>
                   <Link
                     href="/register"
@@ -138,19 +138,19 @@ export default function TestCenterPage() {
                   view.isAdmin ? 'border-white/20 text-gray-200 hover:bg-white/5' : 'border-white/10 text-gray-400'
                 }`}
               >
-                {view.isAdmin ? 'Centro IA (admin) â†’' : 'Centro IA ðŸ”’ (exige admin/owner)'}
+                {view.isAdmin ? 'Centro IA (admin) →' : 'Centro IA ðŸ”’ (exige admin/owner)'}
               </Link>
             </div>
 
             {!view.authenticated && (
               <p className="text-xs text-amber-300/80 mt-4">
-                VocÃª estÃ¡ <strong>nÃ£o autenticado</strong>: as Ã¡reas logadas ficam <em>locked</em> e redirecionam para o
+                Você está <strong>não autenticado</strong>: as áreas logadas ficam <em>locked</em> e redirecionam para o
                 login. Entre para desbloquear o teste completo.
               </p>
             )}
           </div>
 
-          {/* SeÃ§Ãµes por grupo */}
+          {/* Seções por grupo */}
           <div className="mt-8 space-y-8">
             {sections.map((s) => (
               <section key={s.group} aria-label={s.label}>
@@ -166,8 +166,8 @@ export default function TestCenterPage() {
 
           <p className="text-xs text-gray-400 mt-10">
             {state.done
-              ? 'Sondas read-only executadas. Rota desconhecida â†’ redireciona para a home (app/not-found).'
-              : 'Coletando o estado das sondas read-onlyâ€¦'}
+              ? 'Sondas read-only executadas. Rota desconhecida → redireciona para a home (app/not-found).'
+              : 'Coletando o estado das sondas read-only…'}
           </p>
         </div>
       </main>
@@ -218,7 +218,7 @@ function PartCard({ part }: { part: PartStatus }) {
             href={part.href}
             className="inline-block text-xs font-semibold text-purple-400 hover:text-purple-300"
           >
-            abrir {part.href} â†’
+            abrir {part.href} →
           </Link>
         ) : part.locked ? (
           part.adminOnly ? (
@@ -227,7 +227,7 @@ function PartCard({ part }: { part: PartStatus }) {
             </span>
           ) : (
             <Link href="/login" className="inline-block text-xs font-semibold text-amber-400 hover:text-amber-300">
-              ðŸ”’ exige login â†’ entrar
+              ðŸ”’ exige login → entrar
             </Link>
           )
         ) : (
@@ -238,7 +238,7 @@ function PartCard({ part }: { part: PartStatus }) {
   );
 }
 
-// Deriva um estado agregado p/ a health de integraÃ§Ãµes a partir de `{ health: [] }`.
+// Deriva um estado agregado p/ a health de integrações a partir de `{ health: [] }`.
 function healthStatus(body: { health?: { provider: string; status: ProbeStatus }[] } | null): { status: ProbeStatus; detail?: string } {
   if (!body?.health || body.health.length === 0) {
     return { status: 'not_configured', detail: 'nenhum provedor listado' };
@@ -246,7 +246,7 @@ function healthStatus(body: { health?: { provider: string; status: ProbeStatus }
   const n = body.health.length;
   const ok = body.health.filter((h) => h.status === 'ok').length;
   const hasError = body.health.some((h) => h.status === 'error');
-  if (hasError) return { status: 'error', detail: `${ok}/${n} provedores ok; hÃ¡ falha` };
+  if (hasError) return { status: 'error', detail: `${ok}/${n} provedores ok; há falha` };
   if (ok === n) return { status: 'ok', detail: `${ok}/${n} provedores ok` };
   return { status: 'not_configured', detail: `${ok}/${n} ok; demais sem config` };
 }

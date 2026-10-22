@@ -1,18 +1,18 @@
 'use client';
 
-// FASE 17 â€” Detalhe da campanha + aÃ§Ãµes da mÃ¡quina de estados (Â§10/Â§11/Â§12).
+// FASE 17 — Detalhe da campanha + ações da máquina de estados (§10/§11/§12).
 //
-//  * AÃ§Ãµes derivadas do estado ATUAL (start/resume, pause, cancel,
-//    mark_manual_complete, preview) â€” o servidor revalida (409 invalid_state
-//    quando a mÃ¡quina de estados nÃ£o permite).
-//  * WhatsApp: seletor de conta POR OPERAÃ‡ÃƒO (Â§7/Â§11). Se a campanha jÃ¡ tem
-//    conta ancorada, ela comeÃ§a selecionada (escolha explÃ­cita na criaÃ§Ã£o),
-//    mas pode ser trocada aqui. Nunca hÃ¡ default silencioso: sem escolha,
+//  * Ações derivadas do estado ATUAL (start/resume, pause, cancel,
+//    mark_manual_complete, preview) — o servidor revalida (409 invalid_state
+//    quando a máquina de estados não permite).
+//  * WhatsApp: seletor de conta POR OPERAÇÃO (§7/§11). Se a campanha já tem
+//    conta ancorada, ela começa selecionada (escolha explícita na criação),
+//    mas pode ser trocada aqui. Nunca há default silencioso: sem escolha,
 //    o servidor responde 409 account_selection_required.
 //  * Canal email: envio 409 honesto (channel_not_available_yet).
 //  * Canal manual: a RX NUNCA envia; "Concluir manualmente" registra a
-//    confirmaÃ§Ã£o do usuÃ¡rio (Â§12).
-//  * DestinatÃ¡rios: resultados REAIS por destinatÃ¡rio, paginados (Â§10).
+//    confirmação do usuário (§12).
+//  * Destinatários: resultados REAIS por destinatário, paginados (§10).
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -49,13 +49,13 @@ type WaAccount = { id: string; displayName: string | null; phoneNumberId: string
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Rascunho',
-  awaiting_validation: 'Aguardando validaÃ§Ã£o',
+  awaiting_validation: 'Aguardando validação',
   scheduled: 'Agendada',
   queued: 'Em fila',
-  running: 'Em execuÃ§Ã£o',
+  running: 'Em execução',
   paused: 'Pausada',
-  completed: 'ConcluÃ­da',
-  completed_partial: 'ConcluÃ­da parcialmente',
+  completed: 'Concluída',
+  completed_partial: 'Concluída parcialmente',
   failed: 'Falhou',
   canceled: 'Cancelada',
 };
@@ -86,7 +86,7 @@ export default function CampaignDetailPage() {
   const [preview, setPreview] = useState<Array<{ text: string; missing: string[] }> | null>(null);
   const [acting, setActing] = useState(false);
 
-  // DestinatÃ¡rios (fila, Â§10)
+  // Destinatários (fila, §10)
   const [recStatus, setRecStatus] = useState('');
   const [recOffset, setRecOffset] = useState(0);
   const [recPage, setRecPage] = useState<Array<Recipient> | null>(null);
@@ -111,7 +111,7 @@ export default function CampaignDetailPage() {
       const c = data.campaign as Campaign;
       setCampaign(c);
       setCounts(data.counts ?? null);
-      // Conta ancorada na criaÃ§Ã£o jÃ¡ vem selecionada (nunca default oculto).
+      // Conta ancorada na criação já vem selecionada (nunca default oculto).
       setAccountId(typeof c.accountId === 'string' ? c.accountId : '');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro inesperado');
@@ -144,7 +144,7 @@ export default function CampaignDetailPage() {
       setRecPage(data.items ?? []);
       setRecTotal(data.total ?? 0);
     } catch {
-      /* fila indisponÃ­vel: a UI mostra o que tem */
+      /* fila indisponível: a UI mostra o que tem */
     }
   }, [id, recStatus, recOffset]);
 
@@ -169,21 +169,21 @@ export default function CampaignDetailPage() {
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) {
         const codes: Record<string, string> = {
-          invalid_state: `Estado atual nÃ£o permite essa aÃ§Ã£o (${data.from} â†’ ${data.to}).`,
+          invalid_state: `Estado atual não permite essa ação (${data.from} → ${data.to}).`,
           account_selection_required:
-            'Selecione a conta (nÃºmero) que farÃ¡ o envio â€” nunca hÃ¡ default silencioso (Â§11).',
-          account_unavailable: `Conta indisponÃ­vel: ${data.reason ?? ''}`,
+            'Selecione a conta (número) que fará o envio — nunca há default silencioso (§11).',
+          account_unavailable: `Conta indisponível: ${data.reason ?? ''}`,
           channel_not_available_yet:
-            'Canal de e-mail ainda nÃ£o disponÃ­vel para envio (resposta honesta, sem mÃ©tricas fictÃ­cias).',
-          not_manual_campaign: 'SÃ³ campanhas manuais podem ser concluÃ­das pela confirmaÃ§Ã£o do usuÃ¡rio.',
-          unknown_action: 'AÃ§Ã£o desconhecida.',
+            'Canal de e-mail ainda não disponível para envio (resposta honesta, sem métricas fictícias).',
+          not_manual_campaign: 'Só campanhas manuais podem ser concluídas pela confirmação do usuário.',
+          unknown_action: 'Ação desconhecida.',
         };
-        const text = codes[data.error as string] ?? String(data.error ?? 'AÃ§Ã£o indisponÃ­vel');
+        const text = codes[data.error as string] ?? String(data.error ?? 'Ação indisponível');
         setMsg({ ok: false, text });
       } else {
         const d = data as { status?: string; note?: string; samples?: Array<{ text: string; missing: string[] }>; batch?: { sent: number; failed: number; remaining: number } };
         if (d.samples) setPreview(d.samples);
-        let ok = `AÃ§Ã£o aplicada${d.status ? ` â€” estado: ${STATUS_LABEL[d.status] ?? d.status}` : ''}.`;
+        let ok = `Ação aplicada${d.status ? ` — estado: ${STATUS_LABEL[d.status] ?? d.status}` : ''}.`;
         if (d.batch) ok += ` Lote: ${d.batch.sent} enviadas, ${d.batch.failed} falhas, ${d.batch.remaining} restantes na fila.`;
         if (d.note) ok += ` ${d.note}`;
         setMsg({ ok: true, text: ok });
@@ -201,7 +201,7 @@ export default function CampaignDetailPage() {
       <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
           <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            FaÃ§a login para ver esta campanha. <Link href="/login" className="text-purple-400">Entrar</Link>
+            Faça login para ver esta campanha. <Link href="/login" className="text-purple-400">Entrar</Link>
           </div>
         </main>
       </AppShell>
@@ -212,8 +212,8 @@ export default function CampaignDetailPage() {
       <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
           <p className="text-sm text-gray-400">
-            Campanha nÃ£o encontrada (ou pertence a outra organizaÃ§Ã£o).{' '}
-            <Link href="/campaigns" className="text-purple-400">Voltar Ã s campanhas</Link>
+            Campanha não encontrada (ou pertence a outra organização).{' '}
+            <Link href="/campaigns" className="text-purple-400">Voltar às campanhas</Link>
           </p>
         </main>
       </AppShell>
@@ -232,15 +232,15 @@ export default function CampaignDetailPage() {
   return (
     <AppShell>
       <main className="min-h-screen p-8 bg-[#05020A] max-w-5xl mx-auto">
-        <Link href="/campaigns" className="text-sm text-purple-400 hover:text-purple-300">â† Voltar Ã s campanhas</Link>
+        <Link href="/campaigns" className="text-sm text-purple-400 hover:text-purple-300">← Voltar às campanhas</Link>
 
         {loading ? (
-          <p className="text-gray-400 mt-6">Carregandoâ€¦</p>
+          <p className="text-gray-400 mt-6">Carregando…</p>
         ) : error ? (
           <div className="mt-6 p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{error}</div>
         ) : campaign ? (
           <div className="mt-6 space-y-8">
-            {/* CabeÃ§alho */}
+            {/* Cabeçalho */}
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold text-white">{campaign.title}</h1>
@@ -250,46 +250,46 @@ export default function CampaignDetailPage() {
               </div>
               <div className="text-sm text-gray-400 mt-1">
                 Canal: <strong className="text-gray-300">{campaign.channel}</strong>
-                {campaign.scheduledFor ? ` Â· Agendada para ${new Date(campaign.scheduledFor).toLocaleString('pt-BR')}` : ''}
+                {campaign.scheduledFor ? ` · Agendada para ${new Date(campaign.scheduledFor).toLocaleString('pt-BR')}` : ''}
               </div>
 
               {campaign.channel === 'email' && (
                 <div className="mt-3 p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-                  O canal de e-mail ainda nÃ£o estÃ¡ disponÃ­vel para envio. O disparo responderÃ¡ de
-                  forma honesta (channel_not_available_yet) â€” a plataforma nÃ£o inventa mÃ©tricas.
+                  O canal de e-mail ainda não está disponível para envio. O disparo responderá de
+                  forma honesta (channel_not_available_yet) — a plataforma não inventa métricas.
                 </div>
               )}
               {campaign.channel === 'manual' && (
                 <div className="mt-3 p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-                  Campanha manual: a Revolution X NÃƒO envia mensagens. A conclusÃ£o Ã© registrada
-                  apenas quando VOCÃŠ confirma a aÃ§Ã£o que tomou fora da plataforma.
+                  Campanha manual: a Revolution X NÃO envia mensagens. A conclusão é registrada
+                  apenas quando VOCÊ confirma a ação que tomou fora da plataforma.
                 </div>
               )}
               {campaign.errorText && (
                 <div className="mt-3 p-3 text-xs text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg">
-                  Ãšltimo erro: {campaign.errorText}
+                  Último erro: {campaign.errorText}
                 </div>
               )}
               {campaign.manualNotes && (
                 <div className="mt-3 p-3 text-xs text-gray-300 bg-black/40 border border-white/10 rounded-lg">
-                  Nota de conclusÃ£o: {campaign.manualNotes}
+                  Nota de conclusão: {campaign.manualNotes}
                 </div>
               )}
             </div>
 
-            {/* AÃ§Ãµes */}
+            {/* Ações */}
             <div className="border border-white/10 rounded-lg p-5 space-y-4">
-              <h2 className="text-lg font-semibold text-white">AÃ§Ãµes</h2>
+              <h2 className="text-lg font-semibold text-white">Ações</h2>
 
               {campaign.channel === 'whatsapp' && (
                 <div>
                   <label className="text-sm font-medium text-gray-300 block mb-1">
-                    Conta (nÃºmero) que farÃ¡ o envio
+                    Conta (número) que fará o envio
                   </label>
                   {accounts.length > 0 ? (
                     <div className="flex items-center gap-3">
                       <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputCls}>
-                        <option value="">â€” Escolha o nÃºmero â€”</option>
+                        <option value="">— Escolha o número —</option>
                         {accounts.map((a) => (
                           <option key={a.id} value={a.id}>{labelOf(a)}</option>
                         ))}
@@ -302,12 +302,12 @@ export default function CampaignDetailPage() {
                     </div>
                   ) : (
                     <div className="text-xs text-amber-300">
-                      Nenhuma conta de WhatsApp disponÃ­vel nesta organizaÃ§Ã£o. Conecte um nÃºmero em{' '}
-                      <Link href="/whatsapp" className="underline">Canais e integraÃ§Ãµes</Link> antes de iniciar.
+                      Nenhuma conta de WhatsApp disponível nesta organização. Conecte um número em{' '}
+                      <Link href="/whatsapp" className="underline">Canais e integrações</Link> antes de iniciar.
                     </div>
                   )}
                   <div className="text-[11px] text-gray-500 mt-1">
-                    A escolha Ã© POR OPERAÃ‡ÃƒO: sem nÃºmero selecionado, o servidor recusa o disparo (nunca default silencioso).
+                    A escolha é POR OPERAÇÃO: sem número selecionado, o servidor recusa o disparo (nunca default silencioso).
                   </div>
                 </div>
               )}
@@ -334,12 +334,12 @@ export default function CampaignDetailPage() {
                 )}
                 {manualCompletable && (
                   <button onClick={() => act('mark_manual_complete')} disabled={acting} className="px-4 py-2 text-sm rounded-lg border border-green-400/30 text-green-300 hover:bg-green-400/10 disabled:opacity-50">
-                    Confirmar conclusÃ£o manual
+                    Confirmar conclusão manual
                   </button>
                 )}
                 {!terminal && (
                   <button onClick={() => act('preview')} disabled={acting} className="px-4 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5 disabled:opacity-50">
-                    PrÃ©via (nada Ã© enviado)
+                    Prévia (nada é enviado)
                   </button>
                 )}
               </div>
@@ -352,13 +352,13 @@ export default function CampaignDetailPage() {
 
               {preview && (
                 <div>
-                  <div className="text-sm text-gray-400 mb-2">Amostras interpoladas (prÃ©via â€” nenhuma mensagem foi enviada):</div>
+                  <div className="text-sm text-gray-400 mb-2">Amostras interpoladas (prévia — nenhuma mensagem foi enviada):</div>
                   <div className="space-y-2">
                     {preview.map((s, i) => (
                       <div key={i} className="p-3 bg-black/40 border border-white/10 rounded-lg text-sm text-gray-200 whitespace-pre-wrap">
                         {s.text}
                         {s.missing.length > 0 && (
-                          <div className="mt-1 text-[11px] text-amber-300">variÃ¡veis ausentes: {s.missing.join(', ')}</div>
+                          <div className="mt-1 text-[11px] text-amber-300">variáveis ausentes: {s.missing.join(', ')}</div>
                         )}
                       </div>
                     ))}
@@ -370,7 +370,7 @@ export default function CampaignDetailPage() {
             {/* Contagens reais */}
             {counts && (
               <div>
-                <h2 className="text-lg font-semibold text-white mb-3">Progresso (mÃ©tricas reais)</h2>
+                <h2 className="text-lg font-semibold text-white mb-3">Progresso (métricas reais)</h2>
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[
                     ['Total', counts.total],
@@ -392,10 +392,10 @@ export default function CampaignDetailPage() {
               </div>
             )}
 
-            {/* DestinatÃ¡rios */}
+            {/* Destinatários */}
             <div>
               <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <h2 className="text-lg font-semibold text-white">DestinatÃ¡rios (fila)</h2>
+                <h2 className="text-lg font-semibold text-white">Destinatários (fila)</h2>
                 <div className="flex items-center gap-2">
                   <select value={recStatus} onChange={(e) => { setRecStatus(e.target.value); setRecOffset(0); }} className={inputCls}>
                     <option value="">Todos</option>
@@ -408,12 +408,12 @@ export default function CampaignDetailPage() {
               </div>
 
               {recPage === null ? (
-                <p className="text-sm text-gray-500">Carregando filaâ€¦</p>
+                <p className="text-sm text-gray-500">Carregando fila…</p>
               ) : recPage.length === 0 ? (
                 <p className="text-sm text-gray-500">
                   {counts && counts.total > 0
-                    ? 'Nenhum destinatÃ¡rio com esse filtro.'
-                    : 'Ainda nÃ£o hÃ¡ fila: inicie o disparo para planejar os destinatÃ¡rios.'}
+                    ? 'Nenhum destinatário com esse filtro.'
+                    : 'Ainda não há fila: inicie o disparo para planejar os destinatários.'}
                 </p>
               ) : (
                 <>
@@ -426,14 +426,14 @@ export default function CampaignDetailPage() {
                           <th className="text-left p-3">Status</th>
                           <th className="text-left p-3">Tentativas</th>
                           <th className="text-left p-3">Enviado em</th>
-                          <th className="text-left p-3">Ãšltimo erro</th>
+                          <th className="text-left p-3">Último erro</th>
                         </tr>
                       </thead>
                       <tbody className="text-gray-200">
                         {recPage.map((r) => (
                           <tr key={r.contactId} className="border-t border-white/5">
                             <td className="p-3">{r.name ?? r.contactId.slice(0, 8)}</td>
-                            <td className="p-3 text-gray-400 font-mono text-xs">{r.phone ?? 'â€”'}</td>
+                            <td className="p-3 text-gray-400 font-mono text-xs">{r.phone ?? '—'}</td>
                             <td className="p-3">
                               <span className={`px-2 py-0.5 rounded-full text-xs border ${
                                 r.status === 'sent'
@@ -448,9 +448,9 @@ export default function CampaignDetailPage() {
                               </span>
                             </td>
                             <td className="p-3 text-gray-400">{r.attempts}</td>
-                            <td className="p-3 text-gray-400 text-xs">{r.sentAt ? new Date(r.sentAt).toLocaleString('pt-BR') : 'â€”'}</td>
+                            <td className="p-3 text-gray-400 text-xs">{r.sentAt ? new Date(r.sentAt).toLocaleString('pt-BR') : '—'}</td>
                             <td className="p-3 text-gray-500 text-xs max-w-[220px] truncate" title={r.lastError ?? undefined}>
-                              {r.lastError ?? 'â€”'}
+                              {r.lastError ?? '—'}
                             </td>
                           </tr>
                         ))}
@@ -458,7 +458,7 @@ export default function CampaignDetailPage() {
                     </table>
                   </div>
                   <div className="flex items-center gap-3 mt-3 text-sm text-gray-400">
-                    <span>{recTotal} destinatÃ¡rio(s)</span>
+                    <span>{recTotal} destinatário(s)</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setRecOffset(Math.max(0, recOffset - RECS_PER_PAGE))}
@@ -472,7 +472,7 @@ export default function CampaignDetailPage() {
                         disabled={recOffset + RECS_PER_PAGE >= recTotal}
                         className="px-3 py-1 rounded-lg border border-white/15 hover:bg-white/5 disabled:opacity-40"
                       >
-                        PrÃ³xima
+                        Próxima
                       </button>
                     </div>
                   </div>

@@ -1,13 +1,13 @@
 'use client';
 
-// IntegraÃ§Ãµes â€” Hub de integraÃ§Ãµes (FASE 1 UI).
+// Integrações — Hub de integrações (FASE 1 UI).
 //
-//  â€¢ CondiÃ§Ã£o real da integraÃ§Ã£o Meta (paginas/Instagram/WhatsApp) via /api/integrations/meta.
-//  â€¢ Provedores separados visualmente em "API Oficial" (roxo) e "Sem API / AvanÃ§ado"
-//    (Ã¢mbar + aviso de risco). Cada um tem fluxo "Integrar" (form guiado) e estado de saÃºde.
-//  â€¢ Token refresh + health check (sÃ³ admin). Nenhum segredo aparece no front-end.
+//  • Condição real da integração Meta (paginas/Instagram/WhatsApp) via /api/integrations/meta.
+//  • Provedores separados visualmente em "API Oficial" (roxo) e "Sem API / Avançado"
+//    (âmbar + aviso de risco). Cada um tem fluxo "Integrar" (form guiado) e estado de saúde.
+//  • Token refresh + health check (só admin). Nenhum segredo aparece no front-end.
 //
-// O front sÃ³ faz fetch; os segredos vivem no banco (AgentMemory, RLS) â€” padrÃ£o ai-config.
+// O front só faz fetch; os segredos vivem no banco (AgentMemory, RLS) — padrão ai-config.
 
 import AppShell from '@/components/AppShell';
 import ApiBadge from '@/components/ApiBadge';
@@ -39,7 +39,7 @@ const OFFICIAL = providersByLayer('official');
 const SEM_API = providersByLayer('sem_api');
 
 export default function IntegrationsPage() {
-  // CondiÃ§Ã£o real Meta
+  // Condição real Meta
   const [meta, setMeta] = useState<{ loading: boolean; denied: boolean; error: string | null; connected: boolean; integrations: MetaIntegration[] }>({
     loading: true,
     denied: false,
@@ -47,7 +47,7 @@ export default function IntegrationsPage() {
     connected: false,
     integrations: [],
   });
-  // Flags de configuraÃ§Ã£o (admin)
+  // Flags de configuração (admin)
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   // Health probes (admin)
   const [health, setHealth] = useState<Record<string, { status: ProbeStatus; detail?: string }>>({});
@@ -63,7 +63,7 @@ export default function IntegrationsPage() {
       if (r.status === 401) {
         setMeta({ loading: false, denied: true, error: null, connected: false, integrations: [] });
       } else if (!r.ok) {
-        setMeta({ loading: false, denied: false, error: `Falha ao carregar integraÃ§Ãµes (HTTP ${r.status}).`, connected: false, integrations: [] });
+        setMeta({ loading: false, denied: false, error: `Falha ao carregar integrações (HTTP ${r.status}).`, connected: false, integrations: [] });
       } else {
         const d = await r.json();
         setMeta({
@@ -75,7 +75,7 @@ export default function IntegrationsPage() {
         });
       }
     } catch {
-      setMeta({ loading: false, denied: false, error: 'Falha de rede ao carregar integraÃ§Ãµes.', connected: false, integrations: [] });
+      setMeta({ loading: false, denied: false, error: 'Falha de rede ao carregar integrações.', connected: false, integrations: [] });
     }
   }, []);
 
@@ -120,10 +120,10 @@ export default function IntegrationsPage() {
         setHealth(m);
         setNote('Health atualizado.');
       } else {
-        setNote(`Health indisponÃ­vel (HTTP ${r.status}).`);
+        setNote(`Health indisponível (HTTP ${r.status}).`);
       }
     } catch {
-      setNote('Falha de rede ao checar saÃºde.');
+      setNote('Falha de rede ao checar saúde.');
     } finally {
       setChecking(false);
     }
@@ -135,25 +135,25 @@ export default function IntegrationsPage() {
       const r = await fetch('/api/integrations/meta/refresh-token', { method: 'POST' });
       const d = await r.json().catch(() => ({}));
       if (r.ok) setNote(`Token da Meta renovado (expira em ~${d.expiresIn ?? '?'}s).`);
-      else if (r.status === 409) setNote('Meta nÃ£o conectada neste tenant ainda.');
-      else if (r.status === 503) setNote('Meta nÃ£o configurada no servidor (META_* ausentes).');
-      else setNote(`Falha ao renovar token (HTTP ${r.status}${d.detail ? ` â€” ${d.detail}` : ''}).`);
+      else if (r.status === 409) setNote('Meta não conectada neste tenant ainda.');
+      else if (r.status === 503) setNote('Meta não configurada no servidor (META_* ausentes).');
+      else setNote(`Falha ao renovar token (HTTP ${r.status}${d.detail ? ` — ${d.detail}` : ''}).`);
     } catch {
       setNote('Falha de rede ao renovar o token da Meta.');
     }
   };
 
-  // TikTok: renova o access token via refresh_token (sÃ³ OAuth + admin). Mesmo
-  // padrÃ£o da Meta; a rota degrada com 409/503/502 honestos.
+  // TikTok: renova o access token via refresh_token (só OAuth + admin). Mesmo
+  // padrão da Meta; a rota degrada com 409/503/502 honestos.
   const refreshTikTokToken = async () => {
     setNote(null);
     try {
       const r = await fetch('/api/integrations/tiktok/refresh-token', { method: 'POST' });
       const d = await r.json().catch(() => ({}));
       if (r.ok) setNote(`Token do TikTok renovado (expira em ~${d.expiresIn ?? '?'}s).`);
-      else if (r.status === 409) setNote('TikTok nÃ£o conectado via OAuth neste tenant (nada para renovar).');
-      else if (r.status === 503) setNote('TikTok nÃ£o configurado ou fila indisponÃ­vel no servidor.');
-      else setNote(`Falha ao renovar o token do TikTok (HTTP ${r.status}${d.detail ? ` â€” ${d.detail}` : ''}).`);
+      else if (r.status === 409) setNote('TikTok não conectado via OAuth neste tenant (nada para renovar).');
+      else if (r.status === 503) setNote('TikTok não configurado ou fila indisponível no servidor.');
+      else setNote(`Falha ao renovar o token do TikTok (HTTP ${r.status}${d.detail ? ` — ${d.detail}` : ''}).`);
     } catch {
       setNote('Falha de rede ao renovar o token do TikTok.');
     }
@@ -168,15 +168,15 @@ export default function IntegrationsPage() {
         window.location.assign(url);
         return;
       }
-      if (r.status === 503) setNote('Meta nÃ£o configurada no servidor (META_APP_ID/SECRET ausentes) â€” item P0 do hpanel.');
-      else if (r.status === 401) setNote('FaÃ§a login para conectar a Meta.');
+      if (r.status === 503) setNote('Meta não configurada no servidor (META_APP_ID/SECRET ausentes) — item P0 do hpanel.');
+      else if (r.status === 401) setNote('Faça login para conectar a Meta.');
       else setNote(`Falha ao iniciar o OAuth da Meta (HTTP ${r.status}).`);
     } catch {
       setNote('Falha de rede ao iniciar o OAuth da Meta.');
     }
   };
 
-  // TikTok: mesmo padrÃ£o da Meta â€” inicia em /api/auth/tiktok (302 para o
+  // TikTok: mesmo padrão da Meta — inicia em /api/auth/tiktok (302 para o
   // authorize com PKCE), o callback cifra + persiste no AgentMemory do tenant.
   const startTikTokOAuth = async () => {
     setNote(null);
@@ -187,8 +187,8 @@ export default function IntegrationsPage() {
         window.location.assign(url);
         return;
       }
-      if (r.status === 503) setNote('TikTok nÃ£o configurado no servidor (TIKTOK_CLIENT_KEY/SECRET ausentes).');
-      else if (r.status === 401) setNote('FaÃ§a login para conectar o TikTok.');
+      if (r.status === 503) setNote('TikTok não configurado no servidor (TIKTOK_CLIENT_KEY/SECRET ausentes).');
+      else if (r.status === 401) setNote('Faça login para conectar o TikTok.');
       else setNote(`Falha ao iniciar o OAuth do TikTok (HTTP ${r.status}).`);
     } catch {
       setNote('Falha de rede ao iniciar o OAuth do TikTok.');
@@ -206,9 +206,9 @@ export default function IntegrationsPage() {
       const d = await r.json().catch(() => ({}));
       if (r.ok) {
         setConfigured((c) => ({ ...c, [def.id]: true }));
-        setNote(`${def.name}: configuraÃ§Ã£o salva.`);
+        setNote(`${def.name}: configuração salva.`);
         void loadAdmin();
-      } else if (r.status === 400) setNote(`${def.name}: ${d.error ?? 'campos invÃ¡lidos'}.`);
+      } else if (r.status === 400) setNote(`${def.name}: ${d.error ?? 'campos inválidos'}.`);
       else setNote(`${def.name}: falha (HTTP ${r.status}).`);
     } catch {
       setNote(`${def.name}: falha de rede ao salvar.`);
@@ -217,12 +217,12 @@ export default function IntegrationsPage() {
 
   const clearProvider = async (def: ProviderDef) => {
     setNote(null);
-    if (!window.confirm(`Remover a configuraÃ§Ã£o de ${def.name}?`)) return;
+    if (!window.confirm(`Remover a configuração de ${def.name}?`)) return;
     try {
       const r = await fetch(`/api/integrations/config?provider=${encodeURIComponent(def.id)}`, { method: 'DELETE' });
       if (r.ok) {
         setConfigured((c) => ({ ...c, [def.id]: false }));
-        setNote(`${def.name}: configuraÃ§Ã£o removida.`);
+        setNote(`${def.name}: configuração removida.`);
         void loadAdmin();
       } else setNote(`${def.name}: falha ao remover (HTTP ${r.status}).`);
     } catch {
@@ -231,11 +231,11 @@ export default function IntegrationsPage() {
   };
 
   const disconnectMeta = async (provider: string) => {
-    if (!window.confirm(`Desconectar a integraÃ§Ã£o ${provider}?`)) return;
+    if (!window.confirm(`Desconectar a integração ${provider}?`)) return;
     setNote(null);
     try {
       const r = await fetch(`/api/integrations/meta?provider=${encodeURIComponent(provider)}`, { method: 'DELETE' });
-      setNote(r.ok ? `IntegraÃ§Ã£o ${provider} desconectada.` : `Falha ao desconectar (HTTP ${r.status}).`);
+      setNote(r.ok ? `Integração ${provider} desconectada.` : `Falha ao desconectar (HTTP ${r.status}).`);
       if (r.ok) await loadMeta();
     } catch {
       setNote('Falha de rede ao desconectar.');
@@ -250,9 +250,9 @@ export default function IntegrationsPage() {
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-white">IntegraÃ§Ãµes</h1>
+            <h1 className="text-2xl font-bold text-white">Integrações</h1>
             <p className="text-sm text-gray-400">
-              Hub de integraÃ§Ãµes: condiÃ§Ã£o real, fluxo de integraÃ§Ã£o, health check e renovaÃ§Ã£o de token. Nenhum segredo Ã© exibido.
+              Hub de integrações: condição real, fluxo de integração, health check e renovação de token. Nenhum segredo é exibido.
             </p>
           </div>
 
@@ -260,14 +260,14 @@ export default function IntegrationsPage() {
             <div className="mb-4 p-3 text-sm rounded-lg bg-white/5 border border-white/10 text-gray-300">{note}</div>
           )}
 
-          {/* ===== CondiÃ§Ã£o real da Meta ===== */}
+          {/* ===== Condição real da Meta ===== */}
           <section className="mb-8">
-            <SectionTitle>ConexÃ£o Meta (Facebook Â· Instagram Â· WhatsApp)</SectionTitle>
+            <SectionTitle>Conexão Meta (Facebook · Instagram · WhatsApp)</SectionTitle>
             {meta.loading ? (
-              <p className="text-gray-400 text-sm">Carregandoâ€¦</p>
+              <p className="text-gray-400 text-sm">Carregando…</p>
             ) : meta.denied ? (
               <div role="status" aria-live="polite" className="p-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-                FaÃ§a login para ver as integraÃ§Ãµes da sua organizaÃ§Ã£o.
+                Faça login para ver as integrações da sua organização.
               </div>
             ) : meta.error ? (
               <div role="status" aria-live="polite" className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{meta.error}</div>
@@ -275,13 +275,13 @@ export default function IntegrationsPage() {
               <div className="space-y-3">
                 {meta.integrations.length > 1 && (
                   <p className="text-xs text-gray-400">
-                    {meta.integrations.length} contas Meta conectadas. Em cada operaÃ§Ã£o de publicaÃ§Ã£o/disparo
-                    vocÃª escolhe a conta (botÃ£o â€œPÃ¡gina / NÃºmero / Contaâ€ nos formulÃ¡rios).
+                    {meta.integrations.length} contas Meta conectadas. Em cada operação de publicação/disparo
+                    você escolhe a conta (botão “Página / Número / Conta” nos formulários).
                   </p>
                 )}
                 {meta.integrations.length === 0 && (
                   <div className="p-4 bg-[#0D0915] border border-white/10 rounded-2xl text-sm text-gray-400">
-                    Nenhuma integraÃ§Ã£o Meta conectada.
+                    Nenhuma integração Meta conectada.
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         onClick={() => void startMetaOAuth()}
@@ -293,7 +293,7 @@ export default function IntegrationsPage() {
                         href="/whatsapp"
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
                       >
-                        Abrir WhatsApp â†’
+                        Abrir WhatsApp →
                       </a>
                     </div>
                   </div>
@@ -304,21 +304,21 @@ export default function IntegrationsPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-gray-200 font-semibold">
                           {providerLabel(i.provider)}
-                          {i.displayName ? <span className="text-gray-400 font-normal"> Â· {i.displayName}</span> : null}
+                          {i.displayName ? <span className="text-gray-400 font-normal"> · {i.displayName}</span> : null}
                         </span>
                         <ApiBadge layer="official" />
                       </div>
                       <HealthPill status={i.status === 'DISCONNECTED' ? 'error' : 'ok'} detail={i.status ?? undefined} />
                     </div>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      <dt className="text-gray-400">PÃ¡gina Meta</dt>
-                      <dd className="text-gray-300 truncate" title={i.metaPageId ?? undefined}>{i.metaPageId ?? 'â€”'}</dd>
+                      <dt className="text-gray-400">Página Meta</dt>
+                      <dd className="text-gray-300 truncate" title={i.metaPageId ?? undefined}>{i.metaPageId ?? '—'}</dd>
                       <dt className="text-gray-400">WhatsApp Business</dt>
-                      <dd className="text-gray-300 truncate" title={i.whatsappBusinessAccountId ?? undefined}>{i.whatsappBusinessAccountId ?? 'â€”'}</dd>
+                      <dd className="text-gray-300 truncate" title={i.whatsappBusinessAccountId ?? undefined}>{i.whatsappBusinessAccountId ?? '—'}</dd>
                       <dt className="text-gray-400">Token expira</dt>
-                      <dd className="text-gray-300">{i.tokenExpiresAt ? new Date(i.tokenExpiresAt).toLocaleString('pt-BR') : 'â€”'}</dd>
+                      <dd className="text-gray-300">{i.tokenExpiresAt ? new Date(i.tokenExpiresAt).toLocaleString('pt-BR') : '—'}</dd>
                     </dl>
-                    {i.lastError && <p className="mt-2 text-xs text-red-400">Ãºltimo erro: {i.lastError}</p>}
+                    {i.lastError && <p className="mt-2 text-xs text-red-400">último erro: {i.lastError}</p>}
                     {i.status !== 'DISCONNECTED' && (
                       <button
                         onClick={() => void disconnectMeta(i.provider)}
@@ -329,7 +329,7 @@ export default function IntegrationsPage() {
                     )}
                   </div>
                 ))}
-                {/* AÃ§Ãµes de admin sobre a Meta */}
+                {/* Ações de admin sobre a Meta */}
                 {!adminDenied && (
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -343,7 +343,7 @@ export default function IntegrationsPage() {
                       disabled={checking}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:bg-white/5 disabled:opacity-50"
                     >
-                      {checking ? 'Checandoâ€¦' : 'Checar saÃºde de tudo'}
+                      {checking ? 'Checando…' : 'Checar saúde de tudo'}
                     </button>
                   </div>
                 )}
@@ -372,12 +372,12 @@ export default function IntegrationsPage() {
             </div>
           </section>
 
-          {/* ===== Provedores: Sem API / AvanÃ§ado ===== */}
+          {/* ===== Provedores: Sem API / Avançado ===== */}
           <section className="mb-8">
-            <SectionTitle accent tone="warn">Sem API Â· AvanÃ§ado</SectionTitle>
+            <SectionTitle accent tone="warn">Sem API · Avançado</SectionTitle>
             <p className="text-xs text-gray-400 mb-3">
-              MÃ©todos nÃ£o oficiais (scraping, QR Code, automaÃ§Ã£o de navegador). SÃ³ o parÃ¢metro Ã©
-              guardado; a execuÃ§Ã£o Ã© nÃ£o-oficial e de sua responsabilidade.
+              Métodos não oficiais (scraping, QR Code, automação de navegador). Só o parâmetro é
+              guardado; a execução é não-oficial e de sua responsabilidade.
             </p>
             {adminDenied && <AdminNote />}
             <div className="grid gap-3">
@@ -416,7 +416,7 @@ function SectionTitle({ children, accent, tone = 'ok' }: { children: React.React
 function AdminNote() {
   return (
     <div className="mb-3 p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-      O fluxo de integraÃ§Ã£o e o health check sÃ£o exclusivos de admin/owner. FaÃ§a login como admin para configurar.
+      O fluxo de integração e o health check são exclusivos de admin/owner. Faça login como admin para configurar.
     </div>
   );
 }
@@ -451,7 +451,7 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear, on
   };
 
   const testOutbound = async () => {
-    setExec({ ok: false, msg: 'Enviando evento de testeâ€¦' });
+    setExec({ ok: false, msg: 'Enviando evento de teste…' });
     try {
       const r = await fetch('/api/integrations/execute', {
         method: 'POST',
@@ -459,11 +459,11 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear, on
         body: JSON.stringify({ provider: def.id, test: true }),
       });
       const d = await r.json().catch(() => ({} as { ok?: boolean; httpStatus?: number; error?: string; detail?: string }));
-      if (r.status === 409) setExec({ ok: false, msg: `NÃ£o configurado: ${d.detail ?? 'faltam campos do alvo'}.` });
-      else if (r.status === 503) setExec({ ok: false, msg: 'Banco/fila indisponÃ­vel (503).' });
+      if (r.status === 409) setExec({ ok: false, msg: `Não configurado: ${d.detail ?? 'faltam campos do alvo'}.` });
+      else if (r.status === 503) setExec({ ok: false, msg: 'Banco/fila indisponível (503).' });
       else if (r.ok && d.ok) setExec({ ok: true, msg: `Alvo respondeu HTTP ${d.httpStatus ?? '?'}.` });
-      else if (r.ok && d.error) setExec({ ok: false, msg: `Alvo falhou: ${d.error}${d.detail ? ` â€” ${d.detail}` : ''}.` });
-      else setExec({ ok: false, msg: `Falha (HTTP ${r.status}${d.detail ? ` â€” ${d.detail}` : ''}).` });
+      else if (r.ok && d.error) setExec({ ok: false, msg: `Alvo falhou: ${d.error}${d.detail ? ` — ${d.detail}` : ''}.` });
+      else setExec({ ok: false, msg: `Falha (HTTP ${r.status}${d.detail ? ` — ${d.detail}` : ''}).` });
     } catch {
       setExec({ ok: false, msg: 'Falha de rede ao testar o envio.' });
     }
@@ -567,7 +567,7 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear, on
                 </label>
               ))}
               {missingRequired.length > 0 && (
-                <p className="text-xs text-amber-400">ObrigatÃ³rios: {missingRequired.map((f) => f.label).join(', ')}</p>
+                <p className="text-xs text-amber-400">Obrigatórios: {missingRequired.map((f) => f.label).join(', ')}</p>
               )}
               <button
                 type="submit"

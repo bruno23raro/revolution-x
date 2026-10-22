@@ -1,15 +1,15 @@
 'use client';
 
-// FASE 17 â€” Lista + criaÃ§Ã£o de campanhas (Â§1/Â§10/Â§11).
+// FASE 17 — Lista + criação de campanhas (§1/§10/§11).
 //
-//  * Lista com contagens REAIS (sent/failed/skipped) â€” nunca mÃ©tricas
-//    fictÃ­cias (Â§10/Â§18).
-//  * CriaÃ§Ã£o: a campanha nasce `draft`; NENHUM envio acontece aqui.
-//  * WhatsApp: o seletor de conta/nÃºmero Ã© POR OPERAÃ‡ÃƒO (Â§7/Â§11) â€” a conta
-//    escolhida aqui Ã© "ancorada" na criaÃ§Ã£o, mas o detalhe da campanha
-//    permite trocar antes de iniciar. Nunca hÃ¡ default silencioso.
-//  * Canal email: criaÃ§Ã£o Ã© permitida, mas o envio Ã© 409 honesto
-//    (channel_not_available_yet) â€” a pÃ¡gina deixa isso claro (Â§18).
+//  * Lista com contagens REAIS (sent/failed/skipped) — nunca métricas
+//    fictícias (§10/§18).
+//  * Criação: a campanha nasce `draft`; NENHUM envio acontece aqui.
+//  * WhatsApp: o seletor de conta/número é POR OPERAÇÃO (§7/§11) — a conta
+//    escolhida aqui é "ancorada" na criação, mas o detalhe da campanha
+//    permite trocar antes de iniciar. Nunca há default silencioso.
+//  * Canal email: criação é permitida, mas o envio é 409 honesto
+//    (channel_not_available_yet) — a página deixa isso claro (§18).
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -37,13 +37,13 @@ type WaAccount = {
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Rascunho',
-  awaiting_validation: 'Aguardando validaÃ§Ã£o',
+  awaiting_validation: 'Aguardando validação',
   scheduled: 'Agendada',
   queued: 'Em fila',
-  running: 'Em execuÃ§Ã£o',
+  running: 'Em execução',
   paused: 'Pausada',
-  completed: 'ConcluÃ­da',
-  completed_partial: 'ConcluÃ­da parcialmente',
+  completed: 'Concluída',
+  completed_partial: 'Concluída parcialmente',
   failed: 'Falhou',
   canceled: 'Cancelada',
 };
@@ -61,7 +61,7 @@ export default function CampaignsPage() {
   const [accounts, setAccounts] = useState<WaAccount[]>([]);
   const [accountsAvailable, setAccountsAvailable] = useState(false);
 
-  // FormulÃ¡rio
+  // Formulário
   const [title, setTitle] = useState('');
   const [channel, setChannel] = useState<'whatsapp' | 'email' | 'manual'>('whatsapp');
   const [message, setMessage] = useState('');
@@ -93,7 +93,7 @@ export default function CampaignsPage() {
 
   useEffect(() => {
     load();
-    // Contas de WhatsApp para o seletor POR OPERAÃ‡ÃƒO (Â§7/Â§11)
+    // Contas de WhatsApp para o seletor POR OPERAÇÃO (§7/§11)
     fetch('/api/whatsapp/accounts')
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { available?: boolean; accounts?: WaAccount[] } | null) => {
@@ -146,19 +146,19 @@ export default function CampaignsPage() {
       const data = (await res.json().catch(() => ({}))) as { error?: string; campaign?: { id?: string } };
       if (!res.ok) {
         const codes: Record<string, string> = {
-          invalid_title: 'Informe um tÃ­tulo (mÃ¡x. 300).',
-          invalid_channel: 'Canal invÃ¡lido.',
-          invalid_message: 'Informe a mensagem (mÃ¡x. 4096).',
-          invalid_scheduled_for: 'Data de agendamento invÃ¡lida.',
-          invalid_variables: 'VariÃ¡veis devem ser um objeto de texto.',
-          too_many_variables: 'MÃ¡ximo de 64 variÃ¡veis.',
-          variable_too_long: 'Valor de variÃ¡vel excedeu 4000 caracteres.',
-          invalid_audience_tags: 'Tags invÃ¡lidas (mÃ¡x. 10, cada uma 60).',
-          invalid_account_id: 'Selecione uma conta vÃ¡lida para o WhatsApp.',
-          invalid_batch_maxPerRun: 'Lote: maxPerRun deve ser 1â€“1000.',
-          invalid_batch_delayMs: 'Lote: delayMs deve ser 250â€“30000.',
-          invalid_batch_maxAttempts: 'Lote: maxAttempts deve ser 1â€“5.',
-          invalid_batch_backoffFactor: 'Lote: backoffFactor deve ser 1â€“5.',
+          invalid_title: 'Informe um título (máx. 300).',
+          invalid_channel: 'Canal inválido.',
+          invalid_message: 'Informe a mensagem (máx. 4096).',
+          invalid_scheduled_for: 'Data de agendamento inválida.',
+          invalid_variables: 'Variáveis devem ser um objeto de texto.',
+          too_many_variables: 'Máximo de 64 variáveis.',
+          variable_too_long: 'Valor de variável excedeu 4000 caracteres.',
+          invalid_audience_tags: 'Tags inválidas (máx. 10, cada uma 60).',
+          invalid_account_id: 'Selecione uma conta válida para o WhatsApp.',
+          invalid_batch_maxPerRun: 'Lote: maxPerRun deve ser 1–1000.',
+          invalid_batch_delayMs: 'Lote: delayMs deve ser 250–30000.',
+          invalid_batch_maxAttempts: 'Lote: maxAttempts deve ser 1–5.',
+          invalid_batch_backoffFactor: 'Lote: backoffFactor deve ser 1–5.',
         };
         throw new Error(codes[data.error ?? ''] ?? data.error ?? 'Falha ao criar campanha');
       }
@@ -183,7 +183,7 @@ export default function CampaignsPage() {
       <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
           <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-            FaÃ§a login para gerenciar campanhas. <Link href="/login" className="text-purple-400">Entrar</Link>
+            Faça login para gerenciar campanhas. <Link href="/login" className="text-purple-400">Entrar</Link>
           </div>
         </main>
       </AppShell>
@@ -195,11 +195,11 @@ export default function CampaignsPage() {
       <main className="min-h-screen p-8 bg-[#05020A] max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold text-white mb-1">Campanhas e disparos</h1>
         <p className="text-sm text-gray-400 mb-6">
-          CriaÃ§Ã£o em rascunho + disparo em fila com resultados por destinatÃ¡rio. WhatsApp:
-          escolha o nÃºmero POR OPERAÃ‡ÃƒO â€” nunca hÃ¡ default silencioso.
+          Criação em rascunho + disparo em fila com resultados por destinatário. WhatsApp:
+          escolha o número POR OPERAÇÃO — nunca há default silencioso.
         </p>
 
-        {/* â”€â”€ Nova campanha â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Nova campanha ───────────────────────────────────────────────── */}
         <section className="border border-white/10 rounded-lg p-5 mb-8">
           <h2 className="text-lg font-semibold text-white mb-4">Nova campanha</h2>
           {created && (
@@ -209,8 +209,8 @@ export default function CampaignsPage() {
           )}
           <form onSubmit={create} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="TÃ­tulo *">
-                <input required maxLength={300} value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="Ex.: PromoÃ§Ã£o de junho" />
+              <Field label="Título *">
+                <input required maxLength={300} value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="Ex.: Promoção de junho" />
               </Field>
               <Field label="Canal *">
                 <div className="flex gap-2">
@@ -233,18 +233,18 @@ export default function CampaignsPage() {
             </div>
 
             {channel === 'whatsapp' && (
-              <Field label="Conta (nÃºmero) de envio *">
+              <Field label="Conta (número) de envio *">
                 {accountsAvailable && accounts.length > 0 ? (
                   <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls}>
-                    <option value="">â€” Escolha o nÃºmero que farÃ¡ o envio â€”</option>
+                    <option value="">— Escolha o número que fará o envio —</option>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>{labelOf(a)}</option>
                     ))}
                   </select>
                 ) : (
                   <div className="text-xs text-amber-300">
-                    Nenhuma conta de WhatsApp disponÃ­vel nesta organizaÃ§Ã£o. VocÃª pode salvar como
-                    rascunho e iniciar depois de conectar um nÃºmero (Canais e integraÃ§Ãµes).
+                    Nenhuma conta de WhatsApp disponível nesta organização. Você pode salvar como
+                    rascunho e iniciar depois de conectar um número (Canais e integrações).
                   </div>
                 )}
               </Field>
@@ -252,29 +252,29 @@ export default function CampaignsPage() {
 
             {channel === 'email' && (
               <div className="p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-                O canal de e-mail ainda nÃ£o estÃ¡ disponÃ­vel para envio. A campanha pode ser criada
-                e visualizada; o disparo responderÃ¡ de forma honesta (canal nÃ£o implementado).
+                O canal de e-mail ainda não está disponível para envio. A campanha pode ser criada
+                e visualizada; o disparo responderá de forma honesta (canal não implementado).
               </div>
             )}
 
             {channel === 'manual' && (
               <div className="p-3 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg">
-                Campanha manual: a plataforma NÃƒO envia nada. Ela serve para organizar a aÃ§Ã£o e
-                registrar a confirmaÃ§Ã£o que VOCÃŠ fez fora da RX (Â«aguardando aÃ§Ã£o manualÂ»).
+                Campanha manual: a plataforma NÃO envia nada. Ela serve para organizar a ação e
+                registrar a confirmação que VOCÊ fez fora da RX («aguardando ação manual»).
               </div>
             )}
 
-            <Field label="Mensagem * (use {{nome}}, {{empresa}}, {{telefone}}â€¦)">
-              <textarea required maxLength={4096} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} className={inputCls} placeholder="OlÃ¡, {{nome}}! â€¦" />
-              <div className="text-[11px] text-gray-500 mt-1">Os valores do contato entram escapados: conteÃºdo de CSV/variÃ¡vel nunca executa HTML, JS ou SQL.</div>
+            <Field label="Mensagem * (use {{nome}}, {{empresa}}, {{telefone}}…)">
+              <textarea required maxLength={4096} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} className={inputCls} placeholder="Olá, {{nome}}! …" />
+              <div className="text-[11px] text-gray-500 mt-1">Os valores do contato entram escapados: conteúdo de CSV/variável nunca executa HTML, JS ou SQL.</div>
             </Field>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Tags da audiÃªncia">
-                <input value={tags} onChange={(e) => setTags(e.target.value)} className={inputCls} placeholder="vip, clientes (separadas por vÃ­rgula)" />
+              <Field label="Tags da audiência">
+                <input value={tags} onChange={(e) => setTags(e.target.value)} className={inputCls} placeholder="vip, clientes (separadas por vírgula)" />
               </Field>
               <Field label="Origem">
-                <input value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="csv-import, lojaâ€¦" />
+                <input value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="csv-import, loja…" />
               </Field>
             </div>
 
@@ -282,7 +282,7 @@ export default function CampaignsPage() {
               <Field label="Agendar para (opcional)">
                 <input type="datetime-local" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} className={inputCls} />
               </Field>
-              <Field label="VariÃ¡veis extras (linha a linha: chave=valor)">
+              <Field label="Variáveis extras (linha a linha: chave=valor)">
                 <input value={varsText} onChange={(e) => setVarsText(e.target.value)} className={inputCls} placeholder="cupom=10OFF" />
               </Field>
             </div>
@@ -290,16 +290,16 @@ export default function CampaignsPage() {
             <details className="text-sm text-gray-400">
               <summary className="cursor-pointer text-purple-400">Limites do lote (opcional)</summary>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                <Field label="Mensagens por execuÃ§Ã£o (1â€“1000)">
+                <Field label="Mensagens por execução (1–1000)">
                   <input type="number" min={1} max={1000} value={batch.maxPerRun} onChange={(e) => setBatch({ ...batch, maxPerRun: e.target.value })} className={inputCls} />
                 </Field>
-                <Field label="Pausa entre envios, ms (250â€“30000)">
+                <Field label="Pausa entre envios, ms (250–30000)">
                   <input type="number" min={250} max={30000} value={batch.delayMs} onChange={(e) => setBatch({ ...batch, delayMs: e.target.value })} className={inputCls} />
                 </Field>
-                <Field label="Tentativas (1â€“5)">
+                <Field label="Tentativas (1–5)">
                   <input type="number" min={1} max={5} value={batch.maxAttempts} onChange={(e) => setBatch({ ...batch, maxAttempts: e.target.value })} className={inputCls} />
                 </Field>
-                <Field label="Fator de backoff (1â€“5)">
+                <Field label="Fator de backoff (1–5)">
                   <input type="number" min={1} max={5} step="0.5" value={batch.backoffFactor} onChange={(e) => setBatch({ ...batch, backoffFactor: e.target.value })} className={inputCls} />
                 </Field>
               </div>
@@ -308,18 +308,18 @@ export default function CampaignsPage() {
             {formError && <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{formError}</div>}
 
             <button type="submit" disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50">
-              {saving ? 'Criandoâ€¦' : 'Criar rascunho'}
+              {saving ? 'Criando…' : 'Criar rascunho'}
             </button>
           </form>
         </section>
 
-        {/* â”€â”€ Lista â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Lista ───────────────────────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">Suas campanhas</h2>
           {error ? (
             <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{error}</div>
           ) : items === null ? (
-            <p className="text-sm text-gray-500">Carregandoâ€¦</p>
+            <p className="text-sm text-gray-500">Carregando…</p>
           ) : items.length === 0 ? (
             <p className="text-sm text-gray-500">Nenhuma campanha ainda. Crie a primeira acima.</p>
           ) : (
@@ -327,7 +327,7 @@ export default function CampaignsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-[#0D0915] text-gray-400">
                   <tr>
-                    <th className="text-left p-3">TÃ­tulo</th>
+                    <th className="text-left p-3">Título</th>
                     <th className="text-left p-3">Canal</th>
                     <th className="text-left p-3">Estado</th>
                     <th className="text-left p-3">Total / Enviadas / Falhas / Puladas</th>

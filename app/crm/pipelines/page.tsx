@@ -78,9 +78,9 @@ export default function PipelinesPage() {
     return (
       <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
-          <Link href="/crm" className="text-sm text-purple-400">â† Voltar ao CRM</Link>
+          <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
           <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
-            FaÃ§a login para ver os pipelines da sua organizaÃ§Ã£o.{' '}
+            Faça login para ver os pipelines da sua organização.{' '}
             <Link href="/login" className="text-purple-400">Entrar</Link>
           </div>
         </main>
@@ -94,11 +94,11 @@ export default function PipelinesPage() {
   return (
     <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
-        <Link href="/crm" className="text-sm text-purple-400">â† Voltar ao CRM</Link>
+        <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
         <h1 className="text-2xl font-bold text-white mb-6 mt-4">Pipelines</h1>
 
         {loading ? (
-          <p className="text-gray-400">Carregandoâ€¦</p>
+          <p className="text-gray-400">Carregando…</p>
         ) : error ? (
           <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{error}</div>
         ) : items.length === 0 ? (
@@ -147,16 +147,16 @@ export default function PipelinesPage() {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-300">
-                Etapas <span className="text-gray-500">(separadas por vÃ­rgula)</span>
+                Etapas <span className="text-gray-500">(separadas por vírgula)</span>
               </label>
               <input
                 value={stagesInput}
                 onChange={(e) => setStagesInput(e.target.value)}
-                placeholder="ProspecÃ§Ã£o, Proposta, NegociaÃ§Ã£o, Fechamento"
+                placeholder="Prospecção, Proposta, Negociação, Fechamento"
                 className={inputCls}
               />
               <p className="text-xs text-gray-600">
-                Ex: ProspecÃ§Ã£o, Proposta, NegociaÃ§Ã£o, Fechamento
+                Ex: Prospecção, Proposta, Negociação, Fechamento
               </p>
             </div>
             {formError && (
@@ -174,7 +174,7 @@ export default function PipelinesPage() {
               disabled={saving}
               className="py-2 px-4 font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
             >
-              {saving ? 'Salvandoâ€¦' : 'Adicionar'}
+              {saving ? 'Salvando…' : 'Adicionar'}
             </button>
           </form>
         </section>

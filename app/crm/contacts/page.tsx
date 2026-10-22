@@ -66,7 +66,7 @@ export default function ContactsPage() {
       setPhone('');
       await load();
     } catch (err: any) {
-      setFormError(err.message === 'invalid_email' ? 'E-mail invÃ¡lido.' : err.message);
+      setFormError(err.message === 'invalid_email' ? 'E-mail inválido.' : err.message);
     } finally {
       setSaving(false);
     }
@@ -78,7 +78,7 @@ export default function ContactsPage() {
       <main className="min-h-screen p-8 bg-[#05020A]">
         <BackToCRM />
         <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
-          FaÃ§a login para ver os contatos da sua organizaÃ§Ã£o. <Link href="/login" className="text-purple-400">Entrar</Link>
+          Faça login para ver os contatos da sua organização. <Link href="/login" className="text-purple-400">Entrar</Link>
         </div>
       </main>
       </AppShell>
@@ -92,7 +92,7 @@ export default function ContactsPage() {
       <h1 className="text-2xl font-bold text-white mb-6">Contatos</h1>
 
       {loading ? (
-        <p className="text-gray-400">Carregandoâ€¦</p>
+        <p className="text-gray-400">Carregando…</p>
       ) : error ? (
         <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{error}</div>
       ) : items.length === 0 ? (
@@ -112,9 +112,9 @@ export default function ContactsPage() {
               {items.map((c) => (
                 <tr key={c.id} className="border-t border-white/5">
                   <td className="p-3">{c.name}</td>
-                  <td className="p-3 text-gray-400">{c.email ?? 'â€”'}</td>
-                  <td className="p-3 text-gray-400">{c.phone ?? 'â€”'}</td>
-                  <td className="p-3 text-gray-400">{c.waId ?? 'â€”'}</td>
+                  <td className="p-3 text-gray-400">{c.email ?? '—'}</td>
+                  <td className="p-3 text-gray-400">{c.phone ?? '—'}</td>
+                  <td className="p-3 text-gray-400">{c.waId ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -130,7 +130,7 @@ export default function ContactsPage() {
           <Field label="Telefone"><input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} /></Field>
           {formError && <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">{formError}</div>}
           <button type="submit" disabled={saving} className="py-2 px-4 font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50">
-            {saving ? 'Salvandoâ€¦' : 'Adicionar'}
+            {saving ? 'Salvando…' : 'Adicionar'}
           </button>
         </form>
       </section>
@@ -140,7 +140,7 @@ export default function ContactsPage() {
 }
 
 function BackToCRM() {
-  return <Link href="/crm" className="text-sm text-purple-400 hover:text-purple-300">â† Voltar ao CRM</Link>;
+  return <Link href="/crm" className="text-sm text-purple-400 hover:text-purple-300">← Voltar ao CRM</Link>;
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

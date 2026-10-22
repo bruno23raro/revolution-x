@@ -11,7 +11,8 @@
 --     disparos" com fila persistente, idempotência
 --     (unique campaignId+contactId), resultado POR DESTINATÁRIO e
 --     máquina de estados (draft → … → completed/completed_partial/
---     failed/canceled; waiting_manual para o modo sem API).
+--     failed/canceled; modo sem API: canal 'manual' + resultKind
+--     'manual' — a plataforma NUNCA afirma ter enviado).
 --
 -- DUAL-SCHEMA (regra §15: "Não presuma que os bancos são
 -- intercambiáveis"): este arquivo é SHAPE-AWARE.

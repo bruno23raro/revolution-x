@@ -508,9 +508,12 @@ model AgentMemory {
 // FASE 17 — CAMPANHAS E DISPARIOS (missão final, seções 9–12)
 //
 // Campanha = mensagem + público + canal + conta selecionada.
-// Estados (máquina): draft → pending_validation → scheduled →
-//   queued → running → paused → completed / completed_partial /
-//   failed / canceled;  waiting_manual (modo sem API, §12).
+// Estados (máquina, cf. CAMPAIGN_STATUSES no serviço): draft,
+//   awaiting_validation, scheduled, queued, running, paused,
+//   completed, completed_partial, failed, canceled.
+// Modo sem API (§12): canal 'manual' + resultKind 'manual'; a
+//   plataforma NUNCA afirma ter enviado (completed só por
+//   confirmação manual do usuário).
 // Resultado POR DESTINATÁRIO em CampaignRecipient (idempotência:
 // unique (campaignId, contactId)); progresso real, sem métrica fictícia.
 // ============================================================

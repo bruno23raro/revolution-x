@@ -83,6 +83,8 @@ model Organization {
   // FASE AGENT (Phase 2 — Centro Administrativo com IA)
   tasks        Task[]
   agentMemories AgentMemory[]
+  // FASE 17 — Campanhas e disparos
+  campaigns    Campaign[]
 }
 
 // Modelo 4: membro de organização
@@ -204,21 +206,41 @@ model BillingEvent {
 // ============================================================
 
 // FASE 12: waId, externalId added; email made nullable
+// FASE 17: campos de importação CSV + consentimento (seções 8/11 da missão
+// final — campos aditivos, nulos/descartáveis; CSV nunca altera campos
+// protegidos: organizationId, papel/rota de usuário)
 model Contact {
   id             String        @id @default(uuid()) @db.Uuid
   organizationId String        @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   email          String?       @db.VarChar(255)
   name           String        @db.VarChar(255)
+  firstName      String?       @db.VarChar(255)
+  lastName       String?       @db.VarChar(255)
+  company        String?       @db.VarChar(255)
   phone          String?       @db.VarChar(50)
   waId           String?       @db.VarChar(50)
   externalId     String?       @db.VarChar(255)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  source         String?       @db.VarChar(120)
+  tags           Json         @default("[]")
+  customFields   Json         @default("{}")
+  preferences    Json         @default("{}")
+  // Consentimento marketing (LGPD): contato importado SEM consentimento
+  // comprovado NÃO é elegível para disparos automáticos.
+  consentMarketing Boolean    @default(false)
+  consentSource  String?      @db.VarChar(200)
+  consentAt      DateTime?    @db.Timestamp(6)
+  optOut         Boolean      @default(false)
+  createdAt      DateTime    @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime    @default(now()) @db.Timestamp(6)
   messages       Message[]
   leads          Lead[]
   deals          Deal[]
+  campaignRecipients CampaignRecipient[]
   @@index([organizationId])
   @@index([organizationId, waId])
+  @@index([organizationId, email])
+  @@index([organizationId, phone])
 }
 
 model Lead {
@@ -480,4 +502,70 @@ model AgentMemory {
   updatedAt      DateTime     @updatedAt
   @@unique([organizationId, userId, kind, memoryKey])
   @@index([organizationId, userId])
+}
+
+// ============================================================
+// FASE 17 — CAMPANHAS E DISPARIOS (missão final, seções 9–12)
+//
+// Campanha = mensagem + público + canal + conta selecionada.
+// Estados (máquina): draft → pending_validation → scheduled →
+//   queued → running → paused → completed / completed_partial /
+//   failed / canceled;  waiting_manual (modo sem API, §12).
+// Resultado POR DESTINATÁRIO em CampaignRecipient (idempotência:
+// unique (campaignId, contactId)); progresso real, sem métrica fictícia.
+// ============================================================
+
+model Campaign {
+  id           String     @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId       String     @db.Uuid
+  title        String     @db.VarChar(300)
+  channel      String     @db.VarChar(30)
+  status       String     @default("draft") @db.VarChar(30)
+  /// Conta multicontas SELECIONADA (id da meta_integrations / config do
+  /// provedor). Ausente em canais manuais. NUNCA há conta "padrão global":
+  /// cada operação valida a conta e o tenant.
+  accountId    String?    @db.VarChar(64)
+  message      String     @db.Text
+  variables    Json      @default("{}")
+  audienceJson Json      @default("{}")
+  batchJson    Json      @default("{}")
+  /// 'auto' (enviado pela plataforma) | 'manual' (usuário confirmou o
+  /// disparo fora da plataforma — §12; a RX NUNCA afirma ter enviado).
+  resultKind   String?    @db.VarChar(20)
+  scheduledFor DateTime?  @db.Timestamp(6)
+  startedAt    DateTime?  @db.Timestamp(6)
+  completedAt  DateTime?  @db.Timestamp(6)
+  progress     Int        @default(0)
+  totalCount   Int        @default(0)
+  sentCount    Int        @default(0)
+  failedCount  Int        @default(0)
+  skippedCount Int        @default(0)
+  errorText    String?
+  manualNotes  String?
+  createdAt    DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime  @default(now()) @db.Timestamp(6)
+  recipients   CampaignRecipient[]
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+}
+
+model CampaignRecipient {
+  id        String     @id @default(uuid()) @db.Uuid
+  campaign  Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String    @db.Uuid
+  organizationId String @db.Uuid
+  contact   Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId String     @db.Uuid
+  status     String    @default("pending") @db.VarChar(20)
+  attempts   Int       @default(0)
+  externalMessageId String? @db.VarChar(200)
+  lastError  String?
+  sentAt     DateTime? @db.Timestamp(6)
+  createdAt  DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime  @default(now()) @db.Timestamp(6)
+  @@unique([campaignId, contactId])
+  @@index([campaignId, status])
+  @@index([organizationId])
 }

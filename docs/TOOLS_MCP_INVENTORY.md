@@ -91,3 +91,19 @@
 2. **Investigate autocompact mitigation** — consider lowering `CLAUDE_CODE_AUTO_COMPACT_WINDOW` via config backup+merge (supported, does not disturb running session)
 3. **Document human-dependent steps** — FreeLLMAPI MCP enable requires dashboard access; cannot be auto'd in this environment
 4. **Continue Revolution X accessibility verification** — Dashboard, Admin Settings, Integrations pages
+---
+
+## Re-verificação (ciclo 2026-10-23, missão de continuação autônoma)
+
+| Ferramenta | Estado real | Evidência |
+|---|---|---|
+| Git 2.55.0 | ✅ funcionando | push `f34ae04..aa07f90` em origin/feat/finalizacao-missao-2-2026-10-22 |
+| GitHub CLI (`gh`) | ❌ não instalado | `gh: command not found`; substituído pelo MCP github |
+| MCP github | ⚠️ parcial | leitura OK (PRs, check-runs); **escrita em PR retorna 403** (PAT sem scope) — merge do PR #4 é passo humano |
+| Jest | ✅ | 705/705 em 51 suítes (13.0s) neste ciclo |
+| tsc / ESLint | ✅ | 0 erros ambos, neste ciclo |
+| npm run build | ✅ | exit 0 no HEAD `aa07f90` (~70 rotas) |
+| Supabase MCP (HTTP) | ✅ (ciclo anterior) | migrations 3 aplicadas vs 17 locais revisadas |
+| Playwright/Lighthouse | ✅ (ciclo anterior) | `.a11y-lighthouse/report.json`: a11y=100 no /dashboard |
+| CI GitHub Actions | ✅ | build-and-test success em `9a78b9a` e `aa07f90` |
+| hermes / memory / freeLLMAPI MCP | ❌ sem mudança | CONNECTION_CLOSED / 403 intencional |

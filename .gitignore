@@ -69,3 +69,7 @@ phase*_verification_report.json
 /test-whatsapp.js
 /test-zernio.js
 /zernio-tudo.js
+
+# Artefatos locais de auditoria/checkpoint (missão 2026-10-22)
+.a11y-lighthouse/
+logs/

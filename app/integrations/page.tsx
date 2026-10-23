@@ -9,7 +9,7 @@
 //
 // O front só faz fetch; os segredos vivem no banco (AgentMemory, RLS) — padrão ai-config.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
 import HealthPill from '@/components/HealthPill';
@@ -246,8 +246,7 @@ export default function IntegrationsPage() {
     health[id] ?? { status: configured[id] ? 'ok' : 'not_configured' };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
@@ -398,7 +397,7 @@ export default function IntegrationsPage() {
           </section>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }
 
@@ -475,7 +474,7 @@ function ProviderCard({ def, state, configured, admin, risk, onSave, onClear, on
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-gray-200 font-semibold text-sm">{def.name}</span>
+            <h3 className="text-gray-200 font-semibold text-sm">{def.name}</h3>
             <ApiBadge layer={def.layer} />
             {configured && <HealthPill status="ok" detail="configurado" />}
           </div>

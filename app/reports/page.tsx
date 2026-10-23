@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 type Report = {
   loading: boolean;
@@ -78,16 +78,14 @@ export default function ReportsPage() {
 
   if (r.loading)
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A] text-gray-400">Carregando relatório…</main>
-      </>
+      </AppShell>
     );
 
   if (r.unauthorized) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="flex min-h-screen items-center justify-center p-4 bg-[#05020A]">
           <div className="max-w-md p-8 text-center space-y-4 bg-[#0D0915] border border-white/10 rounded-2xl">
             <h1 className="text-xl font-semibold text-white">Relatórios</h1>
@@ -95,20 +93,19 @@ export default function ReportsPage() {
             <Link href="/login" className="inline-block py-2 px-4 font-semibold text-white bg-purple-600 rounded-lg">Entrar</Link>
           </div>
         </main>
-      </>
+      </AppShell>
     );
   }
 
   if (r.error) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
           <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">
             Não foi possível gerar o relatório. Banco indisponível?
           </div>
         </main>
-      </>
+      </AppShell>
     );
   }
 
@@ -116,8 +113,7 @@ export default function ReportsPage() {
   const leadsStatuses = Object.entries(r.leadsByStatus);
 
   return (
-    <>
-    <AppNav />
+    <AppShell>
     <main className="min-h-screen p-8 bg-[#05020A]">
       <h1 className="text-2xl font-bold text-white mb-2">Relatórios — CRM</h1>
       <p className="text-gray-400 mb-8">Métricas reais da sua organização (isolado por tenant).</p>
@@ -162,7 +158,7 @@ export default function ReportsPage() {
         </section>
       </div>
     </main>
-    </>
+    </AppShell>
   );
 }
 

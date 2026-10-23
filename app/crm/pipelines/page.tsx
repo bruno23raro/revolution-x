@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 interface Pipeline {
   id: string;
@@ -76,8 +76,7 @@ export default function PipelinesPage() {
 
   if (unauthorized) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-8 bg-[#05020A]">
           <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
           <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
@@ -85,7 +84,7 @@ export default function PipelinesPage() {
             <Link href="/login" className="text-purple-400">Entrar</Link>
           </div>
         </main>
-      </>
+      </AppShell>
     );
   }
 
@@ -93,8 +92,7 @@ export default function PipelinesPage() {
     'w-full px-4 py-2 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500';
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
         <h1 className="text-2xl font-bold text-white mb-6 mt-4">Pipelines</h1>
@@ -181,6 +179,6 @@ export default function PipelinesPage() {
           </form>
         </section>
       </main>
-    </>
+    </AppShell>
   );
 }

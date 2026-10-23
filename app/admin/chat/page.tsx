@@ -6,7 +6,7 @@
 // Sem simulação: quando a fila não existe no ambiente, mostra o motivo exato.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 // ------------------------------------------------------------------
 // Tipos (espelho dos contratos das rotas /api/admin/*)
@@ -308,8 +308,7 @@ export default function AdminChatPage() {
   const chatDisabled = busy || !input.trim();
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         {/* Cabeçalho */}
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-6 max-w-6xl">
@@ -426,7 +425,7 @@ export default function AdminChatPage() {
             </h2>
             {tasksNote && <p className="text-xs text-amber-300 mb-2">{tasksNote}</p>}
             {tasks.length === 0 && !tasksNote && (
-              <p className="text-sm text-gray-500">Nenhuma tarefa em andamento.</p>
+              <p className="text-sm text-gray-500">Nenhuma tarefa em andamento. Descreva uma tarefa em linguagem natural para criar uma nova.</p>
             )}
             <ul className="space-y-3">
               {tasks.map((t) => (
@@ -538,6 +537,6 @@ export default function AdminChatPage() {
           </section>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }

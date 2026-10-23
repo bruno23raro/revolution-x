@@ -5,7 +5,7 @@
 // ambiente (migration 014 pendente) a API responde 503 e a tela mostra o motivo
 // exato em vez de inventar dados.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import { useCallback, useEffect, useState } from 'react';
 
 type TaskStatus =
@@ -121,8 +121,7 @@ export default function AdminTasksPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
@@ -237,6 +236,6 @@ export default function AdminTasksPage() {
           </div>
         )}
       </main>
-    </>
+    </AppShell>
   );
 }

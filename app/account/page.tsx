@@ -6,7 +6,7 @@
 //  - recuperação de senha por e-mail encaminha para /forgot-password;
 //  - troca de e-mail fica marcada como indisponível (não inventa recurso).
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -53,19 +53,17 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-4 sm:p-8 bg-[#05020A] text-gray-400 text-sm">
           Carregando sua conta…
         </main>
-      </>
+      </AppShell>
     );
   }
 
   if (!session?.authenticated) {
     return (
-      <>
-        <AppNav />
+      <AppShell>
         <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
           <h1 className="text-2xl font-bold text-white mb-6">Meu perfil</h1>
           <div className="max-w-lg p-4 bg-[#0D0915] border border-white/10 rounded-2xl text-sm space-y-4">
@@ -75,7 +73,7 @@ export default function AccountPage() {
             </Link>
           </div>
         </main>
-      </>
+      </AppShell>
     );
   }
 
@@ -118,8 +116,7 @@ export default function AccountPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <h1 className="text-2xl font-bold text-white mb-2">Meu perfil</h1>
         <p className="text-sm text-gray-500 mb-6">Gestão da sua conta e segurança.</p>
@@ -223,6 +220,6 @@ export default function AccountPage() {
           </Link>
         </section>
       </main>
-    </>
+    </AppShell>
   );
 }

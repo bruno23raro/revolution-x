@@ -4,7 +4,7 @@
 // GET /api/admin/memory lista; POST grava (upsert). Quando a tabela não existe
 // neste ambiente a API responde 503 e a tela mostra o motivo em vez de fingir.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import { useCallback, useEffect, useState } from 'react';
 
 type MemoryKind = 'decision' | 'preference' | 'lesson' | 'fact';
@@ -112,8 +112,7 @@ export default function AdminMemoryPage() {
   };
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white">Memória de agentes</h1>
@@ -224,6 +223,6 @@ export default function AdminMemoryPage() {
           </form>
         </section>
       </main>
-    </>
+    </AppShell>
   );
 }

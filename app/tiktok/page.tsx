@@ -18,7 +18,7 @@
 //
 // Design: lilás + preto + branco. Nenhum segredo no front-end.
 
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import ApiBadge from '@/components/ApiBadge';
 import RiskBanner from '@/components/RiskBanner';
 import { toLocalInputValue } from '@/lib/format-local-datetime';
@@ -33,8 +33,7 @@ const PRIVACY_LEVELS: Array<{ value: string; label: string }> = [
 
 export default function TikTokPage() {
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6">
@@ -55,7 +54,7 @@ export default function TikTokPage() {
           </div>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }
 

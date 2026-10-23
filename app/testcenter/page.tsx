@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 import HealthPill from '@/components/HealthPill';
 import { buildTestCenterView, groupParts, type Signals, type SessionLike, type PartStatus } from '@/lib/testCenter';
 import type { ProbeStatus } from '@/integrations/providers';
@@ -87,8 +87,7 @@ export default function TestCenterPage() {
   const sections = useMemo(() => groupParts(view.parts), [view.parts]);
 
   return (
-    <>
-      <AppNav />
+    <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A] text-gray-300">
         <div className="mx-auto max-w-6xl">
           {/* Hero */}
@@ -139,7 +138,7 @@ export default function TestCenterPage() {
                   view.isAdmin ? 'border-white/20 text-gray-200 hover:bg-white/5' : 'border-white/10 text-gray-400'
                 }`}
               >
-                {view.isAdmin ? 'Centro IA (admin) →' : 'Centro IA 🔒 (exige admin/owner)'}
+                {view.isAdmin ? 'Centro IA (admin) →' : 'Centro IA ðŸ”’ (exige admin/owner)'}
               </Link>
             </div>
 
@@ -172,7 +171,7 @@ export default function TestCenterPage() {
           </p>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }
 
@@ -224,11 +223,11 @@ function PartCard({ part }: { part: PartStatus }) {
         ) : part.locked ? (
           part.adminOnly ? (
             <span className="inline-block text-xs text-gray-400">
-              🔒 exige papel admin/owner
+              ðŸ”’ exige papel admin/owner
             </span>
           ) : (
             <Link href="/login" className="inline-block text-xs font-semibold text-amber-400 hover:text-amber-300">
-              🔒 exige login → entrar
+              ðŸ”’ exige login → entrar
             </Link>
           )
         ) : (

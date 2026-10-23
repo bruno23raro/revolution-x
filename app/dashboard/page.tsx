@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 type Counts = {
   loading: boolean;
@@ -56,20 +56,20 @@ export default function DashboardPage() {
 
   if (state.loading) {
     return (
-      <>
-      <AppNav />
-      <main className="min-h-screen p-8 bg-[#05020A] text-gray-400">
-        <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
-        Carregando seus dados…
+      <AppShell>
+      <main className="min-h-screen p-8 bg-[#05020A] text-gray-400" aria-label="Dashboard">
+        <h1 className="text-2xl font-bold text-white mb-6" aria-hidden="true">Dashboard</h1>
+        {state.loading && <p className="text-gray-400" aria-live="polite">Carregando seus dados...</p>}
+        {!state.loading && state.unauthorized && <p className="text-gray-400" aria-live="polite">Área protegida — faça login para ver seu dashboard e os dados da sua organização.</p>}
+        {!state.loading && state.error && <p className="text-sm text-red-400" aria-live="polite">Não foi possível carregar os dados. O banco pode estar indisponível — verifique se a aplicação e o Supabase estão configurados.</p>}
       </main>
-      </>
+      </AppShell>
     );
   }
 
   if (state.unauthorized) {
     return (
-      <>
-      <AppNav />
+      <AppShell>
       <main className="flex min-h-screen items-center justify-center p-4 bg-[#05020A]">
         <div className="max-w-md p-8 text-center space-y-4 bg-[#0D0915] border border-white/10 rounded-2xl">
           <h1 className="text-xl font-semibold text-white">Área protegida</h1>
@@ -79,14 +79,29 @@ export default function DashboardPage() {
           </Link>
         </div>
       </main>
-      </>
+      </AppShell>
+    );
+  }
+
+  if (state.unauthorized) {
+    return (
+      <AppShell>
+      <main className="flex min-h-screen items-center justify-center p-4 bg-[#05020A]">
+        <div className="max-w-md p-8 text-center space-y-4 bg-[#0D0915] border border-white/10 rounded-2xl">
+          <h1 className="text-xl font-semibold text-white">Área protegida</h1>
+          <p className="text-gray-400">Faça login para ver seu dashboard e os dados da sua organização.</p>
+          <Link href="/login" className="inline-block py-2 px-4 font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+            Entrar
+          </Link>
+        </div>
+      </main>
+      </AppShell>
     );
   }
 
   if (state.error) {
     return (
-      <>
-      <AppNav />
+      <AppShell>
       <main className="min-h-screen p-8 bg-[#05020A]">
         <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
         <div className="p-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">
@@ -94,7 +109,7 @@ export default function DashboardPage() {
           Supabase estão configurados.
         </div>
       </main>
-      </>
+      </AppShell>
     );
   }
 
@@ -105,11 +120,10 @@ export default function DashboardPage() {
   ];
 
   return (
-    <>
-    <AppNav />
+    <AppShell>
     <main className="min-h-screen p-8 bg-[#05020A]">
       <h1 className="text-2xl font-bold text-white mb-2">Dashboard</h1>
-      <p className="text-gray-400 mb-8">Visão geral da sua organização (dados reais, isolados por tenant).</p>
+      <p className="text-gray-300 mb-8">Visão geral da sua organização (dados reais, isolados por tenant).</p>
       <div className="grid gap-4 sm:grid-cols-3 max-w-3xl">
         {cards.map((c) => (
           <Link
@@ -133,7 +147,7 @@ export default function DashboardPage() {
         >
           <div>
             <div className="text-sm font-semibold text-gray-200">Centro Administrativo com IA</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-400 mt-1">
               Descreva a tarefa em linguagem natural · acompanhe o progresso real das tarefas ·
               acesso restrito a admin/owner
             </div>
@@ -143,12 +157,12 @@ export default function DashboardPage() {
       </div>
 
       {cards.every((c) => (c.value ?? 0) === 0) && (
-        <p className="text-sm text-gray-500 mt-6">
+        <p className="text-sm text-gray-400 mt-6">
           Ainda não há registros. Comece adicionando{' '}
-          <Link href="/crm/contacts" className="text-purple-400">um contato</Link>.
+          <Link href="/crm/contacts" className="text-purple-400 underline">um contato</Link>.
         </p>
       )}
     </main>
-    </>
+    </AppShell>
   );
 }

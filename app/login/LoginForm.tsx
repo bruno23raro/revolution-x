@@ -90,7 +90,7 @@ export default function LoginForm() {
         </button>
       </form>
 
-      <div className="text-sm text-center text-gray-500">
+      <div className="text-sm text-center text-gray-300">
         Não tem uma conta? <span className="text-purple-400 cursor-not-allowed">Contate o administrador</span>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppNav from '@/components/AppNav';
+import AppShell from '@/components/AppShell';
 
 type Deal = { id: string; title: string; value: number | string; stage: string; createdAt?: string };
 
@@ -68,21 +68,19 @@ export default function DealsPage() {
 
   if (unauthorized) {
     return (
-      <>
-      <AppNav />
+      <AppShell>
       <main className="min-h-screen p-8 bg-[#05020A]">
         <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
         <div className="p-3 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg mt-4">
           Faça login para ver os deals da sua organização. <Link href="/login" className="text-purple-400">Entrar</Link>
         </div>
       </main>
-      </>
+      </AppShell>
     );
   }
 
   return (
-    <>
-    <AppNav />
+    <AppShell>
     <main className="min-h-screen p-8 bg-[#05020A]">
       <Link href="/crm" className="text-sm text-purple-400">← Voltar ao CRM</Link>
       <h1 className="text-2xl font-bold text-white mb-6 mt-4">Deals</h1>
@@ -142,7 +140,7 @@ export default function DealsPage() {
         </form>
       </section>
     </main>
-    </>
+    </AppShell>
   );
 }
 

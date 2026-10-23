@@ -98,7 +98,7 @@ export function RegisterClient() {
 
         <div className="text-sm text-center text-gray-400">
           Já tem uma conta?{' '}
-          <a href="/login" className="text-purple-400 hover:text-purple-300">Entrar</a>
+          <a href="/login" className="text-purple-400 underline hover:text-purple-300">Entrar</a>
         </div>
       </div>
     </main>

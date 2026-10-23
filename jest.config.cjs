@@ -10,5 +10,7 @@ module.exports = {
     '^@/services/(.*)$': '<rootDir>/src/services/$1',
     '^@/repositories/(.*)$': '<rootDir>/src/repositories/$1',
     '^@/jobs/(.*)$': '<rootDir>/src/jobs/$1',
+    '^@/ai$': '<rootDir>/src/ai/index',
+    '^@/ai/(.*)$': '<rootDir>/src/ai/$1',
   },
 };

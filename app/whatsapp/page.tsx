@@ -30,6 +30,26 @@ const EMPTY_RULE = (): ChatbotRule => ({ matchType: 'keyword', pattern: '', resp
 const uniqueStepId = () => `step-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
 
 export default function WhatsAppPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        // Bug fix: session API returns { authenticated: false } without error/unauthorized keys
+        // Check data.authenticated directly instead of checking for error/unauthorized which are undefined
+        setIsAuthenticated(data.authenticated === true);
+      } catch {
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    })();
+  }, []);
   return (
     <AppShell>
       <main className="min-h-screen p-4 sm:p-8 bg-[#05020A]">

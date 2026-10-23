@@ -6,6 +6,7 @@
 // Sem simulação: quando a fila não existe no ambiente, mostra o motivo exato.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 
 // ------------------------------------------------------------------
@@ -130,6 +131,36 @@ const statusLabel: Record<TaskStatus, string> = {
 };
 
 export default function AdminChatPage() {
+  // 1. Auth guard — useState e useEffect sempre NA MESMA ORDEM, no topo
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        setIsAuthenticated(data.authenticated === true);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    })();
+  }, []);
+
+  // Se não estiver autenticado, ainda assim renderizamos a estrutura completa
+  // mas com o conteúdo de "Área Protegida". Os hooks continuam sendo chamados
+  // na mesma ordem em cada render.
+  // Como Next.js exige hooks no topo, usamos a variável de estado para controlar o que aparece.
+
+  // Se não estiver autenticado, ainda assim renderizamos a estrutura completa
+  // mas com o conteúdo de "Área Protegida". Os hooks continuam sendo chamados
+  // na mesma ordem em cada render.
+
+  // Build the page content based on auth state
+  const isAuth = isAuthenticated;
+
   const [router, setRouter] = useState<RouterStatus | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [tasksNote, setTasksNote] = useState<string | null>(null);

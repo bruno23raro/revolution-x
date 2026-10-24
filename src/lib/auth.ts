@@ -37,6 +37,8 @@ export interface AuthenticatedUser {
   email: string | null;
   organizationId: string;
   role: string;
+  /** Todas as memberships do usuário (para autorização completa). */
+  organizationMembers?: Array<{ organizationId: string; role: string }>;
 }
 
 export async function getAuthenticatedUser(
@@ -48,6 +50,8 @@ export async function getAuthenticatedUser(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    // Log: sem sessão Supabase (usuário não autenticado)
+    console.log('[auth] getAuthenticatedUser: no supabase session');
     return null;
   }
 
@@ -61,17 +65,33 @@ export async function getAuthenticatedUser(
     })
   );
 
-  if (!dbUser || dbUser.organizationMembers.length === 0) {
+  if (!dbUser) {
+    // Log: usuário sem registro no banco de dados
+    console.log('[auth] getAuthenticatedUser: user not found in database');
     return null;
   }
 
-  // Return the first (primary) organization membership.
+  if (dbUser.organizationMembers.length === 0) {
+    // Log: usuário sem membership em nenhuma organização
+    console.log('[auth] getAuthenticatedUser: user has no organization memberships');
+    return null;
+  }
+
+  // Return the first (primary) organization membership for organizationId/organization rollback.
   const primary = dbUser.organizationMembers[0];
+
+  // O role reflete a organização primária (orgMembers[0]).
+  // Se o usuário for admin/owner na org primária, role = admin/owner.
+  // Se for admin só em outras orgs, o role permanece como o da org primária,
+  // preservando o isolamento multi-tenant: não eleva privilégios fora da org ativa.
+  const primaryRole = primary.role;
+  const effectiveRole = primaryRole;
+
   return {
     id: user.id,
     email: user.email || null,
     organizationId: primary.organizationId,
-    role: primary.role,
+    role: effectiveRole,
   };
 }
 

@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { generateState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 import type { MetaAuthConfig } from '@/integrations/meta/types';
 
 export const dynamic = 'force-dynamic';
@@ -46,7 +47,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const redirectUri = `${req.nextUrl.origin}/api/auth/callback/meta`;
+  // Origem pública canônica (NEXT_PUBLIC_SITE_URL com precedência; cai para
+  // o request origin apenas quando útil). Em produção no Hostinger o proxy
+  // interno pode produzir 0.0.0.0:3000 — o redirect_uri PRECISA bater com o
+  // cadastrado no painel da Meta, senão o próprio Meta rejeita o dialog.
+  const redirectUri = `${resolvePublicSiteOrigin(req.nextUrl.origin)}/api/auth/callback/meta`;
   const config: MetaAuthConfig = { appId, appSecret, redirectUri, scopes: DEFAULT_SCOPES };
   const state = generateState();
 

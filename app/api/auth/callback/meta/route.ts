@@ -4,6 +4,7 @@ import { encryptToken } from '@/lib/encryption';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { withUserContext } from '@/lib/prisma';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 import type { MetaConnectionStatus } from '@/integrations/meta/types';
 
 // OAuth Meta callback — arquitetura existente respeitada
@@ -74,10 +75,14 @@ export async function GET(req: NextRequest) {
     const appSecret = process.env.META_APP_SECRET;
     if (!appId || !appSecret) return redirectError(req, 'config_missing');
 
+    // redirect_uri deve ser EXATAMENTE o mesmo usado no início do dialog
+    // (Meta rejeita mismatch). resolvePublicSiteOrigin evita o origin interno
+    // do proxy do Hostinger (0.0.0.0:3000), que quebraria o exchange.
+    const callbackOrigin = resolvePublicSiteOrigin(req.nextUrl.origin);
     const tokenRes = await fetch(
       `https://graph.facebook.com/v26.0/oauth/access_token?` +
       `client_id=${appId}&client_secret=${appSecret}&code=${code}&` +
-      `redirect_uri=${encodeURIComponent(`${req.nextUrl.origin}/api/auth/callback/meta`)}`,
+      `redirect_uri=${encodeURIComponent(`${callbackOrigin}/api/auth/callback/meta`)}`,
       { method: 'POST' }
     );
 
@@ -190,8 +195,10 @@ export async function GET(req: NextRequest) {
     return redirectError(req, 'db_error');
   }
 
-  // Token nunca em log/redirect
-  return NextResponse.redirect(new URL('/onboarding/success', req.url));
+  // Token nunca em log/redirect. Estado OAuth é de uso único: limpar o cookie.
+  const ok = NextResponse.redirect(new URL('/onboarding/success', req.url));
+  ok.cookies.set('oauth_state', '', { maxAge: 0, path: '/' });
+  return ok;
 }
 
 function redirectError(req: NextRequest, reason: string, detail?: string) {

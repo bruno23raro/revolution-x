@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { isQueueUnavailable } from '@/lib/taskQueue';
 
 // GET /api/integrations/meta — status da integração Meta (informações não sensíveis)
 // NUNCA retornar: access_token, ciphertext, encryption key, Authorization, refresh token
@@ -29,6 +30,11 @@ export async function GET(req: NextRequest) {
       .order('connected_at', { ascending: false });
 
     if (error) {
+      // Degradação honesta: se a fila (TaskQueue) não estiver disponível,
+      // retorna lista vazia em vez de 500. Qualquer outro erro vira internal_error.
+      if (isQueueUnavailable(error)) {
+        return NextResponse.json({ connected: false, integrations: [] }, { status: 200 });
+      }
       return NextResponse.json({ error: 'internal_error' }, { status: 500 });
     }
 

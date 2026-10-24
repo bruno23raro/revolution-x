@@ -147,7 +147,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-2xl font-semibold text-white mb-4">5. Conteudo do Usuario</h2>
           <p className="text-white text-opacity-60 mb-4">
             Voce possui todo o Conteudo que, de sua autoria, disponibiliza, posta,
-            publica ou exibe na Plataforma ("Seu Conteudo"). Ao disponibilizar,
+            publica ou exibe na Plataforma Seu Conteudo. Ao disponibilizar,
             postar, publicar ou exibir Seu Conteudo na Plataforma, voce nos concede
             uma licenca mundial, nao exclusiva, royalty-free, transferivel e
             sublincenciavel para usar, reproduzir, modificar, exibir, executar,
@@ -180,8 +180,8 @@ export default function TermsOfServicePage() {
           <h2 className="text-2xl font-semibold text-white mb-4">7. IA e Recursos de Automação</h2>
           <p className="text-white text-opacity-60 mb-4">
             Os recursos de IA (Gemini, provedores configurados) e automacao
-            disponiveis na Plataforma sao fornecidos "COMO ESTAO" e "CONFORME
-            DISPONIVEL". Nao garantimos que:
+            disponiveis na Plataforma sao fornecidos &#34;COMO ESTAO&#34; e &#34;CONFORME
+            DISPONIVEL&#34;. Nao garantimos que:
           </p>
           <ul className="list-disc list-inside text-white text-opacity-60 space-y-2">
             <li>Os servicos de IA nao serao interrompidos ou serao permanentes.</li>

@@ -44,7 +44,7 @@ const originalFetch = global.fetch;
 const AUTHED_USER = { data: { user: { id: 'user-1' } } };
 const DB_USER_WITH_ORG = { organizationMembers: [{ organizationId: 'org-1' }] };
 
-function cbReq(query: string, cookie = 'oauth_state=good') {
+function cbReq(query: string, cookie = 'oauth_state=facebook:good') {
   return new NextRequest(`https://revolutionx.com.br/api/auth/callback/meta${query}`, {
     headers: { cookie },
   });
@@ -166,7 +166,7 @@ describe('OAuth callback meta', () => {
 
     // Request visto pelo app em produção atrás do proxy interno (0.0.0.0).
     const req = new NextRequest('http://0.0.0.0:3000/api/auth/callback/meta?code=x&state=good', {
-      headers: { cookie: 'oauth_state=good' },
+      headers: { cookie: 'oauth_state=facebook:good' },
     });
     const res = await GET(req);
     expect(res.status).toBe(307);

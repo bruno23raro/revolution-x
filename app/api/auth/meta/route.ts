@@ -56,7 +56,9 @@ export async function GET(req: NextRequest) {
   const state = generateState();
 
   const res = NextResponse.redirect(buildMetaAuthUrl(config, state, provider));
-  res.cookies.set('oauth_state', state, {
+  // Inclui provider no cookie para o callback saber qual provedor persistir
+  const stateWithProvider = `${provider}:${state}`;
+  res.cookies.set('oauth_state', stateWithProvider, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

@@ -27,9 +27,14 @@ export async function GET(req: NextRequest) {
   if (!state) return redirectError(req, 'state_missing');
   if (!code) return redirectError(req, 'code_missing');
 
-  // State CSRF protection
-  const sessionState = req.cookies.get('oauth_state')?.value ?? '';
+  // State CSRF protection — cookie armazena "provider:state" para saber qual provedor persistir
+  const sessionStateFull = req.cookies.get('oauth_state')?.value ?? '';
+  const [expectedProvider, sessionState] = sessionStateFull.split(':', 2);
   if (!sessionState || !secureCompare(state, sessionState)) {
+    return redirectError(req, 'state_invalid');
+  }
+  // Validar que o provider é um dos esperados
+  if (!['facebook', 'instagram', 'whatsapp'].includes(expectedProvider)) {
     return redirectError(req, 'state_invalid');
   }
 
@@ -142,7 +147,7 @@ export async function GET(req: NextRequest) {
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : null;
 
-    // MULTICONTAS: 1 linha por Página (check-then-act, idempotente por
+    // MULTICONTAS: 1 linha por PÁGINA (check-then-act, idempotente por
     // meta_page_id). Pré-migration-016 a 2ª+ página viola
     // UNIQUE(organization_id,provider) → db_error (documentado); 1 página
     // funciona com ou sem 016.
@@ -151,7 +156,7 @@ export async function GET(req: NextRequest) {
         .from('meta_integrations')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('provider', 'facebook');
+        .eq('provider', expectedProvider);
       const found = t.metaPageId
         ? await selectQ.eq('meta_page_id', t.metaPageId).maybeSingle()
         : await selectQ.is('meta_page_id', null).maybeSingle();
@@ -177,7 +182,7 @@ export async function GET(req: NextRequest) {
           .from('meta_integrations')
           .insert({
             organization_id: organizationId,
-            provider: 'facebook',
+            provider: expectedProvider,
             meta_page_id: t.metaPageId,
             instagram_account_id: t.instagramAccountId,
             meta_app_id: process.env.META_APP_ID ?? null,

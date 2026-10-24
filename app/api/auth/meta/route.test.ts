@@ -58,7 +58,7 @@ describe('OAuth start meta (GET /api/auth/meta)', () => {
     expect(res.status).toBeLessThan(400);
     expect(res.headers.get('location')).toContain('client_id=app-id');
     expect(res.headers.get('location')).toContain('state=state-123');
-    expect(res.cookies.get('oauth_state')?.value).toBe('state-123');
+    expect(res.cookies.get('oauth_state')?.value).toBe('facebook:state-123');
     // provider padrão = facebook quando ausente.
     expect(res.headers.get('location')).toContain('provider=facebook');
   });

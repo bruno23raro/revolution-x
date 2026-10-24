@@ -52,13 +52,15 @@ export async function POST(req: NextRequest) {
   const authUrl = buildMetaAuthUrl(config, state, 'instagram');
 
   // Set state cookie for callback validation (same pattern as /api/auth/meta)
+  // Inclui provider no cookie para o callback saber qual provedor persistir
+  const stateWithProvider = `instagram:${state}`;
   const res = NextResponse.json({
     success: true,
     authUrl,
     state,
     organizationId: user.organizationId,
   });
-  res.cookies.set('oauth_state', state, {
+  res.cookies.set('oauth_state', stateWithProvider, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

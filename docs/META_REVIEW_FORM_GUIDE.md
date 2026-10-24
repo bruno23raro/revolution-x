@@ -20,7 +20,7 @@ https://revolutionx.com.br
 1. Acesse https://revolutionx.com.br
 2. Faça login com: brunoalmeida23111996@gmail.com
 3. Navegue até a seção "Integrações" no menu lateral
-4. Clique em "Conectar via OAuth" na tarjeta Meta
+4. Clique em "Conectar via OAuth" no cartão Meta
 5. Autorize as permissões solicitadas pelo Facebook/Instagram
 6. Após autorização, você será redirecionado de volta ao app
 7. Verifique se a integração aparece como "Conectado" na seção de integrações
@@ -122,11 +122,79 @@ Nenhuma restrição de IP ou geolocalização foi implementada.
 
 ---
 
-## Próximos Passos
+## Como Preencher no Developer Portal
 
 1. Acesse: https://developers.facebook.com/apps/1112157761403064/
-2. Vá em **"Quality Review"** no menu lateral
-3. Selecione os produtos para revisão (Facebook Login, Instagram Graph API, WhatsApp)
-4. Clique em **"Submit for Review"**
-5. Preencha o formulário com as respostas acima
-6. Aguarde a resposta da Meta (24-72 horas)
+2. No menu lateral esquerdo, clique em **"Quality Review"** (Revisão de Qualidade)
+3. Selecione os produtos que deseja revisar:
+   - ✅ Facebook Login
+   - ✅ Instagram Graph API
+   - ✅ WhatsApp Business API
+4. Clique em **"Submit for Review"** (Enviar para Revisão) no canto superior direito
+5. Preencha cada campo usando as respostas acima
+6. Aguarde a resposta da Meta (normalmente 24-72 horas)
+
+---
+
+## Passo a Passo Detalhado
+
+### Passo 1 — Acessar o Developer Portal
+```
+https://developers.facebook.com/apps/1112157761403064/settings/basic/
+```
+
+### Passo 2 — Ir para Quality Review
+No menu lateral esquerdo, clique em **"Quality Review"**.
+
+Se não aparecer, vá em:
+- **"App Review"** → **"Quality Review"**
+
+### Passo 3 — Selecionar Produtos
+Você verá os produtos configurados no seu app:
+
+| Produto | Status | Ação |
+|---------|--------|------|
+| Facebook Login | Configurado | ✅ Selecionar |
+| Instagram Graph API | Configurado | ✅ Selecionar |
+| WhatsApp Business API | Configurado | ✅ Selecionar |
+| Marketing API | (opcional) | ⬜ Selecionar se usar |
+
+### Passo 4 — Submeter para Revisão
+Clique no botão **"Submit for Review"** no canto superior direito.
+
+### Passo 5 — Preencher o Formulário
+O formulário abrirá com os campos listados acima. Copie e cole as respostas prontas.
+
+### Passo 6 — Aguardar Resposta
+- **Tempo médio:** 24-72 horas úteis
+- **Notificação:** Email para o admin do app
+- **Status:** Pode ser visto em **"Quality Review"** > **"Review Status"**
+
+---
+
+## Troubleshooting Comum
+
+### Erro: "App in Development Mode"
+- **Solução:** Vá em Configurações > Básico e ative o modo **"Ao Vivo"**
+- Ou adicione testadores em Configurações > Papéis
+
+### Erro: "redirect_uri não corresponde"
+- **Solução:** Verifique em Facebook Login > Configurações se a URI `https://revolutionx.com.br/api/auth/callback/meta` está registrada
+
+### Revisão Reprovada
+- Leia o motivo no email da Meta
+- Ajuste conforme solicitado
+- Reenvie para revisão
+
+### Status "Em Análise" demora
+- Isso é normal. A Meta revisa manualmente.
+- Não submeta novamente antes do prazo — isso reinicia a fila.
+
+---
+
+## Próximos Passos Após Aprovação
+
+1. ✅ App estará disponível para todos os usuários
+2. ✅ Nova integração OAuth funcionará para qualquer usuário
+3. ✅ Webhook do WhatsApp receberá eventos em tempo real
+4. ✅ Instagram permitirá publicações automatizadas

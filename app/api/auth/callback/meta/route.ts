@@ -201,13 +201,15 @@ export async function GET(req: NextRequest) {
   }
 
   // Token nunca em log/redirect. Estado OAuth é de uso único: limpar o cookie.
-  const ok = NextResponse.redirect(new URL('/onboarding/success', req.url));
+  const publicOrigin = resolvePublicSiteOrigin(req.nextUrl.origin);
+  const ok = NextResponse.redirect(new URL('/onboarding/success', publicOrigin));
   ok.cookies.set('oauth_state', '', { maxAge: 0, path: '/' });
   return ok;
 }
 
 function redirectError(req: NextRequest, reason: string, detail?: string) {
-  const url = new URL('/onboarding/error', req.url);
+  const publicOrigin = resolvePublicSiteOrigin(req.nextUrl.origin);
+  const url = new URL('/onboarding/error', publicOrigin);
   url.searchParams.set('reason', reason);
   if (detail) url.searchParams.set('detail', detail);
   return NextResponse.redirect(url);

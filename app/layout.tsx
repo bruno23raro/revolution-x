@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <head>
-        <meta name="facebook-domain-verification" content="34j2yr0b919ahe1fw0phzg9ubwvile" />
+        <meta name="facebook-domain-verification" content="y5taj86mle4eji96jz4ldkdf2vt49e" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body>{children}</body>

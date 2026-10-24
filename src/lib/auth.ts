@@ -58,12 +58,20 @@ export async function getAuthenticatedUser(
   // Validate user exists in the database and belongs to an organization.
   // Wrapped in withUserContext so the "User_self" RLS policy is satisfied.
   // (Currently BYPASSRLS ignores this, but future-proof for role migration.)
-  const dbUser = await withUserContext(user.id, async (tx) =>
-    tx.user.findUnique({
-      where: { id: user.id },
-      include: { organizationMembers: true },
-    })
-  );
+  let dbUser;
+  try {
+    dbUser = await withUserContext(user.id, async (tx) =>
+      tx.user.findUnique({
+        where: { id: user.id },
+        include: { organizationMembers: true },
+      })
+    );
+  } catch (error) {
+    // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.log('[auth] getAuthenticatedUser: database error, code=' + (err as { code?: string }).code + ', name=' + err.name);
+    return null;
+  }
 
   if (!dbUser) {
     // Log: usuário sem registro no banco de dados
@@ -110,12 +118,20 @@ export async function getAllOrganizationMemberships(
   }
 
   // Wrap in withUserContext to satisfy User_self RLS policy.
-  const dbUser = await withUserContext(user.id, async (tx) =>
-    tx.user.findUnique({
-      where: { id: user.id },
-      include: { organizationMembers: { select: { organizationId: true, role: true } } },
-    })
-  );
+  let dbUser;
+  try {
+    dbUser = await withUserContext(user.id, async (tx) =>
+      tx.user.findUnique({
+        where: { id: user.id },
+        include: { organizationMembers: { select: { organizationId: true, role: true } } },
+      })
+    );
+  } catch (error) {
+    // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.log('[auth] getAllOrganizationMemberships: database error, code=' + (err as { code?: string }).code + ', name=' + err.name);
+    return null;
+  }
 
   if (!dbUser || dbUser.organizationMembers.length === 0) {
     return null;

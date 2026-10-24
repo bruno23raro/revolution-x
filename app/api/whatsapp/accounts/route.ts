@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { listTenantWhatsAppAccounts } from '@/integrations/meta/accounts';
 import { generateOAuthState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 import type { MetaAuthConfig } from '@/integrations/meta/types';
 import { DEFAULT_SCOPES } from '@/integrations/meta/constants';
 
@@ -52,8 +53,10 @@ export async function POST(req: NextRequest) {
   // Generate OAuth state for CSRF protection
   const state = generateOAuthState();
 
-  // Build the redirect URI from the request origin
-  const origin = req.nextUrl.origin;
+  // Origem pública canônica (NEXT_PUBLIC_SITE_URL tem precedência) — o
+  // redirect_uri precisa bater exatamente com o cadastrado no painel da Meta;
+  // o origin interno do proxy do Hostinger (0.0.0.0:3000) quebraria o fluxo.
+  const origin = resolvePublicSiteOrigin(req.nextUrl.origin);
 
   // Build Meta Auth URL for WhatsApp Business connection
   const config: MetaAuthConfig = {

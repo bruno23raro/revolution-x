@@ -58,12 +58,16 @@ export async function GET(req: NextRequest) {
   const res = NextResponse.redirect(buildMetaAuthUrl(config, state, provider));
   // Inclui provider no cookie para o callback saber qual provedor persistir
   const stateWithProvider = `${provider}:${state}`;
+  // Domain must match the public site origin exactly (apex vs www).
+  // Without explicit domain, cookie may not survive cross-site redirect from Facebook.
+  const cookieDomain = resolvePublicSiteOrigin(req.nextUrl.origin);
   res.cookies.set('oauth_state', stateWithProvider, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 10 * 60,
     path: '/',
+    domain: cookieDomain,
   });
   return res;
 }

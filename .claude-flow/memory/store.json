@@ -2663,6 +2663,222 @@
       "lastAccessed": "2026-10-26T21:44:33.981Z",
       "accessCount": 0,
       "expiresAt": "2026-11-25T21:44:33.981Z"
+    },
+    "cmd-1793051160532": {
+      "key": "cmd-1793051160532",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/auth/callback/meta?code=test&state=test\\\" | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:46:00.532Z",
+      "lastAccessed": "2026-10-26T21:46:00.532Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:46:00.532Z"
+    },
+    "cmd-1793051161099": {
+      "key": "cmd-1793051161099",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git add -A && git commit -m \\\"fix: add missing migration 013, update FERRAMENTAS.md and audit report\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:46:01.099Z",
+      "lastAccessed": "2026-10-26T21:46:01.099Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:46:01.099Z"
+    },
+    "cmd-1793051238936": {
+      "key": "cmd-1793051238936",
+      "value": "{\"command\":\"curl -s -o /dev/null -w \\\"%{http_code}\\\" \\\"https://revolutionx.com.br\\\" && echo \\\"\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:18.936Z",
+      "lastAccessed": "2026-10-26T21:47:18.936Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:18.936Z"
+    },
+    "cmd-1793051261331": {
+      "key": "cmd-1793051261331",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test -- --passWithNoTests 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:41.331Z",
+      "lastAccessed": "2026-10-26T21:47:41.331Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:41.331Z"
+    },
+    "cmd-1793051263768": {
+      "key": "cmd-1793051263768",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:43.768Z",
+      "lastAccessed": "2026-10-26T21:47:43.768Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:43.768Z"
+    },
+    "cmd-1793051268966": {
+      "key": "cmd-1793051268966",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:48.966Z",
+      "lastAccessed": "2026-10-26T21:47:48.966Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:48.966Z"
+    },
+    "cmd-1793051269633": {
+      "key": "cmd-1793051269633",
+      "value": "{\"command\":\"curl -sI \\\"https://revolutionx.com.br\\\" | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:49.633Z",
+      "lastAccessed": "2026-10-26T21:47:49.633Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:49.633Z"
+    },
+    "cmd-1793051277362": {
+      "key": "cmd-1793051277362",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git remote -v && git status\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:47:57.362Z",
+      "lastAccessed": "2026-10-26T21:47:57.362Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:47:57.362Z"
+    },
+    "cmd-1793051404500": {
+      "key": "cmd-1793051404500",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git push\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:50:04.500Z",
+      "lastAccessed": "2026-10-26T21:50:04.500Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:50:04.500Z"
+    },
+    "cmd-1793051415204": {
+      "key": "cmd-1793051415204",
+      "value": "{\"command\":\"cat \\\"C:\\\\Users\\\\Bruno\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Bruno--claude-Revolution-X\\\\1ebe3b64-f146-4cfb-9738-1f181fd9ebbd\\\\tasks\\\\bjgczrhur.output\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:50:15.204Z",
+      "lastAccessed": "2026-10-26T21:50:15.204Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:50:15.204Z"
+    },
+    "cmd-1793051419471": {
+      "key": "cmd-1793051419471",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline -3\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:50:19.471Z",
+      "lastAccessed": "2026-10-26T21:50:19.471Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:50:19.471Z"
+    },
+    "cmd-1793051429252": {
+      "key": "cmd-1793051429252",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:50:29.252Z",
+      "lastAccessed": "2026-10-26T21:50:29.252Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:50:29.252Z"
+    },
+    "cmd-1793051566913": {
+      "key": "cmd-1793051566913",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git push 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:52:46.913Z",
+      "lastAccessed": "2026-10-26T21:52:46.913Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:52:46.913Z"
+    },
+    "cmd-1793051694569": {
+      "key": "cmd-1793051694569",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git push 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:54:54.569Z",
+      "lastAccessed": "2026-10-26T21:54:54.569Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:54:54.569Z"
+    },
+    "cmd-1793051703475": {
+      "key": "cmd-1793051703475",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline -3 && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:55:03.475Z",
+      "lastAccessed": "2026-10-26T21:55:03.475Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:55:03.475Z"
+    },
+    "cmd-1793051711078": {
+      "key": "cmd-1793051711078",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline origin/main..HEAD\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:55:11.078Z",
+      "lastAccessed": "2026-10-26T21:55:11.078Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:55:11.078Z"
+    },
+    "cmd-1793051835118": {
+      "key": "cmd-1793051835118",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git push origin main 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:57:15.118Z",
+      "lastAccessed": "2026-10-26T21:57:15.118Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:57:15.118Z"
+    },
+    "cmd-1793051848989": {
+      "key": "cmd-1793051848989",
+      "value": "{\"command\":\"curl -s -o /dev/null -w \\\"HTTP: %{http_code}\\\\nSSL: %{ssl_verify_result}\\\\nTime: %{time_total}s\\\" \\\"https://revolutionx.com.br\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:57:28.989Z",
+      "lastAccessed": "2026-10-26T21:57:28.989Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:57:28.989Z"
+    },
+    "cmd-1793051849709": {
+      "key": "cmd-1793051849709",
+      "value": "{\"command\":\"curl -s -o /dev/null -w \\\"Webhook HTTP: %{http_code}\\\\nResponse: \\\" \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:57:29.709Z",
+      "lastAccessed": "2026-10-26T21:57:29.709Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:57:29.709Z"
+    },
+    "cmd-1793051972286": {
+      "key": "cmd-1793051972286",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git push origin main 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:59:32.286Z",
+      "lastAccessed": "2026-10-26T21:59:32.286Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:59:32.286Z"
+    },
+    "cmd-1793051981475": {
+      "key": "cmd-1793051981475",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && rm -f \\\".mcp.json.bak-20261026-182657\\\" && git rm -f \\\".mcp.json.bak-20261026-182657\\\" 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:59:41.475Z",
+      "lastAccessed": "2026-10-26T21:59:41.475Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:59:41.475Z"
+    },
+    "cmd-1793051986985": {
+      "key": "cmd-1793051986985",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -r \\\"ghp_\\\\|sbp_\\\\|EAAP\\\" --include=\\\"*.json\\\" --include=\\\"*.ts\\\" --include=\\\"*.md\\\" --exclude-dir=\\\".git\\\" -l 2>/dev/null | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:59:46.985Z",
+      "lastAccessed": "2026-10-26T21:59:46.985Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:59:46.985Z"
+    },
+    "cmd-1793051996936": {
+      "key": "cmd-1793051996936",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git status --short && echo \\\"---\\\" && git diff --cached --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:59:56.936Z",
+      "lastAccessed": "2026-10-26T21:59:56.936Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:59:56.936Z"
+    },
+    "cmd-1793051997446": {
+      "key": "cmd-1793051997446",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git config credential.helper && git config --global credential.helper 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:59:57.446Z",
+      "lastAccessed": "2026-10-26T21:59:57.446Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:59:57.446Z"
     }
   },
   "version": "3.0.0"

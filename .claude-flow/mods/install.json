@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "installedAt": "2026-10-26T17:54:29.856Z",
+  "files": {
+    "C:\\Users\\Bruno\\.claude\\Revolution\\X\\.claude\\settings.json": {
+      "plugins": [
+        "ruflo-mods@ruflo",
+        "ruflo-swarm@ruflo",
+        "ruflo-console@ruflo"
+      ],
+      "marketplace": true,
+      "env": true,
+      "claudeInstalled": [
+        "ruflo-swarm@ruflo"
+      ]
+    }
+  }
+}

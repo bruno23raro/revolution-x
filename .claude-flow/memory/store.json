@@ -1,0 +1,2669 @@
+{
+  "entries": {
+    "cmd-1793038006493": {
+      "key": "cmd-1793038006493",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"tests/rls.test\\\" --no-coverage 2>&1 | head -50\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:06:46.493Z",
+      "lastAccessed": "2026-10-26T18:06:46.493Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:06:46.493Z"
+    },
+    "cmd-1793038010637": {
+      "key": "cmd-1793038010637",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"app/api/auth/register/route.test\\\" --no-coverage 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:06:50.637Z",
+      "lastAccessed": "2026-10-26T18:06:50.637Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:06:50.637Z"
+    },
+    "cmd-1793038021213": {
+      "key": "cmd-1793038021213",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test 2>&1 | tail -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:07:01.213Z",
+      "lastAccessed": "2026-10-26T18:07:01.213Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:07:01.213Z"
+    },
+    "cmd-1793038041821": {
+      "key": "cmd-1793038041821",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:07:21.821Z",
+      "lastAccessed": "2026-10-26T18:07:21.821Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:07:21.821Z"
+    },
+    "cmd-1793038046711": {
+      "key": "cmd-1793038046711",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:07:26.711Z",
+      "lastAccessed": "2026-10-26T18:07:26.711Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:07:26.711Z"
+    },
+    "cmd-1793038051201": {
+      "key": "cmd-1793038051201",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:07:31.201Z",
+      "lastAccessed": "2026-10-26T18:07:31.201Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:07:31.201Z"
+    },
+    "cmd-1793038076467": {
+      "key": "cmd-1793038076467",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"app/api/auth/register/route.test\\\" --no-coverage --verbose 2>&1 | grep -E \\\"√|PASS|FAIL\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:07:56.467Z",
+      "lastAccessed": "2026-10-26T18:07:56.467Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:07:56.467Z"
+    },
+    "cmd-1793038227390": {
+      "key": "cmd-1793038227390",
+      "value": "{\"command\":\"ls -la \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\scripts\\\\meta\\\\\\\" 2>&1\",\"exitCode\":2,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:10:27.390Z",
+      "lastAccessed": "2026-10-26T18:10:27.390Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:10:27.390Z"
+    },
+    "cmd-1793038229941": {
+      "key": "cmd-1793038229941",
+      "value": "{\"command\":\"dir \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\scripts\\\\meta\\\\\\\" 2>&1\",\"exitCode\":2,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:10:29.941Z",
+      "lastAccessed": "2026-10-26T18:10:29.941Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:10:29.941Z"
+    },
+    "cmd-1793038275786": {
+      "key": "cmd-1793038275786",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:11:15.786Z",
+      "lastAccessed": "2026-10-26T18:11:15.786Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:11:15.786Z"
+    },
+    "cmd-1793038283622": {
+      "key": "cmd-1793038283622",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:11:23.622Z",
+      "lastAccessed": "2026-10-26T18:11:23.622Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:11:23.622Z"
+    },
+    "cmd-1793038287943": {
+      "key": "cmd-1793038287943",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:11:27.943Z",
+      "lastAccessed": "2026-10-26T18:11:27.943Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:11:27.943Z"
+    },
+    "cmd-1793038299380": {
+      "key": "cmd-1793038299380",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:11:39.380Z",
+      "lastAccessed": "2026-10-26T18:11:39.380Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:11:39.380Z"
+    },
+    "cmd-1793038338392": {
+      "key": "cmd-1793038338392",
+      "value": "{\"command\":\"sed -n '237,287p' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:18.392Z",
+      "lastAccessed": "2026-10-26T18:12:18.392Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:18.392Z"
+    },
+    "cmd-1793038358538": {
+      "key": "cmd-1793038358538",
+      "value": "{\"command\":\"sed -i 's/## FASE 7 — Ajustes Finais no Hostinger ⚠️/## FASE 7 — Ajustes Finais no Hostinger ✅ CONCLUÍDA/' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:38.538Z",
+      "lastAccessed": "2026-10-26T18:12:38.538Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:38.538Z"
+    },
+    "cmd-1793038360716": {
+      "key": "cmd-1793038360716",
+      "value": "{\"command\":\"sed -n '237,237p' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:40.716Z",
+      "lastAccessed": "2026-10-26T18:12:40.716Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:40.716Z"
+    },
+    "cmd-1793038362961": {
+      "key": "cmd-1793038362961",
+      "value": "{\"command\":\"sed -i 's/### Tarefas:/### Tarefas Executadas:/' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:42.961Z",
+      "lastAccessed": "2026-10-26T18:12:42.961Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:42.961Z"
+    },
+    "cmd-1793038365312": {
+      "key": "cmd-1793038365312",
+      "value": "{\"command\":\"sed -n '237,290p' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:45.312Z",
+      "lastAccessed": "2026-10-26T18:12:45.312Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:45.312Z"
+    },
+    "cmd-1793038367829": {
+      "key": "cmd-1793038367829",
+      "value": "{\"command\":\"sed -n '237,290p' \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\PASSOS.md\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:12:47.829Z",
+      "lastAccessed": "2026-10-26T18:12:47.829Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:12:47.829Z"
+    },
+    "cmd-1793039047152": {
+      "key": "cmd-1793039047152",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:24:07.152Z",
+      "lastAccessed": "2026-10-26T18:24:07.152Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:24:07.152Z"
+    },
+    "cmd-1793039053383": {
+      "key": "cmd-1793039053383",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:24:13.383Z",
+      "lastAccessed": "2026-10-26T18:24:13.383Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:24:13.383Z"
+    },
+    "cmd-1793039065315": {
+      "key": "cmd-1793039065315",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:24:25.315Z",
+      "lastAccessed": "2026-10-26T18:24:25.315Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:24:25.315Z"
+    },
+    "cmd-1793039070494": {
+      "key": "cmd-1793039070494",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:24:30.494Z",
+      "lastAccessed": "2026-10-26T18:24:30.494Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:24:30.494Z"
+    },
+    "cmd-1793039274906": {
+      "key": "cmd-1793039274906",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:27:54.906Z",
+      "lastAccessed": "2026-10-26T18:27:54.906Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:27:54.906Z"
+    },
+    "cmd-1793039279789": {
+      "key": "cmd-1793039279789",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:27:59.789Z",
+      "lastAccessed": "2026-10-26T18:27:59.789Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:27:59.789Z"
+    },
+    "cmd-1793039289982": {
+      "key": "cmd-1793039289982",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test 2>&1 | tail -15\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:09.982Z",
+      "lastAccessed": "2026-10-26T18:28:09.982Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:09.982Z"
+    },
+    "cmd-1793039296080": {
+      "key": "cmd-1793039296080",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:16.080Z",
+      "lastAccessed": "2026-10-26T18:28:16.080Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:16.080Z"
+    },
+    "cmd-1793039301380": {
+      "key": "cmd-1793039301380",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"app/api/auth/register/route.test\\\" --no-coverage --verbose 2>&1 | grep -E \\\"√|PASS|FAIL\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:21.380Z",
+      "lastAccessed": "2026-10-26T18:28:21.380Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:21.380Z"
+    },
+    "cmd-1793039305803": {
+      "key": "cmd-1793039305803",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"tests/rls.test\\\" --no-coverage --verbose 2>&1 | grep -E \\\"√|PASS|FAIL\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:25.803Z",
+      "lastAccessed": "2026-10-26T18:28:25.803Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:25.803Z"
+    },
+    "cmd-1793039311042": {
+      "key": "cmd-1793039311042",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx jest --testPathPattern=\\\"auth|register|login|meta\\\" --no-coverage --verbose 2>&1 | grep -E \\\"√|PASS|FAIL|Test Suites\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:31.042Z",
+      "lastAccessed": "2026-10-26T18:28:31.042Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:31.042Z"
+    },
+    "cmd-1793039322021": {
+      "key": "cmd-1793039322021",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx playwright test --help 2>&1 | head -5 || echo \\\"Playwright not fully available or not configured\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:42.021Z",
+      "lastAccessed": "2026-10-26T18:28:42.021Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:42.021Z"
+    },
+    "cmd-1793039324858": {
+      "key": "cmd-1793039324858",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls tests/ 2>&1 | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:44.858Z",
+      "lastAccessed": "2026-10-26T18:28:44.858Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:44.858Z"
+    },
+    "cmd-1793039327375": {
+      "key": "cmd-1793039327375",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls -la tests/ 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:28:47.375Z",
+      "lastAccessed": "2026-10-26T18:28:47.375Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:28:47.375Z"
+    },
+    "cmd-1793040078824": {
+      "key": "cmd-1793040078824",
+      "value": "{\"command\":\"openssl rand -hex 32\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:41:18.824Z",
+      "lastAccessed": "2026-10-26T18:41:18.824Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:41:18.824Z"
+    },
+    "cmd-1793040101613": {
+      "key": "cmd-1793040101613",
+      "value": "{\"command\":\"openssl rand -hex 32\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:41:41.613Z",
+      "lastAccessed": "2026-10-26T18:41:41.613Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:41:41.613Z"
+    },
+    "cmd-1793040139925": {
+      "key": "cmd-1793040139925",
+      "value": "{\"command\":\"npm run build 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:42:19.925Z",
+      "lastAccessed": "2026-10-26T18:42:19.925Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:42:19.925Z"
+    },
+    "cmd-1793040144237": {
+      "key": "cmd-1793040144237",
+      "value": "{\"command\":\"npx tsc --noEmit 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:42:24.237Z",
+      "lastAccessed": "2026-10-26T18:42:24.237Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:42:24.237Z"
+    },
+    "cmd-1793040158854": {
+      "key": "cmd-1793040158854",
+      "value": "{\"command\":\"npm test 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:42:38.854Z",
+      "lastAccessed": "2026-10-26T18:42:38.854Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:42:38.854Z"
+    },
+    "cmd-1793040163588": {
+      "key": "cmd-1793040163588",
+      "value": "{\"command\":\"npx next lint 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T18:42:43.588Z",
+      "lastAccessed": "2026-10-26T18:42:43.588Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T18:42:43.588Z"
+    },
+    "cmd-1793041423637": {
+      "key": "cmd-1793041423637",
+      "value": "{\"command\":\"cat C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\.mcp.json 2>/dev/null || echo \\\"No .mcp.json found\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:03:43.637Z",
+      "lastAccessed": "2026-10-26T19:03:43.637Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:03:43.637Z"
+    },
+    "cmd-1793041450346": {
+      "key": "cmd-1793041450346",
+      "value": "{\"command\":\"npm run build 2>&1 | tail -3 && echo \\\"---TYPECHECK---\\\" && npx tsc --noEmit 2>&1 && echo \\\"---LINT---\\\" && npx next lint 2>&1 && echo \\\"---TESTS---\\\" && npm test 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:04:10.346Z",
+      "lastAccessed": "2026-10-26T19:04:10.346Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:04:10.346Z"
+    },
+    "cmd-1793041745741": {
+      "key": "cmd-1793041745741",
+      "value": "{\"command\":\"npm run build 2>&1 | tail -3 && echo \\\"---\\\" && npx tsc --noEmit 2>&1 && echo \\\"---\\\" && npx next lint 2>&1 && echo \\\"---\\\" && npm test 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:09:05.741Z",
+      "lastAccessed": "2026-10-26T19:09:05.741Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:09:05.741Z"
+    },
+    "cmd-1793042072995": {
+      "key": "cmd-1793042072995",
+      "value": "{\"command\":\"npm run build 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:14:32.995Z",
+      "lastAccessed": "2026-10-26T19:14:32.995Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:14:32.995Z"
+    },
+    "cmd-1793042077404": {
+      "key": "cmd-1793042077404",
+      "value": "{\"command\":\"npx tsc --noEmit 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:14:37.404Z",
+      "lastAccessed": "2026-10-26T19:14:37.404Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:14:37.404Z"
+    },
+    "cmd-1793042081766": {
+      "key": "cmd-1793042081766",
+      "value": "{\"command\":\"npx next lint 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:14:41.766Z",
+      "lastAccessed": "2026-10-26T19:14:41.766Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:14:41.766Z"
+    },
+    "cmd-1793042093250": {
+      "key": "cmd-1793042093250",
+      "value": "{\"command\":\"npm test 2>&1 | tail -15\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:14:53.250Z",
+      "lastAccessed": "2026-10-26T19:14:53.250Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:14:53.250Z"
+    },
+    "cmd-1793042098525": {
+      "key": "cmd-1793042098525",
+      "value": "{\"command\":\"git diff app\\\\api\\\\auth\\\\meta\\\\route.ts\",\"exitCode\":128,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:14:58.525Z",
+      "lastAccessed": "2026-10-26T19:14:58.525Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:14:58.525Z"
+    },
+    "cmd-1793042100684": {
+      "key": "cmd-1793042100684",
+      "value": "{\"command\":\"git diff -- app/api/auth/meta/route.ts\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:15:00.684Z",
+      "lastAccessed": "2026-10-26T19:15:00.684Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:15:00.684Z"
+    },
+    "cmd-1793042320855": {
+      "key": "cmd-1793042320855",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:18:40.855Z",
+      "lastAccessed": "2026-10-26T19:18:40.855Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:18:40.855Z"
+    },
+    "cmd-1793042325287": {
+      "key": "cmd-1793042325287",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:18:45.287Z",
+      "lastAccessed": "2026-10-26T19:18:45.287Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:18:45.287Z"
+    },
+    "cmd-1793042334628": {
+      "key": "cmd-1793042334628",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:18:54.628Z",
+      "lastAccessed": "2026-10-26T19:18:54.628Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:18:54.628Z"
+    },
+    "cmd-1793042340179": {
+      "key": "cmd-1793042340179",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:19:00.179Z",
+      "lastAccessed": "2026-10-26T19:19:00.179Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:19:00.179Z"
+    },
+    "cmd-1793042972957": {
+      "key": "cmd-1793042972957",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git status\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:29:32.957Z",
+      "lastAccessed": "2026-10-26T19:29:32.957Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:29:32.957Z"
+    },
+    "cmd-1793042975904": {
+      "key": "cmd-1793042975904",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git diff app/api/auth/meta/route.ts\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:29:35.904Z",
+      "lastAccessed": "2026-10-26T19:29:35.904Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:29:35.904Z"
+    },
+    "cmd-1793042978468": {
+      "key": "cmd-1793042978468",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git diff .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:29:38.468Z",
+      "lastAccessed": "2026-10-26T19:29:38.468Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:29:38.468Z"
+    },
+    "cmd-1793042981014": {
+      "key": "cmd-1793042981014",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git diff .env.example\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:29:41.014Z",
+      "lastAccessed": "2026-10-26T19:29:41.014Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:29:41.014Z"
+    },
+    "cmd-1793043061948": {
+      "key": "cmd-1793043061948",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -i whatsapp .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:31:01.948Z",
+      "lastAccessed": "2026-10-26T19:31:01.948Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:31:01.948Z"
+    },
+    "cmd-1793043064661": {
+      "key": "cmd-1793043064661",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -E \\\"^META|^WHATTPSAP|^CRON|^NEXT_PUBLIC\\\" .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:31:04.661Z",
+      "lastAccessed": "2026-10-26T19:31:04.661Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:31:04.661Z"
+    },
+    "cmd-1793043136159": {
+      "key": "cmd-1793043136159",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat CREDENCIAIS.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:32:16.159Z",
+      "lastAccessed": "2026-10-26T19:32:16.159Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:32:16.159Z"
+    },
+    "cmd-1793043186794": {
+      "key": "cmd-1793043186794",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit && npm test && npm run lint\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:33:06.794Z",
+      "lastAccessed": "2026-10-26T19:33:06.794Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:33:06.794Z"
+    },
+    "cmd-1793043192287": {
+      "key": "cmd-1793043192287",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx qiksy__qa_status\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:33:12.287Z",
+      "lastAccessed": "2026-10-26T19:33:12.287Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:33:12.287Z"
+    },
+    "cmd-1793043325812": {
+      "key": "cmd-1793043325812",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -A2 \\\"WhatsApp Cloud API\\\" CREDENCIAIS.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:35:25.812Z",
+      "lastAccessed": "2026-10-26T19:35:25.812Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:35:25.812Z"
+    },
+    "cmd-1793044001348": {
+      "key": "cmd-1793044001348",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -A6 \\\"WhatsApp Cloud API\\\" CREDENCIAIS.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:46:41.348Z",
+      "lastAccessed": "2026-10-26T19:46:41.348Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:46:41.348Z"
+    },
+    "cmd-1793044080049": {
+      "key": "cmd-1793044080049",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat CREDENCIAIS.md | head -100\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:48:00.049Z",
+      "lastAccessed": "2026-10-26T19:48:00.049Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:48:00.049Z"
+    },
+    "cmd-1793044152920": {
+      "key": "cmd-1793044152920",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build && npx tsc --noEmit && npm test\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T19:49:12.920Z",
+      "lastAccessed": "2026-10-26T19:49:12.920Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T19:49:12.920Z"
+    },
+    "cmd-1793045179444": {
+      "key": "cmd-1793045179444",
+      "value": "{\"command\":\"npm run build\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:06:19.444Z",
+      "lastAccessed": "2026-10-26T20:06:19.444Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:06:19.444Z"
+    },
+    "cmd-1793045194157": {
+      "key": "cmd-1793045194157",
+      "value": "{\"command\":\"npm run typecheck\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:06:34.157Z",
+      "lastAccessed": "2026-10-26T20:06:34.157Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:06:34.157Z"
+    },
+    "cmd-1793045203592": {
+      "key": "cmd-1793045203592",
+      "value": "{\"command\":\"npm test\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:06:43.592Z",
+      "lastAccessed": "2026-10-26T20:06:43.592Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:06:43.592Z"
+    },
+    "cmd-1793045208814": {
+      "key": "cmd-1793045208814",
+      "value": "{\"command\":\"npm run lint\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:06:48.814Z",
+      "lastAccessed": "2026-10-26T20:06:48.814Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:06:48.814Z"
+    },
+    "cmd-1793045477936": {
+      "key": "cmd-1793045477936",
+      "value": "{\"command\":\"npm run build\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:17.936Z",
+      "lastAccessed": "2026-10-26T20:11:17.936Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:17.936Z"
+    },
+    "cmd-1793045491283": {
+      "key": "cmd-1793045491283",
+      "value": "{\"command\":\"npm run typecheck && npm test && npm run lint\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:31.283Z",
+      "lastAccessed": "2026-10-26T20:11:31.283Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:31.283Z"
+    },
+    "cmd-1793045496597": {
+      "key": "cmd-1793045496597",
+      "value": "{\"command\":\"git status\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:36.597Z",
+      "lastAccessed": "2026-10-26T20:11:36.597Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:36.597Z"
+    },
+    "cmd-1793045501182": {
+      "key": "cmd-1793045501182",
+      "value": "{\"command\":\"git diff app/layout.tsx\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:41.182Z",
+      "lastAccessed": "2026-10-26T20:11:41.182Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:41.182Z"
+    },
+    "cmd-1793045503476": {
+      "key": "cmd-1793045503476",
+      "value": "{\"command\":\"git diff app/api/auth/meta/route.ts\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:43.476Z",
+      "lastAccessed": "2026-10-26T20:11:43.476Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:43.476Z"
+    },
+    "cmd-1793045511220": {
+      "key": "cmd-1793045511220",
+      "value": "{\"command\":\"git add app/layout.tsx app/api/auth/meta/route.ts && git commit -m \\\"feat: update Facebook domain verification metatag and fix OAuth state cookie domain\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:51.220Z",
+      "lastAccessed": "2026-10-26T20:11:51.220Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:51.220Z"
+    },
+    "cmd-1793045517290": {
+      "key": "cmd-1793045517290",
+      "value": "{\"command\":\"git push origin main\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:11:57.290Z",
+      "lastAccessed": "2026-10-26T20:11:57.290Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:11:57.290Z"
+    },
+    "cmd-1793045520076": {
+      "key": "cmd-1793045520076",
+      "value": "{\"command\":\"cat .gitignore\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:00.076Z",
+      "lastAccessed": "2026-10-26T20:12:00.076Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:00.076Z"
+    },
+    "cmd-1793045522367": {
+      "key": "cmd-1793045522367",
+      "value": "{\"command\":\"git diff --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:02.367Z",
+      "lastAccessed": "2026-10-26T20:12:02.367Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:02.367Z"
+    },
+    "cmd-1793045524735": {
+      "key": "cmd-1793045524735",
+      "value": "{\"command\":\"git diff .env.example | head -50\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:04.735Z",
+      "lastAccessed": "2026-10-26T20:12:04.735Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:04.735Z"
+    },
+    "cmd-1793045527402": {
+      "key": "cmd-1793045527402",
+      "value": "{\"command\":\"git checkout .env.example\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:07.402Z",
+      "lastAccessed": "2026-10-26T20:12:07.402Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:07.402Z"
+    },
+    "cmd-1793045530691": {
+      "key": "cmd-1793045530691",
+      "value": "{\"command\":\"git checkout .env.local .gitignore CLAUDE.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:10.691Z",
+      "lastAccessed": "2026-10-26T20:12:10.691Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:10.691Z"
+    },
+    "cmd-1793045532678": {
+      "key": "cmd-1793045532678",
+      "value": "{\"command\":\"git status\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:12.678Z",
+      "lastAccessed": "2026-10-26T20:12:12.678Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:12.678Z"
+    },
+    "cmd-1793045534731": {
+      "key": "cmd-1793045534731",
+      "value": "{\"command\":\"git diff\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:14.731Z",
+      "lastAccessed": "2026-10-26T20:12:14.731Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:14.731Z"
+    },
+    "cmd-1793045537503": {
+      "key": "cmd-1793045537503",
+      "value": "{\"command\":\"git log --oneline -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:17.503Z",
+      "lastAccessed": "2026-10-26T20:12:17.503Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:17.503Z"
+    },
+    "cmd-1793045542648": {
+      "key": "cmd-1793045542648",
+      "value": "{\"command\":\"git push origin main\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:22.648Z",
+      "lastAccessed": "2026-10-26T20:12:22.648Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:22.648Z"
+    },
+    "cmd-1793045545178": {
+      "key": "cmd-1793045545178",
+      "value": "{\"command\":\"git log --oneline --all | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:25.178Z",
+      "lastAccessed": "2026-10-26T20:12:25.178Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:25.178Z"
+    },
+    "cmd-1793045548704": {
+      "key": "cmd-1793045548704",
+      "value": "{\"command\":\"git diff HEAD -- app/layout.tsx app/api/auth/meta/route.ts\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:28.704Z",
+      "lastAccessed": "2026-10-26T20:12:28.704Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:28.704Z"
+    },
+    "cmd-1793045551080": {
+      "key": "cmd-1793045551080",
+      "value": "{\"command\":\"git log origin/main..HEAD --oneline\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:31.080Z",
+      "lastAccessed": "2026-10-26T20:12:31.080Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:31.080Z"
+    },
+    "cmd-1793045559137": {
+      "key": "cmd-1793045559137",
+      "value": "{\"command\":\"git stash list\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:39.137Z",
+      "lastAccessed": "2026-10-26T20:12:39.137Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:39.137Z"
+    },
+    "cmd-1793045561895": {
+      "key": "cmd-1793045561895",
+      "value": "{\"command\":\"git show 7c600f8:.env.local 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:41.895Z",
+      "lastAccessed": "2026-10-26T20:12:41.895Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:41.895Z"
+    },
+    "cmd-1793045569234": {
+      "key": "cmd-1793045569234",
+      "value": "{\"command\":\"git diff a175468^..a175468 --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:12:49.234Z",
+      "lastAccessed": "2026-10-26T20:12:49.234Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:12:49.234Z"
+    },
+    "cmd-1793045598278": {
+      "key": "cmd-1793045598278",
+      "value": "{\"command\":\"npm run build && npm run typecheck && npm run lint && npm test\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:13:18.278Z",
+      "lastAccessed": "2026-10-26T20:13:18.278Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:13:18.278Z"
+    },
+    "cmd-1793046196813": {
+      "key": "cmd-1793046196813",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git status && echo \\\"---\\\" && git log --oneline -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:23:16.813Z",
+      "lastAccessed": "2026-10-26T20:23:16.813Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:23:16.813Z"
+    },
+    "cmd-1793046228911": {
+      "key": "cmd-1793046228911",
+      "value": "{\"command\":\"cd \\\"c:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && echo \\\"=== BUILD VALIDATION ===\\\" && npm run build 2>&1 | tail -5 && echo -e \\\"\\\\n=== TESTS ===\\\" && npm test 2>&1 | tail -3 && echo -e \\\"\\\\n=== LINT ===\\\" && npm run lint 2>&1 | tail -3 && echo -e \\\"\\\\n=== TYPECHECK ===\\\" && npm run typecheck 2>&1 | tail -3\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:23:48.911Z",
+      "lastAccessed": "2026-10-26T20:23:48.911Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:23:48.911Z"
+    },
+    "cmd-1793046781770": {
+      "key": "cmd-1793046781770",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && ls -la .env* 2>/dev/null && echo \\\"---keys in all env files (names only)---\\\" && grep -h -oE '^[A-Z_]+' .env .env.local .env.test .env.production 2>/dev/null | sort -u && echo \\\"---search for MCP tokens anywhere---\\\" && grep -l -iE 'RESEND_API_KEY|HOSTINGER_API_TOKEN|SUPABASE_ACCESS_TOKEN' .env .env.local .env.test 2>/dev/null || echo \\\"NONE FOUND in env files\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:33:01.770Z",
+      "lastAccessed": "2026-10-26T20:33:01.770Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:33:01.770Z"
+    },
+    "cmd-1793046827997": {
+      "key": "cmd-1793046827997",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff --stat && echo \\\"---\\\" && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:33:47.997Z",
+      "lastAccessed": "2026-10-26T20:33:47.997Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:33:47.997Z"
+    },
+    "cmd-1793046837808": {
+      "key": "cmd-1793046837808",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm run build 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:33:57.808Z",
+      "lastAccessed": "2026-10-26T20:33:57.808Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:33:57.808Z"
+    },
+    "cmd-1793046853887": {
+      "key": "cmd-1793046853887",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm test 2>&1 | tail -5 && echo \\\"---\\\" && npm run typecheck 2>&1 && echo \\\"Typecheck OK\\\" && npm run lint 2>&1 && echo \\\"Lint OK\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:13.887Z",
+      "lastAccessed": "2026-10-26T20:34:13.887Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:13.887Z"
+    },
+    "cmd-1793046854205": {
+      "key": "cmd-1793046854205",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff CLAUDE.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:14.205Z",
+      "lastAccessed": "2026-10-26T20:34:14.205Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:14.205Z"
+    },
+    "cmd-1793046859175": {
+      "key": "cmd-1793046859175",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -3 && echo \\\"---\\\" && git branch -a\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:19.175Z",
+      "lastAccessed": "2026-10-26T20:34:19.175Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:19.175Z"
+    },
+    "cmd-1793046859701": {
+      "key": "cmd-1793046859701",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat package.json | grep -A5 '\\\"scripts\\\"'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:19.701Z",
+      "lastAccessed": "2026-10-26T20:34:19.701Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:19.701Z"
+    },
+    "cmd-1793046860858": {
+      "key": "cmd-1793046860858",
+      "value": "{\"command\":\"curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br 2>/dev/null || echo \\\"UNREACHABLE\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:20.858Z",
+      "lastAccessed": "2026-10-26T20:34:20.858Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:20.858Z"
+    },
+    "cmd-1793046867139": {
+      "key": "cmd-1793046867139",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline remotes/origin/main -3\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:27.139Z",
+      "lastAccessed": "2026-10-26T20:34:27.139Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:27.139Z"
+    },
+    "cmd-1793046867848": {
+      "key": "cmd-1793046867848",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git rev-list origin/main..HEAD --count\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:27.848Z",
+      "lastAccessed": "2026-10-26T20:34:27.848Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:27.848Z"
+    },
+    "cmd-1793046873177": {
+      "key": "cmd-1793046873177",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git add CLAUDE.md && git commit -m \\\"docs: add FERRAMENTAS-PERMISSOES section to CLAUDE.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:33.177Z",
+      "lastAccessed": "2026-10-26T20:34:33.177Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:33.177Z"
+    },
+    "cmd-1793046873787": {
+      "key": "cmd-1793046873787",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -5 && echo \\\"---\\\" && git remote -v\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:33.787Z",
+      "lastAccessed": "2026-10-26T20:34:33.787Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:33.787Z"
+    },
+    "cmd-1793046882173": {
+      "key": "cmd-1793046882173",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git push origin main 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:42.173Z",
+      "lastAccessed": "2026-10-26T20:34:42.173Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:42.173Z"
+    },
+    "cmd-1793046882757": {
+      "key": "cmd-1793046882757",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br/api/webhooks/meta 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:42.757Z",
+      "lastAccessed": "2026-10-26T20:34:42.757Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:42.757Z"
+    },
+    "cmd-1793046889435": {
+      "key": "cmd-1793046889435",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && curl -s -I https://revolutionx.com.br 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:49.435Z",
+      "lastAccessed": "2026-10-26T20:34:49.435Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:49.435Z"
+    },
+    "cmd-1793046890294": {
+      "key": "cmd-1793046890294",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" -X POST https://revolutionx.com.br/api/auth/register 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:34:50.294Z",
+      "lastAccessed": "2026-10-26T20:34:50.294Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:34:50.294Z"
+    },
+    "cmd-1793047072408": {
+      "key": "cmd-1793047072408",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -5 && echo \\\"---\\\" && git show --stat 7c600f8 | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:37:52.408Z",
+      "lastAccessed": "2026-10-26T20:37:52.408Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:37:52.408Z"
+    },
+    "cmd-1793047072934": {
+      "key": "cmd-1793047072934",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show 7c600f8 -- .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:37:52.934Z",
+      "lastAccessed": "2026-10-26T20:37:52.934Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:37:52.934Z"
+    },
+    "cmd-1793047084392": {
+      "key": "cmd-1793047084392",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline 7c600f8^..HEAD\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:04.392Z",
+      "lastAccessed": "2026-10-26T20:38:04.392Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:04.392Z"
+    },
+    "cmd-1793047084975": {
+      "key": "cmd-1793047084975",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .gitignore | grep -E \\\"env|\\\\.local\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:04.975Z",
+      "lastAccessed": "2026-10-26T20:38:04.975Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:04.975Z"
+    },
+    "cmd-1793047090370": {
+      "key": "cmd-1793047090370",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git ls-files --error-unmatch .env.local 2>&1 && git ls-files --error-unmatch .env 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:10.370Z",
+      "lastAccessed": "2026-10-26T20:38:10.370Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:10.370Z"
+    },
+    "cmd-1793047090759": {
+      "key": "cmd-1793047090759",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --all --diff-filter=A -- .env.local --pretty=format:\\\"%h %s\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:10.759Z",
+      "lastAccessed": "2026-10-26T20:38:10.759Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:10.759Z"
+    },
+    "cmd-1793047101435": {
+      "key": "cmd-1793047101435",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git rm --cached .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:21.435Z",
+      "lastAccessed": "2026-10-26T20:38:21.435Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:21.435Z"
+    },
+    "cmd-1793047101883": {
+      "key": "cmd-1793047101883",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .gitignore | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:21.883Z",
+      "lastAccessed": "2026-10-26T20:38:21.883Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:21.883Z"
+    },
+    "cmd-1793047108429": {
+      "key": "cmd-1793047108429",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline 7c600f8..HEAD\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:28.429Z",
+      "lastAccessed": "2026-10-26T20:38:28.429Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:28.429Z"
+    },
+    "cmd-1793047108908": {
+      "key": "cmd-1793047108908",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show 7c600f8 -- .env.local | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:28.908Z",
+      "lastAccessed": "2026-10-26T20:38:28.908Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:28.908Z"
+    },
+    "cmd-1793047115864": {
+      "key": "cmd-1793047115864",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && GIT_SEQUENCE_EDITOR=true git rebase -i 7c600f8~1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:35.864Z",
+      "lastAccessed": "2026-10-26T20:38:35.864Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:35.864Z"
+    },
+    "cmd-1793047116452": {
+      "key": "cmd-1793047116452",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git reset 7c600f8 && git rm --cached .env.local 2>/dev/null; git add CLAUDE.md app/layout.tsx app/api/auth/meta/route.ts package.json package-lock.json 2>/dev/null; git commit --amend -m \\\"fix: add missing Supabase env vars after password rotation\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:36.452Z",
+      "lastAccessed": "2026-10-26T20:38:36.452Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:36.452Z"
+    },
+    "cmd-1793047120601": {
+      "key": "cmd-1793047120601",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -6\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:40.601Z",
+      "lastAccessed": "2026-10-26T20:38:40.601Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:40.601Z"
+    },
+    "cmd-1793047121065": {
+      "key": "cmd-1793047121065",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show --stat bd9672c\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:41.065Z",
+      "lastAccessed": "2026-10-26T20:38:41.065Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:41.065Z"
+    },
+    "cmd-1793047125296": {
+      "key": "cmd-1793047125296",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline bd9672c..d673771\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:45.296Z",
+      "lastAccessed": "2026-10-26T20:38:45.296Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:45.296Z"
+    },
+    "cmd-1793047125796": {
+      "key": "cmd-1793047125796",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:45.796Z",
+      "lastAccessed": "2026-10-26T20:38:45.796Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:45.796Z"
+    },
+    "cmd-1793047133274": {
+      "key": "cmd-1793047133274",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show 1a3c128 --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:53.274Z",
+      "lastAccessed": "2026-10-26T20:38:53.274Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:53.274Z"
+    },
+    "cmd-1793047133840": {
+      "key": "cmd-1793047133840",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show 837cd3a --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:53.840Z",
+      "lastAccessed": "2026-10-26T20:38:53.840Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:53.840Z"
+    },
+    "cmd-1793047135015": {
+      "key": "cmd-1793047135015",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show a175468 --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:38:55.015Z",
+      "lastAccessed": "2026-10-26T20:38:55.015Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:38:55.015Z"
+    },
+    "cmd-1793047141510": {
+      "key": "cmd-1793047141510",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff bd9672c HEAD -- app/api/auth/meta/route.ts app/layout.tsx | head -40\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:01.510Z",
+      "lastAccessed": "2026-10-26T20:39:01.510Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:01.510Z"
+    },
+    "cmd-1793047141947": {
+      "key": "cmd-1793047141947",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show 1a3c128 -- docs/META_REVIEW_FORM_GUIDE.md | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:01.947Z",
+      "lastAccessed": "2026-10-26T20:39:01.947Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:01.947Z"
+    },
+    "cmd-1793047142501": {
+      "key": "cmd-1793047142501",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show a297e61 -- docs/META_REVIEW_FORM_MODEL.md | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:02.501Z",
+      "lastAccessed": "2026-10-26T20:39:02.501Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:02.501Z"
+    },
+    "cmd-1793047147634": {
+      "key": "cmd-1793047147634",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git status && echo \\\"---\\\" && git diff --name-only HEAD\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:07.634Z",
+      "lastAccessed": "2026-10-26T20:39:07.634Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:07.634Z"
+    },
+    "cmd-1793047148077": {
+      "key": "cmd-1793047148077",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && ls -la docs/META_REVIEW_FORM*.md 2>/dev/null || echo \\\"No META_REVIEW_FORM docs found\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:08.077Z",
+      "lastAccessed": "2026-10-26T20:39:08.077Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:08.077Z"
+    },
+    "cmd-1793047153981": {
+      "key": "cmd-1793047153981",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff bd9672c HEAD -- app/layout.tsx app/api/auth/meta/route.ts\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:13.981Z",
+      "lastAccessed": "2026-10-26T20:39:13.981Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:13.981Z"
+    },
+    "cmd-1793047154494": {
+      "key": "cmd-1793047154494",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat app/layout.tsx | grep -n \\\"facebook-domain\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:14.494Z",
+      "lastAccessed": "2026-10-26T20:39:14.494Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:14.494Z"
+    },
+    "cmd-1793047164424": {
+      "key": "cmd-1793047164424",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git add app/layout.tsx app/api/auth/meta/route.ts && git commit -m \\\"feat: update Facebook domain verification metatag and fix OAuth state cookie domain\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:24.424Z",
+      "lastAccessed": "2026-10-26T20:39:24.424Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:24.424Z"
+    },
+    "cmd-1793047164941": {
+      "key": "cmd-1793047164941",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git add docs/META_REVIEW_FORM_GUIDE.md docs/META_REVIEW_FORM_MODEL.md && git commit -m \\\"docs: add Meta review form guides (PT-BR translation and completion model)\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:24.941Z",
+      "lastAccessed": "2026-10-26T20:39:24.941Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:24.941Z"
+    },
+    "cmd-1793047171044": {
+      "key": "cmd-1793047171044",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -5 && echo \\\"---\\\" && git diff origin/main..HEAD --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:31.044Z",
+      "lastAccessed": "2026-10-26T20:39:31.044Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:31.044Z"
+    },
+    "cmd-1793047171510": {
+      "key": "cmd-1793047171510",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git show bd9672c --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:31.510Z",
+      "lastAccessed": "2026-10-26T20:39:31.510Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:31.510Z"
+    },
+    "cmd-1793047178112": {
+      "key": "cmd-1793047178112",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -8\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:38.112Z",
+      "lastAccessed": "2026-10-26T20:39:38.112Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:38.112Z"
+    },
+    "cmd-1793047178611": {
+      "key": "cmd-1793047178611",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && ls docs/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:38.611Z",
+      "lastAccessed": "2026-10-26T20:39:38.611Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:38.611Z"
+    },
+    "cmd-1793047183710": {
+      "key": "cmd-1793047183710",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff --stat\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:43.710Z",
+      "lastAccessed": "2026-10-26T20:39:43.710Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:43.710Z"
+    },
+    "cmd-1793047184134": {
+      "key": "cmd-1793047184134",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git diff .mcp.json | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:44.134Z",
+      "lastAccessed": "2026-10-26T20:39:44.134Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:44.134Z"
+    },
+    "cmd-1793047192224": {
+      "key": "cmd-1793047192224",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git push origin main 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:52.224Z",
+      "lastAccessed": "2026-10-26T20:39:52.224Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:52.224Z"
+    },
+    "cmd-1793047192383": {
+      "key": "cmd-1793047192383",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && mcp__hostinger-hosting__search query=\\\"list websites\\\" limit=5\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:52.383Z",
+      "lastAccessed": "2026-10-26T20:39:52.383Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:52.383Z"
+    },
+    "cmd-1793047198289": {
+      "key": "cmd-1793047198289",
+      "value": "{\"command\":\"curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br 2>/dev/null && echo \\\"\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br/api/integrations/health 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:39:58.289Z",
+      "lastAccessed": "2026-10-26T20:39:58.289Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:39:58.289Z"
+    },
+    "cmd-1793047205053": {
+      "key": "cmd-1793047205053",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && grep -r \\\"HOSTINGER\\\\|SUPABASE_ACCESS\\\" .env* 2>/dev/null | grep -v \\\"^Binary\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:05.053Z",
+      "lastAccessed": "2026-10-26T20:40:05.053Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:05.053Z"
+    },
+    "cmd-1793047205120": {
+      "key": "cmd-1793047205120",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat CREDENCIAIS.md | grep -i \\\"hostinger\\\\|supabase.*access\\\" -A2\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:05.120Z",
+      "lastAccessed": "2026-10-26T20:40:05.120Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:05.120Z"
+    },
+    "cmd-1793047213174": {
+      "key": "cmd-1793047213174",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && curl -s https://revolutionx.com.br | head -50 | grep -E \\\"title|meta|hostinger|platform\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:13.174Z",
+      "lastAccessed": "2026-10-26T20:40:13.174Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:13.174Z"
+    },
+    "cmd-1793047213827": {
+      "key": "cmd-1793047213827",
+      "value": "{\"command\":\"curl -s -I https://revolutionx.com.br 2>/dev/null | grep -iE \\\"server|x-powered|platform|strict\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:13.827Z",
+      "lastAccessed": "2026-10-26T20:40:13.827Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:13.827Z"
+    },
+    "cmd-1793047216233": {
+      "key": "cmd-1793047216233",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm test -- --testPathPattern=\\\"rls\\\" 2>&1 | tail -15\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:16.233Z",
+      "lastAccessed": "2026-10-26T20:40:16.233Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:16.233Z"
+    },
+    "cmd-1793047224305": {
+      "key": "cmd-1793047224305",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .github/workflows/*.yml 2>/dev/null | head -50 || echo \\\"No GitHub workflows found\\\" && ls .github/workflows/ 2>/dev/null || echo \\\"No workflows dir\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:24.305Z",
+      "lastAccessed": "2026-10-26T20:40:24.305Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:24.305Z"
+    },
+    "cmd-1793047225130": {
+      "key": "cmd-1793047225130",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br | grep -oE 'facebook-domain-verification[^>]*content=\\\"[^\\\"]*\\\"'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:25.130Z",
+      "lastAccessed": "2026-10-26T20:40:25.130Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:25.130Z"
+    },
+    "cmd-1793047225492": {
+      "key": "cmd-1793047225492",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git log --oneline -3 origin/main && echo \\\"---local---\\\" && git log --oneline -3\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:25.492Z",
+      "lastAccessed": "2026-10-26T20:40:25.492Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:25.492Z"
+    },
+    "cmd-1793047235455": {
+      "key": "cmd-1793047235455",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && gh run list --branch main --limit 5 2>&1\",\"exitCode\":4,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:35.455Z",
+      "lastAccessed": "2026-10-26T20:40:35.455Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:35.455Z"
+    },
+    "cmd-1793047240835": {
+      "key": "cmd-1793047240835",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && gh run watch --exit-status 2>&1 & sleep 5; echo \\\"Checking...\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:40.835Z",
+      "lastAccessed": "2026-10-26T20:40:40.835Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:40.835Z"
+    },
+    "cmd-1793047246470": {
+      "key": "cmd-1793047246470",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat app/layout.tsx | grep facebook-domain\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:46.470Z",
+      "lastAccessed": "2026-10-26T20:40:46.470Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:46.470Z"
+    },
+    "cmd-1793047247178": {
+      "key": "cmd-1793047247178",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br | grep -oE 'domain-verification content=\\\"[^\\\"]*\\\"'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:47.178Z",
+      "lastAccessed": "2026-10-26T20:40:47.178Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:47.178Z"
+    },
+    "cmd-1793047247691": {
+      "key": "cmd-1793047247691",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && ls .next/ | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:47.691Z",
+      "lastAccessed": "2026-10-26T20:40:47.691Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:47.691Z"
+    },
+    "cmd-1793047254783": {
+      "key": "cmd-1793047254783",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && grep -r \\\"HOSTINGER\\\" .mcp.json CREDENCIAIS.md inventory-env.md 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:54.783Z",
+      "lastAccessed": "2026-10-26T20:40:54.783Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:54.783Z"
+    },
+    "cmd-1793047256677": {
+      "key": "cmd-1793047256677",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && ls -la ~/.config/ 2>/dev/null || echo \\\"No ~/.config\\\" && ls -la ~/ | grep -i hostinger 2>/dev/null || echo \\\"No hostinger in home\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:40:56.677Z",
+      "lastAccessed": "2026-10-26T20:40:56.677Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:40:56.677Z"
+    },
+    "cmd-1793047264104": {
+      "key": "cmd-1793047264104",
+      "value": "{\"command\":\"find \\\"C:/Users/Bruno\\\" -name \\\"*hostinger*\\\" -o -name \\\"*hpanel*\\\" 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:41:04.104Z",
+      "lastAccessed": "2026-10-26T20:41:04.104Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:41:04.104Z"
+    },
+    "cmd-1793047269548": {
+      "key": "cmd-1793047269548",
+      "value": "{\"command\":\"find \\\"C:/Users/Bruno/.hostinger-mcp\\\" -type f 2>/dev/null\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:41:09.548Z",
+      "lastAccessed": "2026-10-26T20:41:09.548Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:41:09.548Z"
+    },
+    "cmd-1793047269752": {
+      "key": "cmd-1793047269752",
+      "value": "{\"command\":\"ls -la \\\"C:/Users/Bruno/.hostinger-mcp\\\" && cat \\\"C:/Users/Bruno/.hostinger-mcp/config.json\\\" 2>/dev/null || echo \\\"No config.json\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:41:09.752Z",
+      "lastAccessed": "2026-10-26T20:41:09.752Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:41:09.752Z"
+    },
+    "cmd-1793047281451": {
+      "key": "cmd-1793047281451",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && grep -r \\\"hostinger\\\\|hpanel\\\\|api_token\\\" scripts/ 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:41:21.451Z",
+      "lastAccessed": "2026-10-26T20:41:21.451Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:41:21.451Z"
+    },
+    "cmd-1793047323602": {
+      "key": "cmd-1793047323602",
+      "value": "{\"command\":\"find \\\"C:/Users/Bruno\\\" -name \\\"*.json\\\" -path \\\"*hostinger*\\\" 2>/dev/null | head -10 && find \\\"C:/Users/Bruno/.vscode\\\" -name \\\"*hostinger*\\\" 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:42:03.602Z",
+      "lastAccessed": "2026-10-26T20:42:03.602Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:42:03.602Z"
+    },
+    "cmd-1793047324258": {
+      "key": "cmd-1793047324258",
+      "value": "{\"command\":\"curl -s -I https://api.hostinger.com/v1 2>/dev/null | head -5 || echo \\\"No direct API\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:42:04.258Z",
+      "lastAccessed": "2026-10-26T20:42:04.258Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:42:04.258Z"
+    },
+    "cmd-1793047928598": {
+      "key": "cmd-1793047928598",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git remote set-url origin https://whXksBV0TvxdwNwVsczLHAFMDWvAc42UgJi8@github.com/bruno23raro/revolution-x.git && git push origin main 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:08.598Z",
+      "lastAccessed": "2026-10-26T20:52:08.598Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:08.598Z"
+    },
+    "cmd-1793047934280": {
+      "key": "cmd-1793047934280",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br | grep -oE 'domain-verification content=\\\"[^\\\"]*\\\"'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:14.280Z",
+      "lastAccessed": "2026-10-26T20:52:14.280Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:14.280Z"
+    },
+    "cmd-1793047935028": {
+      "key": "cmd-1793047935028",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br && echo \\\"\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://www.revolutionx.com.br && echo \\\"\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:15.028Z",
+      "lastAccessed": "2026-10-26T20:52:15.028Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:15.028Z"
+    },
+    "cmd-1793047943418": {
+      "key": "cmd-1793047943418",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm test 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:23.418Z",
+      "lastAccessed": "2026-10-26T20:52:23.418Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:23.418Z"
+    },
+    "cmd-1793047951961": {
+      "key": "cmd-1793047951961",
+      "value": "{\"command\":\"curl -s -H \\\"Cache-Control: no-cache\\\" https://revolutionx.com.br | grep -oE 'domain-verification content=\\\"[^\\\"]*\\\"'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:31.961Z",
+      "lastAccessed": "2026-10-26T20:52:31.961Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:31.961Z"
+    },
+    "cmd-1793047961600": {
+      "key": "cmd-1793047961600",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm run build 2>&1 | tail -5 && echo \\\"---\\\" && git log --oneline -3 && echo \\\"---remote---\\\" && git log --oneline origin/main -3\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:41.600Z",
+      "lastAccessed": "2026-10-26T20:52:41.600Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:41.600Z"
+    },
+    "cmd-1793047965921": {
+      "key": "cmd-1793047965921",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npx @supabase/mcp-server-supabase@latest list-migrations --project-ref ardpabjoepzhkpmkgwgu 2>&1 | head -20 || echo \\\"MCP may not be running yet\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:45.921Z",
+      "lastAccessed": "2026-10-26T20:52:45.921Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:45.921Z"
+    },
+    "cmd-1793047973131": {
+      "key": "cmd-1793047973131",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br | grep -oE 'domain-verification content=\\\"[^\\\"]*\\\"' && echo \\\"---\\\" && curl -s -o /dev/null -w \\\"HTTP %{http_code}\\\\n\\\" https://revolutionx.com.br && curl -s -o /dev/null -w \\\"HTTP %{http_code}\\\\n\\\" https://www.revolutionx.com.br\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:53.131Z",
+      "lastAccessed": "2026-10-26T20:52:53.131Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:53.131Z"
+    },
+    "cmd-1793047973637": {
+      "key": "cmd-1793047973637",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .mcp.json | python -c \\\"import json,sys; d=json.load(sys.stdin); [print(f'{k}: {\\\"✅\\\" if \\\"PREENCHER\\\" not in (v.get(\\\"env\\\") or {}).get(v.get(\\\"command\\\") == \\\"npx\\\" and v.get(\\\"args\\\",[])[1] if len(v.get(\\\"args\\\",[])) > 1 else \\\"\\\") else \\\"❌\\\"}') for k,v in d.get(\\\"mcpServers\\\",{}).items()]\\\" 2>/dev/null || echo \\\"Checking tokens manually...\\\" && grep -E \\\"TOKEN|KEY|URL\\\" .mcp.json | grep -v \\\"PREENCHER\\\" | wc -l\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:53.637Z",
+      "lastAccessed": "2026-10-26T20:52:53.637Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:53.637Z"
+    },
+    "cmd-1793047979479": {
+      "key": "cmd-1793047979479",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br | grep -i \\\"facebook-domain\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:59.479Z",
+      "lastAccessed": "2026-10-26T20:52:59.479Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:59.479Z"
+    },
+    "cmd-1793047979711": {
+      "key": "cmd-1793047979711",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat app/layout.tsx | grep facebook-domain\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:52:59.711Z",
+      "lastAccessed": "2026-10-26T20:52:59.711Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:52:59.711Z"
+    },
+    "cmd-1793047997505": {
+      "key": "cmd-1793047997505",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm run build 2>&1 | tail -3 && echo \\\"---\\\" && npm test 2>&1 | grep -E \\\"Tests:|Test Suites:\\\" | tail -2\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:53:17.505Z",
+      "lastAccessed": "2026-10-26T20:53:17.505Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:53:17.505Z"
+    },
+    "cmd-1793048068954": {
+      "key": "cmd-1793048068954",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npx tsc --noEmit 2>&1 | tail -3 && echo \\\"---\\\" && npm run lint 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:54:28.954Z",
+      "lastAccessed": "2026-10-26T20:54:28.954Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:54:28.954Z"
+    },
+    "cmd-1793048069623": {
+      "key": "cmd-1793048069623",
+      "value": "{\"command\":\"curl -sI https://revolutionx.com.br 2>&1 | head -8\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:54:29.623Z",
+      "lastAccessed": "2026-10-26T20:54:29.623Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:54:29.623Z"
+    },
+    "cmd-1793048205632": {
+      "key": "cmd-1793048205632",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npx -y @playwright/mcp@latest --extension 2>&1 &\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T20:56:45.632Z",
+      "lastAccessed": "2026-10-26T20:56:45.632Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T20:56:45.632Z"
+    },
+    "cmd-1793048413287": {
+      "key": "cmd-1793048413287",
+      "value": "{\"command\":\"sleep 5 && cat \\\"C:\\\\Users\\\\Bruno\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Bruno--claude-Revolution-X\\\\1ebe3b64-f146-4cfb-9738-1f181fd9ebbd\\\\page-*.yml\\\" 2>$null | Select-Object -Last 50\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:00:13.287Z",
+      "lastAccessed": "2026-10-26T21:00:13.287Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:00:13.287Z"
+    },
+    "cmd-1793048421073": {
+      "key": "cmd-1793048421073",
+      "value": "{\"command\":\"timeout 15 curl -s -X POST https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=challenge&hub.verify_token=[redacted] -w \\\"\\\\nHTTP_CODE: %{http_code}\\\\n\\\"\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:00:21.073Z",
+      "lastAccessed": "2026-10-26T21:00:21.073Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:00:21.073Z"
+    },
+    "cmd-1793048431112": {
+      "key": "cmd-1793048431112",
+      "value": "{\"command\":\"curl -s -X GET \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\" -w \\\"\\\\nHTTP_CODE: %{http_code}\\\\n\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:00:31.112Z",
+      "lastAccessed": "2026-10-26T21:00:31.112Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:00:31.112Z"
+    },
+    "cmd-1793048460879": {
+      "key": "cmd-1793048460879",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .env.local | grep -i \\\"WEBHOOK\\\\|VERIFY\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:01:00.879Z",
+      "lastAccessed": "2026-10-26T21:01:00.879Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:01:00.879Z"
+    },
+    "cmd-1793048461585": {
+      "key": "cmd-1793048461585",
+      "value": "{\"command\":\"curl -s -X GET \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\" -w \\\"\\\\nHTTP_CODE: %{http_code}\\\\n\\\" -H \\\"User-Agent: Mozilla/5.0\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:01:01.585Z",
+      "lastAccessed": "2026-10-26T21:01:01.585Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:01:01.585Z"
+    },
+    "cmd-1793048499850": {
+      "key": "cmd-1793048499850",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .env.local 2>$null | Select-String -Pattern \\\"META_WEBHOOK_VERIFY_TOKEN\\\"\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:01:39.850Z",
+      "lastAccessed": "2026-10-26T21:01:39.850Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:01:39.850Z"
+    },
+    "cmd-1793048500204": {
+      "key": "cmd-1793048500204",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && cat .env.example | Select-String -Pattern \\\"WEBHOOK\\\"\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:01:40.204Z",
+      "lastAccessed": "2026-10-26T21:01:40.204Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:01:40.204Z"
+    },
+    "cmd-1793048526450": {
+      "key": "cmd-1793048526450",
+      "value": "{\"command\":\"grep -i \\\"META_WEBHOOK_VERIFY_TOKEN\\\" \\\"C:/Users/Bruno/.claude/Revolution/X/.env.example\\\" 2>/dev/null || echo \\\"NOT_FOUND\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:02:06.450Z",
+      "lastAccessed": "2026-10-26T21:02:06.450Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:02:06.450Z"
+    },
+    "cmd-1793048526667": {
+      "key": "cmd-1793048526667",
+      "value": "{\"command\":\"grep -i \\\"META_WEBHOOK_VERIFY_TOKEN\\\" \\\"C:/Users/Bruno/.claude/Revolution/X/.env.local\\\" 2>/dev/null || echo \\\"NOT_FOUND\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:02:06.667Z",
+      "lastAccessed": "2026-10-26T21:02:06.667Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:02:06.667Z"
+    },
+    "cmd-1793048534565": {
+      "key": "cmd-1793048534565",
+      "value": "{\"command\":\"cat \\\"C:/Users/Bruno/.claude/Revolution/X/.env\\\" 2>/dev/null | grep -E \\\"META_|WHATSAPP\\\" | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:02:14.565Z",
+      "lastAccessed": "2026-10-26T21:02:14.565Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:02:14.565Z"
+    },
+    "cmd-1793048562680": {
+      "key": "cmd-1793048562680",
+      "value": "{\"command\":\"cat \\\"C:/Users/Bruno/.claude/Revolution/X/.env\\\" 2>/dev/null | head -50\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:02:42.680Z",
+      "lastAccessed": "2026-10-26T21:02:42.680Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:02:42.680Z"
+    },
+    "cmd-1793048562849": {
+      "key": "cmd-1793048562849",
+      "value": "{\"command\":\"ls -la \\\"C:/Users/Bruno/.claude/Revolution/X/\\\" | grep -E \\\"\\\\.env\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:02:42.849Z",
+      "lastAccessed": "2026-10-26T21:02:42.849Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:02:42.849Z"
+    },
+    "cmd-1793048592544": {
+      "key": "cmd-1793048592544",
+      "value": "{\"command\":\"cat \\\"C:/Users/Bruno/.claude/Revolution/X/.env.local\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:03:12.544Z",
+      "lastAccessed": "2026-10-26T21:03:12.544Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:03:12.544Z"
+    },
+    "cmd-1793048603766": {
+      "key": "cmd-1793048603766",
+      "value": "{\"command\":\"grep -r \\\"META_WEBHOOK_VERIFY_TOKEN\\\" \\\"C:/Users/Bruno/.claude/Revolution/X/\\\" --include=\\\"*.env*\\\" --include=\\\"*.ts\\\" --include=\\\"*.js\\\" 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:03:23.766Z",
+      "lastAccessed": "2026-10-26T21:03:23.766Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:03:23.766Z"
+    },
+    "cmd-1793048637993": {
+      "key": "cmd-1793048637993",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm run build 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:03:57.993Z",
+      "lastAccessed": "2026-10-26T21:03:57.993Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:03:57.993Z"
+    },
+    "cmd-1793048646318": {
+      "key": "cmd-1793048646318",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && npm test 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:04:06.318Z",
+      "lastAccessed": "2026-10-26T21:04:06.318Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:04:06.318Z"
+    },
+    "cmd-1793048663960": {
+      "key": "cmd-1793048663960",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:04:23.960Z",
+      "lastAccessed": "2026-10-26T21:04:23.960Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:04:23.960Z"
+    },
+    "cmd-1793048664441": {
+      "key": "cmd-1793048664441",
+      "value": "{\"command\":\"cd \\\"C:/Users/Bruno/.claude/Revolution/X\\\" && git add .env.local && git diff --cached .env.local\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:04:24.441Z",
+      "lastAccessed": "2026-10-26T21:04:24.441Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:04:24.441Z"
+    },
+    "cmd-1793048682415": {
+      "key": "cmd-1793048682415",
+      "value": "{\"command\":\"curl -s -X GET \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\" -w \\\"\\\\nHTTP_CODE: %{http_code}\\\\n\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:04:42.415Z",
+      "lastAccessed": "2026-10-26T21:04:42.415Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:04:42.415Z"
+    },
+    "cmd-1793048683067": {
+      "key": "cmd-1793048683067",
+      "value": "{\"command\":\"curl -s -X GET \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\" -w \\\"\\\\nHTTP_CODE: %{http_code}\\\\n\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:04:43.067Z",
+      "lastAccessed": "2026-10-26T21:04:43.067Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:04:43.067Z"
+    },
+    "cmd-1793048706354": {
+      "key": "cmd-1793048706354",
+      "value": "{\"command\":\"cat \\\"C:/Users/Bruno/.claude/Revolution/X/CREDENCIAIS.md\\\" | head -80\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:05:06.354Z",
+      "lastAccessed": "2026-10-26T21:05:06.354Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:05:06.354Z"
+    },
+    "cmd-1793048707656": {
+      "key": "cmd-1793048707656",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta\\\" | jq -r '.error' 2>/dev/null || curl -s \\\"https://revolutionx.com.br/api/webhooks/meta\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:05:07.656Z",
+      "lastAccessed": "2026-10-26T21:05:07.656Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:05:07.656Z"
+    },
+    "cmd-1793048831517": {
+      "key": "cmd-1793048831517",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:07:11.517Z",
+      "lastAccessed": "2026-10-26T21:07:11.517Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:07:11.517Z"
+    },
+    "cmd-1793048863230": {
+      "key": "cmd-1793048863230",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta\\\" | jq -r '.error // \\\"OK\\\"'\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:07:43.230Z",
+      "lastAccessed": "2026-10-26T21:07:43.230Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:07:43.230Z"
+    },
+    "cmd-1793048863593": {
+      "key": "cmd-1793048863593",
+      "value": "{\"command\":\"curl -s -X GET \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:07:43.593Z",
+      "lastAccessed": "2026-10-26T21:07:43.593Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:07:43.593Z"
+    },
+    "cmd-1793048875673": {
+      "key": "cmd-1793048875673",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\" && echo \\\" - Webhook OK\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:07:55.673Z",
+      "lastAccessed": "2026-10-26T21:07:55.673Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:07:55.673Z"
+    },
+    "cmd-1793048884416": {
+      "key": "cmd-1793048884416",
+      "value": "{\"command\":\"Start-Sleep -Seconds 3; \\\"Waiting...\\\"\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:08:04.416Z",
+      "lastAccessed": "2026-10-26T21:08:04.416Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:08:04.416Z"
+    },
+    "cmd-1793048929183": {
+      "key": "cmd-1793048929183",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta\\\" && echo \\\"\\\" && curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=validacao_teste&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:08:49.183Z",
+      "lastAccessed": "2026-10-26T21:08:49.183Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:08:49.183Z"
+    },
+    "cmd-1793049023490": {
+      "key": "cmd-1793049023490",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=verify123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:10:23.490Z",
+      "lastAccessed": "2026-10-26T21:10:23.490Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:10:23.490Z"
+    },
+    "cmd-1793049052825": {
+      "key": "cmd-1793049052825",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=final_test&hub.verify_token=[redacted]\\\" && echo \\\" - Webhook verifikasi BERHASIL\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:10:52.825Z",
+      "lastAccessed": "2026-10-26T21:10:52.825Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:10:52.825Z"
+    },
+    "cmd-1793049200815": {
+      "key": "cmd-1793049200815",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta\\\" && echo \\\"\\\" && curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=ok&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:13:20.815Z",
+      "lastAccessed": "2026-10-26T21:13:20.815Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:13:20.815Z"
+    },
+    "cmd-1793049217870": {
+      "key": "cmd-1793049217870",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=success_test&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:13:37.870Z",
+      "lastAccessed": "2026-10-26T21:13:37.870Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:13:37.870Z"
+    },
+    "cmd-1793049294172": {
+      "key": "cmd-1793049294172",
+      "value": "{\"command\":\"cat /tmp/whatsapp_progress.md 2>/dev/null || echo \\\"No previous progress\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:14:54.172Z",
+      "lastAccessed": "2026-10-26T21:14:54.172Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:14:54.172Z"
+    },
+    "cmd-1793049324896": {
+      "key": "cmd-1793049324896",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=final_test&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:15:24.896Z",
+      "lastAccessed": "2026-10-26T21:15:24.896Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:15:24.896Z"
+    },
+    "cmd-1793049403305": {
+      "key": "cmd-1793049403305",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=loop_check&hub.verify_token=[redacted]\\\" && echo \\\" ✅\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:16:43.305Z",
+      "lastAccessed": "2026-10-26T21:16:43.305Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:16:43.305Z"
+    },
+    "cmd-1793049403969": {
+      "key": "cmd-1793049403969",
+      "value": "{\"command\":\"git log --oneline -5 && echo \\\"---\\\" && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:16:43.969Z",
+      "lastAccessed": "2026-10-26T21:16:43.969Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:16:43.969Z"
+    },
+    "cmd-1793049412021": {
+      "key": "cmd-1793049412021",
+      "value": "{\"command\":\"npm test -- --passWithNoTests 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:16:52.021Z",
+      "lastAccessed": "2026-10-26T21:16:52.021Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:16:52.021Z"
+    },
+    "cmd-1793049588003": {
+      "key": "cmd-1793049588003",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=continuing_test&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:19:48.003Z",
+      "lastAccessed": "2026-10-26T21:19:48.003Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:19:48.003Z"
+    },
+    "cmd-1793050098460": {
+      "key": "cmd-1793050098460",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git status --short && echo \\\"---\\\" && git log --oneline -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:28:18.460Z",
+      "lastAccessed": "2026-10-26T21:28:18.460Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:28:18.460Z"
+    },
+    "cmd-1793050107487": {
+      "key": "cmd-1793050107487",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat .mcp.json 2>$null || echo \\\"FILE NOT FOUND\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:28:27.487Z",
+      "lastAccessed": "2026-10-26T21:28:27.487Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:28:27.487Z"
+    },
+    "cmd-1793050108082": {
+      "key": "cmd-1793050108082",
+      "value": "{\"command\":\"Get-Process -Name \\\"github-mcp-server\\\" -ErrorAction SilentlyContinue | Select-Object Id, ProcessName; Get-Process -Name \\\"node\\\" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like \\\"*mcp*\\\" } | Select-Object Id, CommandLine | Format-Table -AutoSize\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:28:28.082Z",
+      "lastAccessed": "2026-10-26T21:28:28.082Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:28:28.082Z"
+    },
+    "cmd-1793050137935": {
+      "key": "cmd-1793050137935",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx -y hostinger-api-mcp --help 2>&1 | head -5; echo \\\"EXIT:$?\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:28:57.935Z",
+      "lastAccessed": "2026-10-26T21:28:57.935Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:28:57.935Z"
+    },
+    "cmd-1793050142273": {
+      "key": "cmd-1793050142273",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx -y resend-mcp --help 2>&1 | head -5; echo \\\"EXIT:$?\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:02.273Z",
+      "lastAccessed": "2026-10-26T21:29:02.273Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:02.273Z"
+    },
+    "cmd-1793050151926": {
+      "key": "cmd-1793050151926",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat CREDENCIAIS.md | grep -i \\\"hostinger\\\\|resend\\\\|meta\\\" | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:11.926Z",
+      "lastAccessed": "2026-10-26T21:29:11.926Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:11.926Z"
+    },
+    "cmd-1793050152116": {
+      "key": "cmd-1793050152116",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls scripts/meta/ 2>/dev/null; ls .claude/skills/ 2>/dev/null | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:12.116Z",
+      "lastAccessed": "2026-10-26T21:29:12.116Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:12.116Z"
+    },
+    "cmd-1793050153702": {
+      "key": "cmd-1793050153702",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm ls @playwright/mcp @supabase/mcp-server-supabase 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:13.702Z",
+      "lastAccessed": "2026-10-26T21:29:13.702Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:13.702Z"
+    },
+    "cmd-1793050168277": {
+      "key": "cmd-1793050168277",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat scripts/meta/meta-cli.js 2>/dev/null | head -50\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:28.277Z",
+      "lastAccessed": "2026-10-26T21:29:28.277Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:28.277Z"
+    },
+    "cmd-1793050168571": {
+      "key": "cmd-1793050168571",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls scripts/meta/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:28.571Z",
+      "lastAccessed": "2026-10-26T21:29:28.571Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:28.571Z"
+    },
+    "cmd-1793050188211": {
+      "key": "cmd-1793050188211",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test -- --passWithNoTests 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:48.211Z",
+      "lastAccessed": "2026-10-26T21:29:48.211Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:48.211Z"
+    },
+    "cmd-1793050190512": {
+      "key": "cmd-1793050190512",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1; echo \\\"Typecheck exit: $?\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:29:50.512Z",
+      "lastAccessed": "2026-10-26T21:29:50.512Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:29:50.512Z"
+    },
+    "cmd-1793050206903": {
+      "key": "cmd-1793050206903",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls scripts/meta/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:06.903Z",
+      "lastAccessed": "2026-10-26T21:30:06.903Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:06.903Z"
+    },
+    "cmd-1793050229788": {
+      "key": "cmd-1793050229788",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br && echo \\\"\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test&hub.verify_token=[redacted]\",\"exitCode\":127,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:29.788Z",
+      "lastAccessed": "2026-10-26T21:30:29.788Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:29.788Z"
+    },
+    "cmd-1793050235290": {
+      "key": "cmd-1793050235290",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" \\\"https://revolutionx.com.br\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:35.290Z",
+      "lastAccessed": "2026-10-26T21:30:35.290Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:35.290Z"
+    },
+    "cmd-1793050235781": {
+      "key": "cmd-1793050235781",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && curl -s -o /dev/null -w \\\"%{http_code}\\\" \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:35.781Z",
+      "lastAccessed": "2026-10-26T21:30:35.781Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:35.781Z"
+    },
+    "cmd-1793050250499": {
+      "key": "cmd-1793050250499",
+      "value": "{\"command\":\"which github-mcp-server 2>/dev/null || echo \\\"NOT FOUND\\\"; which node && node -e \\\"console.log(process.version)\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:50.499Z",
+      "lastAccessed": "2026-10-26T21:30:50.499Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:50.499Z"
+    },
+    "cmd-1793050250967": {
+      "key": "cmd-1793050250967",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat package.json | grep -E \\\"github|mcp\\\" || echo \\\"No MCP deps in package.json\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:30:50.967Z",
+      "lastAccessed": "2026-10-26T21:30:50.967Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:30:50.967Z"
+    },
+    "cmd-1793050261745": {
+      "key": "cmd-1793050261745",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls migrations/ | sort\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:01.745Z",
+      "lastAccessed": "2026-10-26T21:31:01.745Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:01.745Z"
+    },
+    "cmd-1793050262230": {
+      "key": "cmd-1793050262230",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline --all -- migrations/ | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:02.230Z",
+      "lastAccessed": "2026-10-26T21:31:02.230Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:02.230Z"
+    },
+    "cmd-1793050271760": {
+      "key": "cmd-1793050271760",
+      "value": "{\"command\":\"npm ls -g github-mcp-server 2>/dev/null || echo \\\"Not installed globally\\\"; which github-mcp-server 2>/dev/null || echo \\\"Not in PATH\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:11.760Z",
+      "lastAccessed": "2026-10-26T21:31:11.760Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:11.760Z"
+    },
+    "cmd-1793050272063": {
+      "key": "cmd-1793050272063",
+      "value": "{\"command\":\"cat \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\.mcp.json\\\" 2>/dev/null || echo \\\"File not found\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:12.063Z",
+      "lastAccessed": "2026-10-26T21:31:12.063Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:12.063Z"
+    },
+    "cmd-1793050286110": {
+      "key": "cmd-1793050286110",
+      "value": "{\"command\":\"npm install -g @github/mcp-server 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:26.110Z",
+      "lastAccessed": "2026-10-26T21:31:26.110Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:26.110Z"
+    },
+    "cmd-1793050301669": {
+      "key": "cmd-1793050301669",
+      "value": "{\"command\":\"npm install -g @modelcontextprotocol/server-github 2>&1 | tail -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:41.669Z",
+      "lastAccessed": "2026-10-26T21:31:41.669Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:41.669Z"
+    },
+    "cmd-1793050304208": {
+      "key": "cmd-1793050304208",
+      "value": "{\"command\":\"npx supabase migration list --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" 2>&1 | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:44.208Z",
+      "lastAccessed": "2026-10-26T21:31:44.208Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:44.208Z"
+    },
+    "cmd-1793050318941": {
+      "key": "cmd-1793050318941",
+      "value": "{\"command\":\"which github-mcp-server 2>/dev/null || echo \\\"NOT IN PATH\\\"; npm ls -g @modelcontextprotocol/server-github 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:58.941Z",
+      "lastAccessed": "2026-10-26T21:31:58.941Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:58.941Z"
+    },
+    "cmd-1793050319389": {
+      "key": "cmd-1793050319389",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls migrations/ | sort && echo \\\"---\\\" && cat migrations/007_fase5_schedules.sql 2>/dev/null | head -5 && echo \\\"---\\\" && cat migrations/008_fase8_messages.sql 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:31:59.389Z",
+      "lastAccessed": "2026-10-26T21:31:59.389Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:31:59.389Z"
+    },
+    "cmd-1793050459720": {
+      "key": "cmd-1793050459720",
+      "value": "{\"command\":\"export PATH=\\\"$PATH:/root/.local/bin:/root/go/bin\\\" && which github-mcp-server 2>/dev/null || find / -name \\\"github-mcp-server\\\" -type f 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:19.720Z",
+      "lastAccessed": "2026-10-26T21:34:19.720Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:19.720Z"
+    },
+    "cmd-1793050462093": {
+      "key": "cmd-1793050462093",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx supabase migration list --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:22.093Z",
+      "lastAccessed": "2026-10-26T21:34:22.093Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:22.093Z"
+    },
+    "cmd-1793050469878": {
+      "key": "cmd-1793050469878",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls -la migrations/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:29.878Z",
+      "lastAccessed": "2026-10-26T21:34:29.878Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:29.878Z"
+    },
+    "cmd-1793050484073": {
+      "key": "cmd-1793050484073",
+      "value": "{\"command\":\"find /usr/local/lib/node_modules /root/.npm-global /home -name \\\"github-mcp-server\\\" -type f 2>/dev/null | head -5; npm root -g\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:44.073Z",
+      "lastAccessed": "2026-10-26T21:34:44.073Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:44.073Z"
+    },
+    "cmd-1793050486429": {
+      "key": "cmd-1793050486429",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx supabase migration up --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" 2>&1 | tail -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:46.429Z",
+      "lastAccessed": "2026-10-26T21:34:46.429Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:46.429Z"
+    },
+    "cmd-1793050494251": {
+      "key": "cmd-1793050494251",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx supabase migration repair --status applied 20261009020421 --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:34:54.251Z",
+      "lastAccessed": "2026-10-26T21:34:54.251Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:34:54.251Z"
+    },
+    "cmd-1793050504401": {
+      "key": "cmd-1793050504401",
+      "value": "{\"command\":\"ls -la /usr/local/lib/node_modules/@modelcontextprotocol/server-github/bin/ 2>/dev/null || ls -la $(npm root -g)/@modelcontextprotocol/server-github/bin/ 2>/dev/null || find $(npm root -g) -name \\\"github-mcp-server*\\\" 2>/dev/null | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:35:04.401Z",
+      "lastAccessed": "2026-10-26T21:35:04.401Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:35:04.401Z"
+    },
+    "cmd-1793050505198": {
+      "key": "cmd-1793050505198",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat .supabase/.ignore 2>/dev/null || echo \\\"No .supabase/.ignore\\\"; ls supabase/migrations/ 2>/dev/null || echo \\\"No supabase/migrations dir\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:35:05.198Z",
+      "lastAccessed": "2026-10-26T21:35:05.198Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:35:05.198Z"
+    },
+    "cmd-1793050516446": {
+      "key": "cmd-1793050516446",
+      "value": "{\"command\":\"npm root -g && npm ls -g @modelcontextprotocol/server-github 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:35:16.446Z",
+      "lastAccessed": "2026-10-26T21:35:16.446Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:35:16.446Z"
+    },
+    "cmd-1793050517873": {
+      "key": "cmd-1793050517873",
+      "value": "{\"command\":\"npx --yes supabase status --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" 2>&1 | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:35:17.873Z",
+      "lastAccessed": "2026-10-26T21:35:17.873Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:35:17.873Z"
+    },
+    "cmd-1793050605920": {
+      "key": "cmd-1793050605920",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx --yes supabase db push --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" --include-all 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:36:45.920Z",
+      "lastAccessed": "2026-10-26T21:36:45.920Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:36:45.920Z"
+    },
+    "cmd-1793050614076": {
+      "key": "cmd-1793050614076",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm test 2>&1 | tail -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:36:54.076Z",
+      "lastAccessed": "2026-10-26T21:36:54.076Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:36:54.076Z"
+    },
+    "cmd-1793050626623": {
+      "key": "cmd-1793050626623",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls supabase/migrations/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:06.623Z",
+      "lastAccessed": "2026-10-26T21:37:06.623Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:06.623Z"
+    },
+    "cmd-1793050628644": {
+      "key": "cmd-1793050628644",
+      "value": "{\"command\":\"curl -s https://revolutionx.com.br/api/webhooks/meta | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:08.644Z",
+      "lastAccessed": "2026-10-26T21:37:08.644Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:08.644Z"
+    },
+    "cmd-1793050634641": {
+      "key": "cmd-1793050634641",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=verify&hub.challenge=12345&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:14.641Z",
+      "lastAccessed": "2026-10-26T21:37:14.641Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:14.641Z"
+    },
+    "cmd-1793050637189": {
+      "key": "cmd-1793050637189",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx tsc --noEmit 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:17.189Z",
+      "lastAccessed": "2026-10-26T21:37:17.189Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:17.189Z"
+    },
+    "cmd-1793050638424": {
+      "key": "cmd-1793050638424",
+      "value": "{\"command\":\"curl -sI https://revolutionx.com.br | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:18.424Z",
+      "lastAccessed": "2026-10-26T21:37:18.424Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:18.424Z"
+    },
+    "cmd-1793050645979": {
+      "key": "cmd-1793050645979",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=verify&hub.challenge=12345&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:25.979Z",
+      "lastAccessed": "2026-10-26T21:37:25.979Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:25.979Z"
+    },
+    "cmd-1793050646633": {
+      "key": "cmd-1793050646633",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/\\\" | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:26.633Z",
+      "lastAccessed": "2026-10-26T21:37:26.633Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:26.633Z"
+    },
+    "cmd-1793050659704": {
+      "key": "cmd-1793050659704",
+      "value": "{\"command\":\"find \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\\supabase\\\\migrations\\\" -name \\\"*.sql\\\" | sort\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:39.704Z",
+      "lastAccessed": "2026-10-26T21:37:39.704Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:39.704Z"
+    },
+    "cmd-1793050671631": {
+      "key": "cmd-1793050671631",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx next lint 2>&1 | tail -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:37:51.631Z",
+      "lastAccessed": "2026-10-26T21:37:51.631Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:37:51.631Z"
+    },
+    "cmd-1793050681418": {
+      "key": "cmd-1793050681418",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npm run build 2>&1 | tail -15\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:01.418Z",
+      "lastAccessed": "2026-10-26T21:38:01.418Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:01.418Z"
+    },
+    "cmd-1793050687924": {
+      "key": "cmd-1793050687924",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/webhooks/meta?hub.mode=subscribe&hub.challenge=test123&hub.verify_token=[redacted]\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:07.924Z",
+      "lastAccessed": "2026-10-26T21:38:07.924Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:07.924Z"
+    },
+    "cmd-1793050688434": {
+      "key": "cmd-1793050688434",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat supabase/migrations/013_sync_auth_to_public_user.sql 2>/dev/null || echo \\\"FILE NOT FOUND\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:08.434Z",
+      "lastAccessed": "2026-10-26T21:38:08.434Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:08.434Z"
+    },
+    "cmd-1793050701235": {
+      "key": "cmd-1793050701235",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/auth/session\\\" | head -100\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:21.235Z",
+      "lastAccessed": "2026-10-26T21:38:21.235Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:21.235Z"
+    },
+    "cmd-1793050707986": {
+      "key": "cmd-1793050707986",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/login\\\" | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:27.986Z",
+      "lastAccessed": "2026-10-26T21:38:27.986Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:27.986Z"
+    },
+    "cmd-1793050709113": {
+      "key": "cmd-1793050709113",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/register\\\" | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:29.113Z",
+      "lastAccessed": "2026-10-26T21:38:29.113Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:29.113Z"
+    },
+    "cmd-1793050709788": {
+      "key": "cmd-1793050709788",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/testcenter\\\" | head -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:29.788Z",
+      "lastAccessed": "2026-10-26T21:38:29.788Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:29.788Z"
+    },
+    "cmd-1793050710353": {
+      "key": "cmd-1793050710353",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/robots.txt\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:30.353Z",
+      "lastAccessed": "2026-10-26T21:38:30.353Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:30.353Z"
+    },
+    "cmd-1793050733684": {
+      "key": "cmd-1793050733684",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat supabase/migrations/009_b4_session_billing.sql | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:53.684Z",
+      "lastAccessed": "2026-10-26T21:38:53.684Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:53.684Z"
+    },
+    "cmd-1793050733769": {
+      "key": "cmd-1793050733769",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && cat supabase/migrations/008_token_rls_harden.sql | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:53.769Z",
+      "lastAccessed": "2026-10-26T21:38:53.769Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:53.769Z"
+    },
+    "cmd-1793050735339": {
+      "key": "cmd-1793050735339",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline -5\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:38:55.339Z",
+      "lastAccessed": "2026-10-26T21:38:55.339Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:38:55.339Z"
+    },
+    "cmd-1793050759661": {
+      "key": "cmd-1793050759661",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/integrations/health\\\"\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:39:19.661Z",
+      "lastAccessed": "2026-10-26T21:39:19.661Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:39:19.661Z"
+    },
+    "cmd-1793050790440": {
+      "key": "cmd-1793050790440",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/integrations/meta\\\" | head -100\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:39:50.440Z",
+      "lastAccessed": "2026-10-26T21:39:50.440Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:39:50.440Z"
+    },
+    "cmd-1793050791020": {
+      "key": "cmd-1793050791020",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/whatsapp/accounts\\\" | head -100\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:39:51.020Z",
+      "lastAccessed": "2026-10-26T21:39:51.020Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:39:51.020Z"
+    },
+    "cmd-1793050915633": {
+      "key": "cmd-1793050915633",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:41:55.633Z",
+      "lastAccessed": "2026-10-26T21:41:55.633Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:41:55.633Z"
+    },
+    "cmd-1793050916210": {
+      "key": "cmd-1793050916210",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls -la supabase/migrations/*.sql | awk '{print $9, $5}'\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:41:56.210Z",
+      "lastAccessed": "2026-10-26T21:41:56.210Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:41:56.210Z"
+    },
+    "cmd-1793050933277": {
+      "key": "cmd-1793050933277",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git log --oneline -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:42:13.277Z",
+      "lastAccessed": "2026-10-26T21:42:13.277Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:42:13.277Z"
+    },
+    "cmd-1793050946775": {
+      "key": "cmd-1793050946775",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && find . -name \\\"*.sql\\\" -path \\\"*/migrations/*\\\" | sort\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:42:26.775Z",
+      "lastAccessed": "2026-10-26T21:42:26.775Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:42:26.775Z"
+    },
+    "cmd-1793050946935": {
+      "key": "cmd-1793050946935",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && grep -r \\\"sync_auth_to_public_user\\\" --include=\\\"*.sql\\\" --include=\\\"*.ts\\\" . 2>/dev/null | head -10\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:42:26.935Z",
+      "lastAccessed": "2026-10-26T21:42:26.935Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:42:26.935Z"
+    },
+    "cmd-1793050988063": {
+      "key": "cmd-1793050988063",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && ls -la supabase/migrations/\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:43:08.063Z",
+      "lastAccessed": "2026-10-26T21:43:08.063Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:43:08.063Z"
+    },
+    "cmd-1793051012507": {
+      "key": "cmd-1793051012507",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && npx --yes supabase db push --db-url \\\"postgresql://postgres.ardpabjoepzhkpmkgwgu:[redacted]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres\\\" --include-all 2>&1\",\"exitCode\":1,\"success\":false}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:43:32.507Z",
+      "lastAccessed": "2026-10-26T21:43:32.507Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:43:32.507Z"
+    },
+    "cmd-1793051015979": {
+      "key": "cmd-1793051015979",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/auth/register\\\" -X POST -H \\\"Content-Type: application/json\\\" -d '{\\\"name\\\":\\\"Teste\\\",\\\"email\\\":\\\"test@example.com\\\",\\\"password\\\":\\\"Teste1234\\\"}' 2>&1 | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:43:35.979Z",
+      "lastAccessed": "2026-10-26T21:43:35.979Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:43:35.979Z"
+    },
+    "cmd-1793051031290": {
+      "key": "cmd-1793051031290",
+      "value": "{\"command\":\"curl -s \\\"https://revolutionx.com.br/api/auth/login\\\" -X POST -H \\\"Content-Type: application/json\\\" -d '{\\\"email\\\":\\\"test@example.com\\\",\\\"password\\\":\\\"wrong\\\"}' 2>&1\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:43:51.290Z",
+      "lastAccessed": "2026-10-26T21:43:51.290Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:43:51.290Z"
+    },
+    "cmd-1793051055912": {
+      "key": "cmd-1793051055912",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git diff HEAD --name-only 2>/dev/null | head -20\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:44:15.912Z",
+      "lastAccessed": "2026-10-26T21:44:15.912Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:44:15.912Z"
+    },
+    "cmd-1793051056489": {
+      "key": "cmd-1793051056489",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git diff CLAUDE.md | head -30\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:44:16.489Z",
+      "lastAccessed": "2026-10-26T21:44:16.489Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:44:16.489Z"
+    },
+    "cmd-1793051064749": {
+      "key": "cmd-1793051064749",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git add supabase/migrations/013_sync_auth_to_public_user.sql FERRAMENTAS.md docs/AUDITORIA-COMPLETA-2026-10-26.md && git status --short\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:44:24.749Z",
+      "lastAccessed": "2026-10-26T21:44:24.749Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:44:24.749Z"
+    },
+    "cmd-1793051073981": {
+      "key": "cmd-1793051073981",
+      "value": "{\"command\":\"cd \\\"C:\\\\Users\\\\Bruno\\\\.claude\\\\Revolution\\\\X\\\" && git stash && git checkout -- CLAUDE.md\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-10-26T21:44:33.981Z",
+      "lastAccessed": "2026-10-26T21:44:33.981Z",
+      "accessCount": 0,
+      "expiresAt": "2026-11-25T21:44:33.981Z"
+    }
+  },
+  "version": "3.0.0"
+}

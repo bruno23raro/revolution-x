@@ -70,7 +70,8 @@ const GROUPS: NavGroup[] = [
       { label: 'Instagram', href: '/instagram' },
       { label: 'Facebook', href: '/facebook' },
       { label: 'TikTok', href: '/tiktok' },
-      { label: 'Integrações', href: '/integrations' },
+      { label: 'Integrações', href: '/integracoes' },
+      { label: 'Hub de integrações', href: '/integrations' },
     ],
   },
   {

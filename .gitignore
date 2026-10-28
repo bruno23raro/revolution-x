@@ -73,3 +73,10 @@ phase*_verification_report.json
 # Artefatos locais de auditoria/checkpoint (missão 2026-10-22)
 .a11y-lighthouse/
 logs/
+.env.local
+.env.*.local
+CLAUDE.local.md
+.claude/settings.local.json
+review-artifacts/
+.pw-fb-profile/
+.chrome-fb/

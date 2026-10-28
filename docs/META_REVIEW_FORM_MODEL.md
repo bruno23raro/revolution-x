@@ -1,4 +1,4 @@
-# Modelo para Preencher o Formulário de Revisão da Meta
+﻿# Modelo para Preencher o Formulário de Revisão da Meta
 
 ## 1. Onde podemos encontrar este app?
 
@@ -23,11 +23,12 @@ Para testar o Revolution X, siga estes passos:
 6. Confirme se a integração aparece como "Conectado"
 
 Uso das APIs da Meta:
-- Facebook Graph API v26.0: pages_show_list, pages_manage_posts, pages_read_engagement
+- Facebook Graph API v26.0: pages_show_list, pages_manage_posts, ads_read
 - Instagram Graph API: instagram_basic, instagram_content_publish
 - Meta Business SDK: business_management
+- WhatsApp Business API: whatsapp_business_messaging
 
-O app utiliza OAuth 2.0 para conectar contas do Meta, permitindo que usuários conectem múltiplas páginas e perfis para gerenciamento centralizado de publicações.
+O app utiliza OAuth 2.0 para conectar contas do Meta, permitindo que usuários conectem múltiplas páginas e perfis para gerenciamento centralizado de publicações, anúncios e insights.
 ```
 
 ---

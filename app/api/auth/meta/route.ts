@@ -12,22 +12,13 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { generateState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
 import type { MetaAuthConfig } from '@/integrations/meta/types';
+import { DEFAULT_SCOPES } from '@/integrations/meta/constants';
 
 export const dynamic = 'force-dynamic';
 
 type Provider = 'facebook' | 'instagram' | 'whatsapp';
 
 const PROVIDERS: Provider[] = ['facebook', 'instagram', 'whatsapp'];
-
-// Escopos padrão (suficientes p/ pages + Instagram + WhatsApp Business Messaging).
-const DEFAULT_SCOPES = [
-  'pages_show_list',
-  'pages_manage_posts',
-  'instagram_basic',
-  'instagram_content_publish',
-  'business_management',
-  'whatsapp_business_messaging',
-];
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);

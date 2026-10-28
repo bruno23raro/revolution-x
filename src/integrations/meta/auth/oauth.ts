@@ -2,14 +2,7 @@
 
 import crypto from 'crypto';
 import { MetaAuthConfig, MetaConnectionStatus, OAuthState } from '../types';
-
-const DEFAULT_SCOPES = [
-  'pages_show_list',
-  'pages_manage_posts',
-  'instagram_basic',
-  'instagram_content_publish',
-  'business_management',
-];
+import { DEFAULT_SCOPES } from '../constants';
 
 export class MetaOAuthError extends Error {
   constructor(message: string, public code: string) { super(message); }
@@ -30,7 +23,7 @@ export function buildMetaAuthUrl(
   provider: 'whatsapp' | 'instagram' | 'facebook',
 ): string {
   const base = 'https://www.facebook.com/v26.0/dialog/oauth';
-  const scopes = config.scopes.join(',');
+  const scopes = (config.scopes || []).join(',');
   return `${base}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(
     config.redirectUri,
   )}&state=${state}&scope=${encodeURIComponent(scopes)}`;

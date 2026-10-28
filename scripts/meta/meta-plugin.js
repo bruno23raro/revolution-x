@@ -1,12 +1,14 @@
 // Meta Plugin - Automação de Conexão de Contas Meta
 // Plugin para fluxos automatizados de conexão e integração de contas Meta
 
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import crypto from 'crypto';
 
-// Credenciais fixas
-const META_APP_ID = '1112157761403064';
-const META_APP_SECRET = 'ff2edcdec00e1e843433b860c717a3ab';
-const DEFAULT_ORIGIN = 'https://revolutionx.com.br';
+// Credenciais de .env.local
+const META_APP_ID = process.env.META_APP_ID || '1112157761403064';
+const META_APP_SECRET = process.env.META_APP_SECRET || '';
+const DEFAULT_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://revolutionx.com.br';
 
 const DEFAULT_SCOPES = [
   'pages_show_list',
@@ -15,12 +17,17 @@ const DEFAULT_SCOPES = [
   'instagram_content_publish',
   'business_management',
   'whatsapp_business_messaging',
+  'pages_read_user_content',
+  'whatsapp_business_management',
+  'ads_read',
+  'pages_read_engagement',
+  'pages_manage_ads',
 ];
 
 // Gerar state OAuth seguro
-export function generateMetaState(): string {
+export function generateMetaState() {
   const cryptoImpl =
-    (globalThis as any).crypto || (globalThis as any).msCrypto;
+    (globalThis).crypto || (globalThis).msCrypto;
   if (cryptoImpl && cryptoImpl.randomBytes) {
     return cryptoImpl.randomBytes(24).toString('base64url');
   }
@@ -28,53 +35,35 @@ export function generateMetaState(): string {
 }
 
 // Construir URL de autorização
-export function buildMetaAuthUrl(provider: 'whatsapp' | 'instagram' | 'facebook', state: string): string {
+export function buildMetaAuthUrl(provider, state) {
   const scopes = DEFAULT_SCOPES.join(',');
   return `https://www.facebook.com/v26.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(`${DEFAULT_ORIGIN}/api/auth/callback/meta`)}&state=${state}&scope=${encodeURIComponent(scopes)}`;
 }
 
 // Verificar se callback tem error
-export function checkOAuthError(query: URLSearchParams): string | null {
+export function checkOAuthError(query) {
   const error = query.get('error');
   return error || null;
 }
 
 // Verificar se callback tem code
-export function getOAuthCode(query: URLSearchParams): string | null {
+export function getOAuthCode(query) {
   const code = query.get('code');
   return code || null;
 }
 
 // Gerar verify token consistente para webhooks
-export function generateWebhookVerifyToken(): string {
+export function generateWebhookVerifyToken() {
   return crypto.randomBytes(16).toString('hex');
 }
 
 // Validar token de webhook recebido
-export function validateWebhookToken(receivedToken: string, expectedToken: string): boolean {
+export function validateWebhookToken(receivedToken, expectedToken) {
   return receivedToken === expectedToken;
 }
 
 // Formatar resposta segura para painel (nunca expõe tokens)
-export function formatSafeConnectionData({
-  connectionId,
-  status,
-  provider,
-  displayName,
-  phoneNumberId,
-  wabaId,
-  connectedAt,
-  expiresAt,
-}: {
-  connectionId: string;
-  status: string;
-  provider: string;
-  displayName: string | null;
-  phoneNumberId: string | null;
-  wabaId: string | null;
-  connectedAt: Date;
-  expiresAt?: Date;
-}) {
+export function formatSafeConnectionData({ connectionId, status, provider, displayName, phoneNumberId, wabaId, connectedAt, expiresAt }) {
   return {
     id: connectionId,
     status,
@@ -88,30 +77,30 @@ export function formatSafeConnectionData({
 }
 
 // Estrutura de resposta para listar contas
-export interface AccountSummary {
-  id: string;
-  provider: string | null;
-  displayName: string | null;
-  phoneNumberId: string | null;
-  whatsappBusinessAccountId: string | null;
-  status: string | null;
-}
-
+// export interface AccountSummary {
+//   id: string;
+//   provider: string | null;
+//   displayName: string | null;
+//   phoneNumberId: string | null;
+//   whatsappBusinessAccountId: string | null;
+//   status: string | null;
+// }
+//
 // Estrutura para resultado de OAuth
-export interface OAuthResult {
-  success: boolean;
-  code?: string;
-  error?: string;
-  stateMatch?: boolean;
-}
-
+// export interface OAuthResult {
+//   success: boolean;
+//   code?: string;
+//   error?: string;
+//   stateMatch?: boolean;
+// }
+//
 // Estrutura para refresh token
-export interface RefreshTokenResult {
-  ok: boolean;
-  accessToken?: string;
-  expiresIn?: number;
-  error?: string;
-}
+// export interface RefreshTokenResult {
+//   ok: boolean;
+//   accessToken?: string;
+//   expiresIn?: number;
+//   error?: string;
+// }
 
 // Configurações de produto no Developer Portal
 export const META_PRODUCTS = {
@@ -146,8 +135,8 @@ export const ALL_SCOPES = [
 ];
 
 // Verificar se todas as credenciais estão presentes
-export function checkCredentials(): { ok: boolean; missing: string[] } {
-  const missing: string[] = [];
+export function checkCredentials() {
+  const missing = [];
 
   if (!META_APP_ID) missing.push('META_APP_ID');
   if (!META_APP_SECRET) missing.push('META_APP_SECRET');
@@ -173,7 +162,7 @@ export function getConfigSummary() {
 }
 
 // Exportar para uso com o sistema de plugins
-export default {
+const pluginExports = {
   generateMetaState,
   buildMetaAuthUrl,
   checkOAuthError,
@@ -181,11 +170,10 @@ export default {
   generateWebhookVerifyToken,
   validateWebhookToken,
   formatSafeConnectionData,
-  AccountSummary,
-  OAuthResult,
-  RefreshTokenResult,
   META_PRODUCTS,
   ALL_SCOPES,
   checkCredentials,
   getConfigSummary,
 };
+
+export default pluginExports;

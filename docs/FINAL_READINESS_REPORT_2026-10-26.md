@@ -1,4 +1,4 @@
-# Final Readiness Report — Revolution X Production
+﻿# Final Readiness Report — Revolution X Production
 
 **Date:** 2026-10-26  
 **Build:** `01a17a4b` (Hostinger)  
@@ -71,10 +71,11 @@
 | Webhook URL | `https://revolutionx.com.br/api/webhooks/meta` ✅ |
 | Verify token | `0b1e361df76b89b0e1f2985d830fe6d5` ✅ |
 | Webhook challenge (GET) | Retorna challenge corretamente ✅ |
-| WhatsApp phone number ID | 1374332299099890 (US test number) |
-| WABA ID | ⚠️ PENDENTE — registrar no Meta Business Manager |
-| WhatsApp number registration | ⚠️ PENDENTE — adicionar número na console Meta |
+| WhatsApp phone number ID | **1244329368771764** = `+55 11 91734-5249` (Brasil, qualidade ALTA/GREEN, status Conectado) ✅ |
+| WABA ID | **801885496316680** ("jeferson") — business_id `353351324537230` ✅ |
+| WhatsApp number registration | ✅ Conectado + mensagem de teste enviada com sucesso (wamid retornado) |
 | Facebook Login approval | ⏳ PENDENTE — revisão externa da Meta (incontrolável) |
+| OAuth scopes ampliados | ✅ `ads_read`, `pages_read_engagement`, `pages_manage_ads` adicionados ao código (`constants.ts`, `oauth.ts`, `route.ts`) |
 
 ---
 
@@ -84,8 +85,9 @@
 |--------|-------|--------|
 | SPF | `v=spf1 include:_spf.mail.hostinger.com ~all` | ✅ |
 | DKIM (resend._domainkey) | Presente (chave longa RSA) | ✅ |
-| DMARC | `v=DMARC1; p=none` | ✅ |
+| DMARC | `v=DMARC1; p=quarantine; pct=25; rua=mailto:brunoalmeida23111996@gmail.com; adspf=r; aspf=r` | ✅ aplicado 2026-10-26 |
 | Resend domain | revolutionx.com.br (sa-east-1) | ✅ verified |
+| GoTrue SMTP | Resend configurado; hook "Before User Created" quebrado excluído | ✅ register → 201 |
 
 ---
 
@@ -119,7 +121,7 @@
 
 ### Priority 1 — Must-do before full operation:
 
-1. **GoTrue mailer fix** — Supabase Auth returns 500 on register because SMTP is not configured. Fix: go to Supabase Dashboard → Authentication → Email → SMTP Settings → add SMTP credentials (Resend or other provider). Until then, registration returns `registration_failed`.
+1. ~~GoTrue mailer fix~~ ✅ **RESOLVIDO 2026-10-26** — SMTP Resend configurado no painel Supabase; hook "Before User Created" quebrado (URL OAuth colada por engano → 404 → 500) excluído; `SUPABASE_SERVICE_ROLE_KEY` adicionada às env vars do Hostinger (14 agora). Registro em produção testado: **HTTP 201** + e-mail de confirmação enviado pelo Resend. Usuários de teste removidos (GoTrue + public.User + Organization residual).
 
 2. **WABA ID registration** — Register WhatsApp phone number in Meta Business Manager → WhatsApp → Add Number. Required for WhatsApp multi-conta flow.
 
@@ -136,7 +138,11 @@
 
 ### Priority 3 — Optional / External:
 
-6. **Facebook Login approval** — Submit app for review in Meta Developer Console. This is external and uncontrollable from our side.
+6. **Facebook Login approval** — Submit app for review in Meta Developer Console with the expanded scopes:
+   - `ads_read`
+   - `pages_read_engagement`
+   - `pages_manage_ads`
+   This is external and uncontrollable from our side. The code already includes these scopes.
 
 7. **DMARC enforcement** — Currently `p=none` (monitoring only). After confirm emails deliver correctly, change to `p=quarantine` or `p=reject`.
 

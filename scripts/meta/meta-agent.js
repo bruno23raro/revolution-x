@@ -1,16 +1,17 @@
-// Meta Agent - Integração e Gestão de Apps Meta
-// Este agente gerencia todas as operações de integração Meta usando as credenciais fornecidas.
+// Meta Agent - Integração e Gestao de Apps Meta
+// Este agente gerencia todas as operacoes de integracao Meta usando as credenciais fornecidas.
 
-import { execute } from '@cloudflare/cli';
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-// Credenciais fixas para esta automação
-const META_APP_ID = '1112157761403064';
-const META_APP_SECRET = 'ff2edcdec00e1e843433b860c717a3ab';
-const DEFAULT_ORIGIN = 'https://revolutionx.com.br';
+// Credenciais de .env.local
+const META_APP_ID = process.env.META_APP_ID || '1112157761403064';
+const META_APP_SECRET = process.env.META_APP_SECRET || '';
+const DEFAULT_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://revolutionx.com.br';
 
-// Escopos padrão
+// Escopos padrao (11 scopes para Meta App Review)
 const DEFAULT_SCOPES = [
   'pages_show_list',
   'pages_manage_posts',
@@ -18,25 +19,29 @@ const DEFAULT_SCOPES = [
   'instagram_content_publish',
   'business_management',
   'whatsapp_business_messaging',
+  'pages_read_user_content',
+  'whatsapp_business_management',
+  'ads_read',
+  'pages_read_engagement',
+  'pages_manage_ads',
 ];
 
-// Estado global para tracking de operações
+// Estado global para tracking de operacoes
 const operationLog = {
   operations: [],
-  log(message: string) {
+  log(message) {
     const timestamp = new Date().toISOString();
     this.operations.push({ timestamp, message });
     console.log(`[${timestamp}] ${message}`);
   },
-  getLastOperations(n: number = 5) {
+  getLastOperations(n = 5) {
     return this.operations.slice(-n);
   }
 };
 
 // Gerar state OAuth seguro (CSPRNG)
-function generateOAuthState(): string {
-  const cryptoImpl =
-    (globalThis as any).crypto || (globalThis as any).msCrypto;
+function generateOAuthState() {
+  const cryptoImpl = globalThis.crypto || globalThis.msCrypto;
   if (cryptoImpl && cryptoImpl.randomBytes) {
     return cryptoImpl.randomBytes(24).toString('base64url');
   }
@@ -44,11 +49,7 @@ function generateOAuthState(): string {
 }
 
 // Validar callback OAuth da Meta
-function validateOAuthCallback(query: URLSearchParams, expectedState: string): {
-  code: string;
-  stateMatch: boolean;
-  error?: string
-} {
+function validateOAuthCallback(query, expectedState) {
   const code = query.get('code');
   const state = query.get('state');
   const error = query.get('error');
@@ -68,16 +69,16 @@ function validateOAuthCallback(query: URLSearchParams, expectedState: string): {
   return { code, stateMatch: true };
 }
 
-// Construir URL de autorização OAuth v26.0
-function buildMetaAuthUrl(config: { appId: string; redirectUri: string; scopes: string[] }, state: string, provider: 'whatsapp' | 'instagram' | 'facebook'): string {
+// Construir URL de autorizacao OAuth v26.0
+function buildMetaAuthUrl(config, state, provider) {
   const base = 'https://www.facebook.com/v26.0/dialog/oauth';
   const scopes = config.scopes.join(',');
   return `${base}?client_id=${config.appId}&redirect_uri=${encodeURIComponent(config.redirectUri)}&state=${state}&scope=${encodeURIComponent(scopes)}`;
 }
 
-// Exchange do código OAuth por tokens
-async function exchangeOAuthCodeForTokens(code: string, config: { appId: string; appSecret: string; redirectUri: string }): Promise<{ accessToken: string; expiresIn?: number; wabaId?: string; phoneNumberId?: string; error?: string }> {
-  const fetchImpl = (globalThis as any).fetch;
+// Exchange do codigo OAuth por tokens
+async function exchangeOAuthCodeForTokens(code, config) {
+  const fetchImpl = globalThis.fetch;
   if (!fetchImpl) {
     return { error: 'Fetch not available', accessToken: '' };
   }
@@ -114,12 +115,8 @@ async function exchangeOAuthCodeForTokens(code: string, config: { appId: string;
 }
 
 // Refresh de token via fb_exchange_token
-async function refreshMetaAccessToken(
-  appId: string,
-  appSecret: string,
-  exchangeToken: string
-): Promise<{ ok: boolean; accessToken?: string; expiresIn?: number; error?: string }> {
-  const fetchImpl = (globalThis as any).fetch;
+async function refreshMetaAccessToken(appId, appSecret, exchangeToken) {
+  const fetchImpl = globalThis.fetch;
   if (!fetchImpl) {
     return { ok: false, error: 'Fetch not available' };
   }
@@ -139,7 +136,7 @@ async function refreshMetaAccessToken(
 
   try {
     const response = await fetchImpl(url, { method: 'GET', signal: ctrl.signal });
-    const parsed = (await response.json()) as { access_token?: string; expires_in?: number; error?: { message?: string } };
+    const parsed = await response.json();
 
     if (response.ok && parsed.access_token) {
       return { ok: true, accessToken: parsed.access_token, expiresIn: parsed.expires_in };
@@ -154,8 +151,8 @@ async function refreshMetaAccessToken(
   }
 }
 
-// Dados seguros para exibição (nunca expõe tokens puros)
-function getSafeConnectionData(connectionId: string, status: string, provider: string, displayName: string | null, phoneNumberId: string | null, wabaId: string | null, connectedAt: Date, expiresAt?: Date) {
+// Dados seguros para exibicao (nunca expoe tokens puros)
+function getSafeConnectionData(connectionId, status, provider, displayName, phoneNumberId, wabaId, connectedAt, expiresAt) {
   return {
     id: connectionId,
     status,
@@ -168,13 +165,13 @@ function getSafeConnectionData(connectionId: string, status: string, provider: s
   };
 }
 
-// Listar contas Meta conectadas para uma organização
-async function listTenantWhatsAppAccounts(organizationId: string): Promise<{ ok: true; accounts: any[]; displayNameAvailable: boolean } | { ok: false; reason: string }> {
+// Listar contas Meta conectadas para uma organizacao
+async function listTenantWhatsAppAccounts(organizationId) {
   // Integrar com Supabase service role client
   try {
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     const { data, error } = await supabase
@@ -191,7 +188,7 @@ async function listTenantWhatsAppAccounts(organizationId: string): Promise<{ ok:
       return { ok: false, reason: 'not_connected' };
     }
 
-    const accounts = data.map((r: any) => ({
+    const accounts = data.map((r) => ({
       id: r.id,
       provider: r.provider,
       displayName: r.display_name ?? null,
@@ -208,22 +205,7 @@ async function listTenantWhatsAppAccounts(organizationId: string): Promise<{ ok:
 }
 
 // Processar callback OAuth completo
-async function processOAuthCallback(
-  query: URLSearchParams,
-  expectedState: string,
-  organizationId: string,
-  origin: string
-): Promise<{
-  success: boolean;
-  code?: string;
-  error?: string;
-  connectionState?: {
-    status: string;
-    wabaId: string | null;
-    phoneNumberId: string | null;
-    displayName: string | null;
-  };
-}> {
+async function processOAuthCallback(query, expectedState, organizationId, origin) {
   const { code, stateMatch, error: callbackError } = validateOAuthCallback(
     query,
     expectedState
@@ -236,19 +218,19 @@ async function processOAuthCallback(
   // Exchange code por tokens
   const redirectUri = `${origin}/api/auth/callback/meta`;
 
-  const config: { appId: string; appSecret: string; redirectUri: string } = {
+  const config = {
     appId: META_APP_ID,
     appSecret: META_APP_SECRET,
     redirectUri,
   };
 
-  const tokenResult = await exchangeOAuthCodeForTokens(code, config, redirectUri);
+  const tokenResult = await exchangeOAuthCodeForTokens(code, config);
 
   if (tokenResult.error) {
     return { success: false, error: tokenResult.error };
   }
 
-  // Montar estado da conexão
+  // Montar estado da conexao
   const connectionState = {
     status: tokenResult.error ? 'ERROR' : 'CONNECTED',
     wabaId: tokenResult.wabaId || null,
@@ -264,27 +246,8 @@ async function processOAuthCallback(
 }
 
 // Publicar post no Facebook Page
-async function publishFacebookPagePost(
-  facebookPageId: string,
-  accessToken: string,
-  spec: {
-    message?: string;
-    link?: string;
-    scheduledAt?: string;
-  },
-  opts?: {
-    timeoutMs?: number;
-    apiBase?: string;
-    version?: string;
-  }
-): Promise<{
-  ok: boolean;
-  postId?: string;
-  error?: string;
-  errorDetail?: string;
-  scheduled?: boolean;
-}> {
-  const fetchImpl = (globalThis as any).fetch;
+async function publishFacebookPagePost(facebookPageId, accessToken, spec, opts) {
+  const fetchImpl = globalThis.fetch;
   if (!fetchImpl) {
     return { ok: false, error: 'fetch_unavailable' };
   }
@@ -294,7 +257,7 @@ async function publishFacebookPagePost(
   const base = (opts?.apiBase ?? BASE_URL).replace(/^\/+\/\//, '');
   const version = opts?.version ?? DEFAULT_VERSION;
 
-  const payload: Record<string, unknown> = {};
+  const payload = {};
   if (spec.message?.trim()) payload.message = spec.message.trim();
   if (spec.link?.trim()) payload.link = spec.link.trim();
 
@@ -331,7 +294,7 @@ async function publishFacebookPagePost(
       signal: ctrl.signal,
     });
 
-    const parsed = (await response.json()) as { id?: string; error?: { message?: string; code?: number } };
+    const parsed = await response.json();
 
     if (response.ok) {
       return { ok: true, postId: parsed.id, scheduled: !!spec.scheduledAt };
@@ -350,14 +313,14 @@ async function publishFacebookPagePost(
   }
 }
 
-// Inicializar agente - verificar configurações
-async function init(): Promise<void> {
-  console.log('🤖 Meta Agent - Inicializando integração Meta');
+// Inicializar agente - verificar configuracoes
+async function init() {
+  console.log('Meta Agent - Inicializando integracao Meta');
   console.log('============================================');
   console.log('');
 
-  // Verificar variáveis de ambiente
-  const missing: string[] = [];
+  // Verificar variaveis de ambiente
+  const missing = [];
 
   if (!process.env.META_APP_ID) missing.push('META_APP_ID');
   if (!process.env.META_APP_SECRET) missing.push('META_APP_SECRET');
@@ -366,68 +329,48 @@ async function init(): Promise<void> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
 
   if (missing.length > 0) {
-    console.log('⚠️  Variáveis de ambiente faltando:');
+    console.log('Variaveis de ambiente faltando:');
     missing.forEach(m => console.log(`   - ${m}`));
     console.log('');
     console.log('Execute `meta init` para criar .env.example ou configure no Hostinger.');
     console.log('');
   } else {
-    console.log('✅ Todas as variáveis de ambiente estão configuradas');
+    console.log('Todas as variaveis de ambiente estao configuradas');
     console.log(`   META_APP_ID: ${process.env.META_APP_ID}`);
     console.log(`   META_APP_SECRET: [mascarado]`);
     console.log(`   NEXT_PUBLIC_SUPABASE_URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
     console.log('');
   }
 
-  // Verificar conexão Supabase
+  // Verificar conexao Supabase
   try {
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    // Testar conexão simples
+    // Testar conexao simples
     const { data, error } = await supabase.from('meta_integrations').select('count').limit(1);
 
     if (error) throw error;
-    console.log('✅ Conexão Supabase OK - pode consultar meta_integrations');
+    console.log('Conexao Supabase OK - pode consultar meta_integrations');
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    console.log('❌ Erro ao conectar Supabase:', error.message);
+    console.log('Erro ao conectar Supabase:', error.message);
   }
 
   console.log('');
-  console.log('📋 Comandos disponíveis:');
+  console.log('Comandos disponiveis:');
   console.log('   list-accounts <org-id>       - Listar contas conectadas');
   console.log('   start-oauth <provider>       - Iniciar OAuth flow');
   console.log('   check-status <org-id>        - Verificar status');
-  console.log('   refresh-token <org-id>       - Refresh automático');
+  console.log('   refresh-token <org-id>       - Refresh automatico');
   console.log('   publish <page-id>            - Publicar post');
   console.log('   help                         - Mostrar ajuda');
   console.log('');
 }
 
-// Exportar funções para uso externo
-export type {
-  MetaAppCreds,
-  RefreshResult,
-  RefreshOptions,
-  MetaIntegrationRow,
-  ResolveResult,
-  ResolveDeps,
-  OAuthState,
-  MetaAuthConfig,
-  WhatsAppConnectionState,
-  OAuthCallbackResult,
-  InstagramTokenSet,
-  PagePostResult,
-  FbPubOptions,
-  FbPubError,
-  CreatePagePostSpec,
-  FacebookPageAccess,
-  SafeConnectionData,
-};
-
+// Exportar funcoes para uso externo
 export {
   init,
   generateOAuthState,
@@ -445,7 +388,7 @@ export {
 // Se executado diretamente, inicializar
 if (require.main === module) {
   init().catch((err) => {
-    console.error('❌ Erro fatal:', err);
+    console.error('Erro fatal:', err);
     process.exit(1);
   });
 }

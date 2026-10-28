@@ -1,6 +1,8 @@
 // Meta CLI - Automação de integração Meta (Facebook/Instagram/WhatsApp)
 // Baseado nas credenciais: META_APP_ID=1112157761403064, META_APP_SECRET=ff2edcdec00e1e843433b860c717a3ab
 
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 import { execSync } from 'child_process';
@@ -8,12 +10,12 @@ import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 import crypto from 'crypto';
 
-// Credenciais fixas para esta automação
-const META_APP_ID = '1112157761403064';
-const META_APP_SECRET = 'ff2edcdec00e1e843433b860c717a3ab';
-const DEFAULT_ORIGIN = 'https://revolutionx.com.br';
+// Credenciais de .env.local
+const META_APP_ID = process.env.META_APP_ID || '1112157761403064';
+const META_APP_SECRET = process.env.META_APP_SECRET || '';
+const DEFAULT_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://revolutionx.com.br';
 
-// Escopos padrão
+// Escopos padrão (11 scopes para Meta App Review)
 const DEFAULT_SCOPES = [
   'pages_show_list',
   'pages_manage_posts',
@@ -21,16 +23,21 @@ const DEFAULT_SCOPES = [
   'instagram_content_publish',
   'business_management',
   'whatsapp_business_messaging',
+  'pages_read_user_content',
+  'whatsapp_business_management',
+  'ads_read',
+  'pages_read_engagement',
+  'pages_manage_ads',
 ];
 
 // Gerar verify token seguro
-function generateVerifyToken(): string {
+function generateVerifyToken() {
   return crypto.randomBytes(16).toString('hex');
 }
 
 // Verificar se variáveis de ambiente estão configuradas
-function checkEnv(): { ok: boolean; missing: string[] } {
-  const missing: string[] = [];
+function checkEnv() {
+  const missing = [];
 
   if (!process.env.META_APP_ID) missing.push('META_APP_ID');
   if (!process.env.META_APP_SECRET) missing.push('META_APP_SECRET');
@@ -45,7 +52,7 @@ function checkEnv(): { ok: boolean; missing: string[] } {
 }
 
 // Listar contas Meta conectadas
-async function listAccounts(organizationId: string): Promise<void> {
+async function listAccounts(organizationId) {
   const envCheck = checkEnv();
   if (!envCheck.ok) {
     console.error(`❌ Variáveis de ambiente faltando: ${envCheck.missing.join(', ')}`);
@@ -60,11 +67,11 @@ async function listAccounts(organizationId: string): Promise<void> {
   // Aqui integraríamos com o Supabase para listar meta_integrations
   // Por enquanto, mostramos estrutura
   console.log('Para listar contas reais, integrar com:');
-  console.log('  npx supabase query execute "select * from meta_integrations where organization_id = \\'${organizationId}\\''');
+  console.log("  npx supabase query execute \"select * from meta_integrations where organization_id = '" + organizationId + "'\"");
 }
 
 // Iniciar OAuth flow
-async function startOAuth(provider: 'whatsapp' | 'instagram' | 'facebook', organizationId: string): Promise<void> {
+async function startOAuth(provider, organizationId) {
   const envCheck = checkEnv();
   if (!envCheck.ok) {
     console.error('❌ Variáveis de ambiente faltando');
@@ -96,7 +103,7 @@ async function startOAuth(provider: 'whatsapp' | 'instagram' | 'facebook', organ
 }
 
 // Verificar status de conexão
-async function checkStatus(organizationId: string): Promise<void> {
+async function checkStatus(organizationId) {
   const envCheck = checkEnv();
   if (!envCheck.ok) {
     console.error('❌ Variáveis de ambiente faltando');
@@ -118,7 +125,7 @@ async function checkStatus(organizationId: string): Promise<void> {
 }
 
 // Refresh de token
-async function refreshToken(organizationId: string): Promise<void> {
+async function refreshToken(organizationId) {
   const envCheck = checkEnv();
   if (!envCheck.ok) {
     console.error('❌ Variáveis de ambiente faltando');
@@ -141,7 +148,7 @@ async function refreshToken(organizationId: string): Promise<void> {
 }
 
 // Publicar post no Facebook
-async function publishPost(scheduledAt?: string, message?: string, link?: string): Promise<void> {
+async function publishPost(scheduledAt, message, link) {
   const envCheck = checkEnv();
   if (!envCheck.ok) {
     console.error('❌ Variáveis de ambiente faltando');
@@ -167,7 +174,7 @@ async function publishPost(scheduledAt?: string, message?: string, link?: string
 }
 
 // Helper para ler linha do stdin
-function askQuestion(question: string): Promise<string> {
+function askQuestion(question) {
   return new Promise((resolve) => {
     const rl = createInterface({
       input: process.stdin,

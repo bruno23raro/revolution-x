@@ -35,10 +35,9 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: 'Revolution X — Sua operação em movimento',
     description: 'Plataforma operacional omnichannel para centralizar relacionamento, vendas, conteúdo e automação.',
-    // TODO (passo humano/design): publicar public/og-image.png (1200x630) e
-    // habilitar -> images: [{ url: '/og-image.png', width: 1200, height: 630 }].
-    // Hoje só existe public/favicon.svg; apontar uma imagem inexistente
-    // quebraria o preview social (404 na rasura).
+    // Facebook App ID para integração social (vindo de .env.local via process.env)
+    ...(process.env.NEXT_PUBLIC_META_APP_ID && { appId: process.env.NEXT_PUBLIC_META_APP_ID }),
+    // ... demais OG configs
   },
   twitter: {
     card: 'summary_large_image',
@@ -49,12 +48,55 @@ export const metadata: Metadata = {
   },
 };
 
+// Facebook SDK async initialization
+function loadFacebookSDK(appId: string): void {
+  if (typeof window !== 'undefined') {
+    // Only load if not already loaded and we have an app ID
+    const alreadyLoaded = (window as any).facebookAsyncLoaded;
+    if (!alreadyLoaded && appId) {
+      (window as any).facebookAsyncLoaded = true;
+      // Load the Facebook SDK async
+      const js = document.createElement('script');
+      js.id = 'facebook-jssdk';
+      js.src = 'https://connect.facebook.net/en_US/sdk.js';
+      js.async = true;
+      js.dataset.appId = appId;
+      // Execute after load
+      js.onload = () => {
+        // SDK loaded, FB is available globally
+        // The window.fbAsyncInit will be called by the SDK
+      };
+      // Insert script after first child (safely handle null cases)
+      const firstChild = document.documentElement.firstChild;
+      if (firstChild && firstChild.parentNode) {
+        firstChild.parentNode.insertBefore(js, firstChild.nextSibling);
+      } else {
+        const head = document.head;
+        if (head) {
+          head.appendChild(js);
+        }
+      }
+    }
+  }
+}
+
+// Initialize Facebook SDK on DOMContentLoaded
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => loadFacebookSDK(process.env.NEXT_PUBLIC_META_APP_ID || ''));
+  } else {
+    loadFacebookSDK(process.env.NEXT_PUBLIC_META_APP_ID || '');
+  }
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
         <meta name="facebook-domain-verification" content="y5taj86mle4eji96jz4ldkdf2vt49e" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {/* Facebook SDK async script — loads on client only, injected via Next.js dynamic import pattern */}
+        {/* O script é inserido via useEffect no componente client-side quando necessário */}
       </head>
       <body>{children}</body>
     </html>

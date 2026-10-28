@@ -1,4 +1,4 @@
-# Formulário de Revisão da Meta — Revolution X
+﻿# Formulário de Revisão da Meta — Revolution X
 
 ## Respostas Prontas para Copiar e Colar
 
@@ -40,6 +40,8 @@ Nosso aplicativo utiliza as seguintes APIs da Meta:
    - pages_show_list: Listar páginas do Facebook conectadas
    - pages_manage_posts: Publicar conteúdo nas páginas conectadas
    - pages_read_engagement: Ler métricas de engajamento das páginas
+   - pages_manage_ads: Criar e gerenciar anúncios nas páginas conectadas
+   - ads_read: Ler insights e relatórios de campanhas de anúncios
 
 2. Instagram Graph API:
    - instagram_basic: Obter informações básicas do perfil Instagram
@@ -47,6 +49,9 @@ Nosso aplicativo utiliza as seguintes APIs da Meta:
 
 3. Meta Business SDK:
    - business_management: Gerenciar múltiplos negócios e conexões
+
+4. WhatsApp Business API:
+   - whatsapp_business_messaging: Enviar e receber mensagens via WhatsApp Business
 
 Todos os access tokens são armazenados de forma segura com criptografia AES-256-GCM e renovados automaticamente antes do vencimento. O app segue as diretrizes de uso de dados da Meta e não realiza nenhuma ação sem autorização explícita do usuário.
 ```

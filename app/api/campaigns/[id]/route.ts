@@ -31,6 +31,8 @@ import {
 import { executeCampaignBatch, mergeCounts } from '../../../../src/services/campaignExecutor';
 import { resolveTenantMetaAccess } from '../../../../src/integrations/meta/resolveAccess';
 import { sendWhatsAppText } from '../../../../src/integrations/meta/whatsappSender';
+import { getChannelDecrypted, buildOfficialSender, checkTier } from '../../../../src/integrations/whatsapp';
+import { createServiceRoleClient } from '../../../../src/lib/supabase/server';
 
 const MAX_ACTION_ACCOUNT = 64;
 
@@ -195,6 +197,11 @@ async function doStart(
     );
   }
 
+  // ── Canal whatsapp_api: WhatsApp OFICIAL (019) — tier/template gates ────
+  if (campaign.channel === 'whatsapp_api') {
+    return await doStartOfficial(campaign, org, from);
+  }
+
   // ── Canal whatsapp: seleção EXPLÍCITA de conta (§7/§11) ────────────────
   let accountId: string | null = null;
   if (typeof body.accountId === 'string' && body.accountId.trim()) {
@@ -300,6 +307,149 @@ async function doStart(
     skipReasons: reasons,
     // Seleção honesta do número (§11): o usuário vê QUAL conta enviou.
     account: { accountId, phoneNumberId: access.phoneNumberId },
+    campaign: fresh,
+  });
+}
+
+// ── whatsapp_api: SAME state machine + executor; o sender vem da factory
+// oficial (tier 250/24h, gate template APPROVED, dual-path) em vez da conta
+// Meta legado. `campaign.message` = texto livre OU JSON
+// {"type":"template","name":...,"language":...} (variáveis = linhas do texto
+// interpolado pelo executor).
+
+async function doStartOfficial(
+  campaign: {
+    id: string;
+    organizationId: string;
+    channel: string;
+    status: string;
+    message: string;
+    accountId: string | null;
+    variables: unknown;
+    audienceJson: unknown;
+    batchJson: unknown;
+    resultKind: string | null;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    totalCount: number;
+    sentCount: number;
+    failedCount: number;
+    skippedCount: number;
+    progress: number;
+  },
+  org: string,
+  from: CampaignStatus,
+) {
+  const client = createServiceRoleClient();
+  const channel = await getChannelDecrypted(client, org);
+  if (!channel || channel.status !== 'CONNECTED' || !channel.phoneNumberId) {
+    return NextResponse.json(
+      { error: 'whatsapp_channel_not_connected', hint: 'Conecte o WhatsApp oficial em /integracoes.' },
+      { status: 409 },
+    );
+  }
+  const tier = checkTier(channel);
+  if (!tier.allowed) {
+    return NextResponse.json(
+      { error: 'tier_limit_reached', sent: tier.sent, limit: tier.limit, hint: 'Limite de 24h do número atingido (auto-pause do tier Meta).' },
+      { status: 429 },
+    );
+  }
+
+  // Payload: template JSON ou texto livre (janela 24h — fora dela a Meta
+  // devolve 131047 por destinatário, registrado em lastError).
+  let payload: import('../../../../src/integrations/whatsapp').DispatchPayload = { kind: 'text', text: campaign.message };
+  let expectedCategory: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' | undefined;
+  try {
+    const parsed = JSON.parse(campaign.message) as Record<string, unknown>;
+    if (isRecord(parsed) && parsed.type === 'template' && typeof parsed.name === 'string') {
+      payload = {
+        kind: 'template',
+        name: parsed.name,
+        language: typeof parsed.language === 'string' ? parsed.language : 'pt_BR',
+        variables: Array.isArray(parsed.variables) ? parsed.variables.map(String) : [],
+      };
+      const CATS = new Set(['MARKETING', 'UTILITY', 'AUTHENTICATION']);
+      expectedCategory = CATS.has(String(parsed.category))
+        ? (parsed.category as typeof expectedCategory)
+        : undefined;
+    }
+  } catch {
+    /* texto livre */
+  }
+
+  // Replaneia a fila (audiência atual, mesmos gates de opt-in de 017).
+  const audience = (isRecord(campaign.audienceJson) ? campaign.audienceJson : {}) as AudienceSpec;
+  const contacts = await listMarketingContacts(org);
+  const { recipients, skipped, reasons } = buildRecipients(contacts, audience, campaign.channel);
+  const planned = await campaignRepoReal.replacePendingRecipients(
+    org,
+    campaign.id,
+    recipients.map((r) => r.id),
+  );
+
+  const path: CampaignStatus[] =
+    from === 'paused' || from === 'queued' ? ['running'] : ['queued', 'running'];
+  for (let i = 0; i < path.length; i++) {
+    const prev = i === 0 ? from : path[i - 1];
+    if (!canTransition(prev, path[i])) {
+      return NextResponse.json({ error: 'invalid_state', from: prev, to: path[i] }, { status: 409 });
+    }
+  }
+  if (path[0] === 'queued') {
+    await campaignRepoReal.setStatus(org, campaign.id, 'queued', { startedAt: campaign.startedAt ?? new Date() });
+  }
+
+  const sender = buildOfficialSender({ channel, client, payload, expectedCategory });
+  const withPlan = { ...campaign, totalCount: campaign.totalCount + planned.planned };
+  const result = await executeCampaignBatch({ campaign: withPlan, sender });
+
+  const merged = mergeCounts(withPlan, { sent: result.sent, failed: result.failed });
+  const progress =
+    merged.totalCount > 0
+      ? Math.min(100, Math.round(((merged.sentCount + merged.failedCount) / merged.totalCount) * 100))
+      : 0;
+
+  // Auto-pause do tier (gate 5): lote parou por limite de 24h → campanha
+  // volta a 'paused' com nota honesta (nunca segue queimando retry).
+  if (sender.lastResult.tierBlocked) {
+    await campaignRepoReal.setStatus(org, campaign.id, 'running', { ...merged, progress });
+    if (canTransition('running', 'paused')) {
+      await campaignRepoReal.setStatus(org, campaign.id, 'paused', {
+        ...merged,
+        progress,
+        errorText: `tier_limit_reached (${tier.sent}/${tier.limit} em 24h) — retomada automática quando a janela virar.`,
+      });
+    }
+  } else {
+    await campaignRepoReal.setStatus(org, campaign.id, 'running', { ...merged, progress, startedAt: campaign.startedAt ?? new Date() });
+    const terminal = result.nextStatus === 'completed' || result.nextStatus === 'completed_partial';
+    if (terminal && canTransition('running', result.nextStatus)) {
+      await campaignRepoReal.setStatus(org, campaign.id, result.nextStatus, { ...merged, progress, completedAt: new Date() });
+    }
+  }
+
+  const fresh = await campaignRepoReal.get(org, campaign.id);
+  console.info('[campaigns] lote oficial executado', {
+    org,
+    id: campaign.id,
+    via: 'whatsapp_api',
+    sent: result.sent,
+    failed: result.failed,
+    remaining: result.remaining,
+    tier: sender.lastResult,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    status: sender.lastResult.tierBlocked ? 'paused' : fresh?.status ?? 'running',
+    batch: { sent: result.sent, failed: result.failed, remaining: result.remaining },
+    planned: planned.planned,
+    skipped,
+    skipReasons: reasons,
+    tier: { sent: tier.sent + sender.lastResult.sentInRun, limit: tier.limit, nearLimit: sender.lastResult.nearLimit },
+    alert80: sender.lastResult.nearLimit,
+    account: { phoneNumberId: channel.phoneNumberId, verifiedName: channel.verifiedName },
     campaign: fresh,
   });
 }

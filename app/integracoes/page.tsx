@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
 import WhatsAppApiCard from '@/components/integrations/WhatsAppApiCard';
 import WhatsAppQrCard from '@/components/integrations/WhatsAppQrCard';
+import WhatsAppOfficialCard from '@/components/integrations/WhatsAppOfficialCard';
 import InstagramCard from '@/components/integrations/InstagramCard';
 import FacebookPagesCard from '@/components/integrations/FacebookPagesCard';
 import type { IntegrationStatus } from '@/components/integrations/IntegrationCard';
@@ -207,6 +208,7 @@ export default function IntegracoesPage() {
                 }
               />
               <WhatsAppQrCard />
+              <WhatsAppOfficialCard onConnected={() => handleConnected('WhatsApp Oficial')} />
             </div>
           )}
 

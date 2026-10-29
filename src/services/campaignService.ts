@@ -114,13 +114,18 @@ export interface Eligibility {
  * Contato só é elegível para marketing com consentimento comprovado
  * (`consentMarketing=true`), sem opt-out e com o canal de contato presente.
  */
+/** Canal de WhatsApp (legado QR/API = 'whatsapp'; oficial OpenBSP = 'whatsapp_api'). */
+export function isWhatsAppChannel(channel: string): boolean {
+  return channel === 'whatsapp' || channel === 'whatsapp_api';
+}
+
 export function isMarketingEligible(
   c: ContactLike,
   opts: { channel: string },
 ): Eligibility {
   if (c.optOut === true) return { eligible: false, reason: 'opt_out' };
   if (c.consentMarketing !== true) return { eligible: false, reason: 'no_consent' };
-  if (opts.channel === 'whatsapp' && !(c.phone || '').trim()) {
+  if (isWhatsAppChannel(opts.channel) && !(c.phone || '').trim()) {
     return { eligible: false, reason: 'no_phone' };
   }
   if (opts.channel === 'email' && !(c.email || '').trim()) {
@@ -179,7 +184,7 @@ export function selectAudience(
   const seen = new Set<string>();
   const dedup: ContactLike[] = [];
   for (const c of eligible) {
-    const key = (channel === 'whatsapp' ? c.phone || '' : c.email || '') || c.id;
+    const key = (isWhatsAppChannel(channel) ? c.phone || '' : c.email || '') || c.id;
     if (seen.has(key)) continue;
     seen.add(key);
     dedup.push(c);
@@ -215,7 +220,7 @@ export function buildRecipients(
   const { eligible, skipped, reasons } = selectAudience(contacts, audience, channel);
   const recipients = eligible.map((c) => ({
     id: c.id,
-    to: channel === 'whatsapp' ? (c.phone || '') : (c.email || ''),
+    to: isWhatsAppChannel(channel) ? (c.phone || '') : (c.email || ''),
   }));
   return { recipients, skipped, reasons };
 }

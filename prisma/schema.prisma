@@ -572,3 +572,51 @@ model CampaignRecipient {
   @@index([campaignId, status])
   @@index([organizationId])
 }
+
+// ============================================================
+// WHATSAPP OFICIAL (migration 019) — OpenBSP agora, meta_direct depois.
+// Aditivo: nada dos modelos acima muda. Campanhas/destinatários reutilizam
+// Campaign/CampaignRecipient (017) com channel='whatsapp_api'; inbound reusa
+// WebhookEvent (015). Acesso via service-role + RLS FORCE (app.current_org).
+// ============================================================
+
+model WhatsappChannel {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @db.Uuid
+  provider         String   @default("openbsp") @db.VarChar(20)
+  status           String   @default("PENDING") @db.VarChar(20)
+  onboardingTokenId String? @db.Text
+  callbackUrl      String?  @db.Text
+  verifyToken      String   @db.Text
+  wabaId           String?  @db.Text
+  phoneNumberId    String?  @db.Text
+  phoneNumber      String?  @db.Text
+  verifiedName     String?  @db.Text
+  /// access_token AES-GCM (src/lib/encryption.ts) — nunca expor na UI
+  accessTokenEnc   String?  @db.Text
+  tierLimitPer24h  Int      @default(250)
+  sentWindow24h    Int      @default(0)
+  windowStartedAt  DateTime? @db.Timestamptz(6)
+  lastError        String?  @db.Text
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @db.Timestamptz(6)
+  @@unique([organizationId])
+  @@map("whatsapp_channels")
+}
+
+model WhatsappTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @db.Uuid
+  metaTemplateId  String?  @db.Text
+  name            String   @db.Text
+  language        String   @default("pt_BR") @db.Text
+  category        String   @db.VarChar(20)
+  status          String   @default("PENDING") @db.VarChar(20)
+  componentsJson  Json     @default("[]")
+  rejectionReason String?  @db.Text
+  lastCheckedAt   DateTime? @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @db.Timestamptz(6)
+  @@unique([organizationId, name, language])
+  @@map("whatsapp_templates")
+}

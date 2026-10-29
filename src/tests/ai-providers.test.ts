@@ -2,7 +2,7 @@
 // provedor recebe um `fetchImpl` fake. Nenhum request real, nenhuma rede, nenhuma
 // chava real (§16: mocks). A descoberta/geração são testáveis sem sair do sandbox.
 
-import { buildAiProviders, buildGeminiProvider, buildOmniProvider } from '@/ai';
+import { buildAiProviders, buildGeminiProvider, buildOmniProvider, buildOllamaProvider } from '@/ai';
 import type { AiProvider } from '@/ai';
 
 // ── Gemini: descoberta com fetchImpl fake ─────────────────────────────────────
@@ -100,21 +100,97 @@ describe('buildOmniProvider', () => {
   });
 });
 
+// ── Ollama: descoberta com fetchImpl fake ────────────────────────────────────
+
+describe('buildOllamaProvider', () => {
+  it('configured=true por padrão (local)', () => {
+    const p = buildOllamaProvider({ env: {} });
+    expect(p.configured).toBe(true);
+  });
+
+  it('descobre modelos via /v1/models', async () => {
+    const seen: { url: string; headers: Record<string, string> }[] = [];
+    const fetchImpl = jest.fn(async (url: string, init: RequestInit) => {
+      seen.push({ url, headers: (init.headers as Record<string, string>) });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [
+            { id: 'llama3.1:8b', name: 'Llama 3.1 8B' },
+            { id: 'mistral:7b', name: 'Mistral 7B' },
+          ],
+        }),
+      } as unknown as Response;
+    });
+    const p = buildOllamaProvider({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r = await p.listModels();
+    expect(r.source).toBe('api');
+    expect(r.models.map((m) => m.id)).toEqual(['llama3.1:8b', 'mistral:7b']);
+    expect(seen[0].url).toBe('http://localhost:11434/v1/models');
+    expect(seen[0].headers['Authorization']).toBe('Bearer ollama');
+  });
+
+  it('gera via /v1/chat/completions', async () => {
+    const fetchImpl = jest.fn(async (url: string, init: RequestInit) => {
+      expect(url).toBe('http://localhost:11434/v1/chat/completions');
+      expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer ollama');
+      const body = JSON.parse(init.body as string);
+      expect(body.messages[0].role).toBe('user');
+      expect(body.model).toBe('llama3.1:8b');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          model: 'llama3.1:8b',
+          choices: [{ message: { content: 'Olá mundo' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      } as unknown as Response;
+    });
+    const p = buildOllamaProvider({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    const res = await p.generate({ prompt: 'Oi', model: 'llama3.1:8b' });
+    expect(res.text).toBe('Olá mundo');
+    expect(res.model).toBe('llama3.1:8b');
+    expect(res.usage).toEqual({ promptTokens: 10, completionTokens: 5, totalTokens: 15 });
+  });
+
+  it('usa AI_API_URL e AI_MODEL do env', async () => {
+    const fetchImpl = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ id: 'custom-model', name: 'Custom' }] }),
+    })) as unknown as typeof fetch;
+    const p = buildOllamaProvider({ env: { AI_API_URL: 'http://custom:11434', AI_MODEL: 'custom-model' }, fetchImpl });
+    const r = await p.listModels();
+    expect(r.models[0].id).toBe('custom-model');
+  });
+});
+
 // ── Registry: ordem do fallback ──────────────────────────────────────────────
 
 describe('buildAiProviders', () => {
-  it('ordem default omni, gemini', () => {
+  it('ordem default omni, gemini, ollama', () => {
     const ps = buildAiProviders({ env: {} });
-    expect(ps.map((p) => p.id)).toEqual(['omni', 'gemini']);
+    expect(ps.map((p) => p.id)).toEqual(['omni', 'gemini', 'ollama']);
   });
 
   it('ordem customizada respeitada', () => {
-    const ps = buildAiProviders({ env: {}, order: ['gemini', 'omni'] });
-    expect(ps.map((p) => p.id)).toEqual(['gemini', 'omni']);
+    const ps = buildAiProviders({ env: {}, order: ['gemini', 'omni', 'ollama'] });
+    expect(ps.map((p) => p.id)).toEqual(['gemini', 'omni', 'ollama']);
   });
 
-  it('nenhum provedor configurado sem creds', () => {
+  it('ollama configurado=true mesmo sem creds', () => {
     const ps = buildAiProviders({ env: {} });
-    expect(ps.every((p) => p.configured === false)).toBe(true);
+    const ollama = ps.find((p) => p.id === 'ollama');
+    expect(ollama?.configured).toBe(true);
+  });
+
+  it('omni e gemini configured=false sem creds', () => {
+    const ps = buildAiProviders({ env: {} });
+    const omni = ps.find((p) => p.id === 'omni');
+    const gemini = ps.find((p) => p.id === 'gemini');
+    expect(omni?.configured).toBe(false);
+    expect(gemini?.configured).toBe(false);
   });
 });

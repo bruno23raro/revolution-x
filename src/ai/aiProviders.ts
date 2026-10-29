@@ -15,6 +15,7 @@ import {
 import type { AiModel, AiProvider, ModelCapability } from './aiTypes';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com';
+const OLLAMA_BASE = 'http://localhost:11434';
 
 function pick(...alts: Array<string | undefined | null>): string | undefined {
   return alts.find((x): x is string => typeof x === 'string' && x.trim() !== '');
@@ -296,6 +297,87 @@ export function buildGeminiProvider(opts: {
   };
 }
 
+// ─────────────────────────── OLLAMA (local OpenAI-compatível) ─────────────────
+
+export function buildOllamaProvider(opts: {
+  env?: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+  baseUrl?: string;
+  apiKey?: string;
+  model?: string;
+} = {}): AiProvider {
+  const env = opts.env ?? process.env;
+  const baseUrl = (opts.baseUrl ?? env.AI_API_URL ?? OLLAMA_BASE).replace(/\/+$/, '');
+  const apiKey = opts.apiKey ?? env.AI_API_KEY ?? 'ollama';
+  const defaultModel = opts.model ?? env.AI_MODEL ?? 'llama3.1:8b';
+  const fetchImpl = opts.fetchImpl ?? (typeof fetch !== 'undefined' ? fetch : undefined);
+
+  return {
+    id: 'ollama',
+    name: 'Ollama (local OpenAI-compatível)',
+    configured: true, // Sempre configurado se o container estiver rodando
+    async listModels() {
+      const now = Date.now();
+      if (!fetchImpl) return { models: [{ id: defaultModel, name: defaultModel }], source: 'fallback', fetchedAt: now };
+      try {
+        const res = await fetchImpl(`${baseUrl}/v1/models`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as { data?: Array<{ id?: string; name?: string }> };
+        const models: AiModel[] = (json.data ?? [])
+          .map((d) => ({ id: d.id ?? '', name: d.name }))
+          .filter((d) => d.id);
+        return { models, source: 'api', fetchedAt: now };
+      } catch {
+        return { models: [{ id: defaultModel, name: defaultModel }], source: 'fallback', fetchedAt: now };
+      }
+    },
+    async generate(req) {
+      if (!fetchImpl) throw new Error('fetch indisponível neste ambiente.');
+      const model = req.model ?? defaultModel;
+      const res = await fetchImpl(
+        `${baseUrl}/v1/chat/completions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            messages: req.system
+              ? [{ role: 'system', content: req.system }, { role: 'user', content: req.prompt }]
+              : [{ role: 'user', content: req.prompt }],
+            max_tokens: req.maxTokens,
+            temperature: req.temperature,
+          }),
+          signal: req.signal,
+        },
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Ollama HTTP ${res.status}: ${text.slice(0, 300)}`);
+      }
+      const json = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+        model?: string;
+      };
+      const choice = json.choices?.[0];
+      const u = json.usage;
+      return {
+        text: choice?.message?.content ?? '',
+        model: json.model ?? model,
+        usage: u
+          ? {
+              promptTokens: u.prompt_tokens,
+              completionTokens: u.completion_tokens,
+              totalTokens: u.total_tokens,
+            }
+          : undefined,
+      };
+    },
+  };
+}
+
 // ─────────────────────────── Registry / cadeia de fallback ─────────────────
 
 export interface BuildProvidersOptions {
@@ -305,8 +387,8 @@ export interface BuildProvidersOptions {
   geminiApiKey?: string;
   env?: Record<string, string | undefined>;
   fetchImpl?: typeof fetch;
-  /** Ordem explícita de fallback (default: omni, gemini). */
-  order?: Array<'omni' | 'gemini'>;
+  /** Ordem explícita de fallback (default: omni, gemini, ollama). */
+  order?: Array<'omni' | 'gemini' | 'ollama'>;
   /** Usar provedor Gemini direto (sem OmniRouter). Ignorado se order não incluir 'gemini'. */
   useDirectGemini?: boolean;
 }
@@ -330,8 +412,9 @@ export function buildAiProviders(opts: BuildProvidersOptions = {}): AiProvider[]
 
   const omni = buildOmniProvider(opts);
   const gemini = buildGeminiProvider(opts);
-  const map = { omni, gemini } as const;
-  const order = opts.order ?? ['omni', 'gemini'];
+  const ollama = buildOllamaProvider(opts);
+  const map = { omni, gemini, ollama } as const;
+  const order = opts.order ?? ['omni', 'gemini', 'ollama'];
   const seen = new Set<string>();
   const out: AiProvider[] = [];
   for (const id of order) {

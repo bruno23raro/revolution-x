@@ -1,0 +1,48 @@
+{
+  "pages_show_list": [
+    { "action": "goto", "selector": "/connections" },
+    { "action": "click", "selector": "[aria-label*='Connect Facebook']" },
+    { "action": "click", "selector": "[aria-label*='Connect']" },
+    { "action": "click", "selector": "button:has-text(\"Connect\")" }
+  ],
+  "instagram_basic": [
+    { "action": "goto", "selector": "/edit/permissions" },
+    { "action": "click", "selector": "[aria-label*='Connect Instagram']" },
+    { "action": "click", "selector": "button:has-text(\"Save\")" }
+  ],
+  "instagram_content_publish": [
+    { "action": "goto", "selector": "/content/publish" },
+    { "action": "click", "selector": "[aria-label*='Toggle Publish']" },
+    { "action": "click", "selector": "button:has-text(\"Done\")" }
+  ],
+  "pages_manage_posts": [
+    { "action": "goto", "selector": "/pages/manage" },
+    { "action": "click", "selector": "[aria-label*='Toggle Posts']" },
+    { "action": "click", "selector": "button:has-text(\"Save Changes\")" }
+  ],
+  "ads_read": [
+    { "action": "goto", "selector": "/ad/management" },
+    { "action": "click", "selector": "[aria-label*='Toggle Ads Read']" },
+    { "action": "click", "selector": "button:has-text(\"Confirm\")" }
+  ],
+  "whatsapp_business_messaging": [
+    { "action": "goto", "selector": "/whatsapp/connected-accounts" },
+    { "action": "click", "selector": "[aria-label*='Connect WhatsApp']" },
+    { "action": "click", "selector": "button:has-text(\"Connect\")" }
+  ],
+  "business_management": [
+    { "action": "goto", "selector": "/business/settings" },
+    { "action": "click", "selector": "[aria-label*='Toggle Business Management']" },
+    { "action": "click", "selector": "button:has-text(\"Save\")" }
+  ],
+  "pages_read_engagement": [
+    { "action": "goto", "selector": "/insights/engagement" },
+    { "action": "click", "selector": "[aria-label*='Toggle Engagement']" },
+    { "action": "click", "selector": "button:has-text(\"Apply\")" }
+  ],
+  "pages_manage_ads": [
+    { "action": "goto", "selector": "/ads/management" },
+    { "action": "click", "selector": "[aria-label*='Toggle Ads Manage']" },
+    { "action": "click", "selector": "button:has-text(\"Save\")" }
+  ]
+}

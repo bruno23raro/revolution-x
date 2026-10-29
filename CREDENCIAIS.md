@@ -14,3 +14,12 @@ Regra: aqui vao APENAS identificadores e referencias. Valores puros vivem em
 | ACCESS_TOKEN | .env | System user (Ads CLI) | 11121577...dvpONKF8s | OK |
 | AD_ACCOUNT_ID | .env | Ads CLI | 984184351272559 (Bla, ACTIVE) | OK |
 | PAGE_ID | .env | Criativos | 645320171988542 (Central Da Black01) | OK |
+| POSTGRES_PASSWORD (local) | supabase-docker/.env | Supabase self-hosted dev (docker) | rx593ce2...a375 | OK |
+| JWT_SECRET (local) | supabase-docker/.env | Stack local (ANON/SERVICE reassinados) | 03cfb678...2a71 | OK |
+| DASHBOARD_PASSWORD (local) | supabase-docker/.env | Studio basic-auth admin | Rx6b8b5a...9ae! | OK |
+| META_PIXEL_ID | .env.local | Pixel Meta (CAPI) | 17189642...7989 | OK (evento teste aceito) |
+| META_CAPI_ACCESS_TOKEN | .env.local | Conversions API (POST /{PIXEL}/events) | EAAUCuAG...ZDZD | OK (validado 2026-10-29) |
+| EMAIL_API_KEY (Resend) | .env.local + hPanel | SMTP/emails transacionais | re_L3KSbf...ey2Rm | OK (email delivered 2026-10-29) |
+| EMAIL_FROM | .env.local + hPanel | Remetente padrão | no-reply@revolutionx.com.br | OK |
+| SUPABASE_DEV_DB_PASSWORD | .env.local | Senha Postgres DEV (rotacionada) | RxDev!j3g...9p6u9 | Rotacionada; aguardando propagação |
+| SEARXNG_URL | .env.local | Busca local (docker) | http://localhost:8888 | Config criado |

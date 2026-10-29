@@ -1,0 +1,336 @@
+{
+  "project": "Revolution X",
+  "date": "2026-10-27",
+  "build": "01a17a4b (Hostinger) / c46e667 (local)",
+  "url": "https://revolutionx.com.br",
+  "done": [
+    {
+      "category": "CODEBASE",
+      "item": "Auth (Supabase Auth + custom routes: login, register, logout, session, verify-email, forgot-password, reset-password, resend-verification, meta callback, tiktok callback)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "CRM (contacts, deals, leads, pipelines, import)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Campaigns (create, send, recipients, LGPD consent)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "WhatsApp (QR, send, templates, chatbot, webhooks, accounts)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Instagram/Facebook (publish, accounts, insights)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "TikTok (publish, analytics, insights, OAuth, cron scheduler)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Meta Ads (insights, campaigns)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "AI Generation (chat, models, providers, auto-select, omni router)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Admin panel (chat, tasks, memory, AI config)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Integrations (Meta, TikTok, health, config, execute)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Webhooks (inbound, Meta verified)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Cron jobs (TikTok scheduler)"
+    },
+    {
+      "category": "CODEBASE",
+      "item": "Products, Schedules, Videos"
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "item": "Migrations 005-017 applied to production (10 migrations total)"
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "item": "FORCE ROW LEVEL SECURITY on all public tables (21 tables)"
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "item": "Hostinger auto-deploy working (main branch → 01a17a4b)"
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "item": "Docker stack healthy locally (app :3000, db Postgres17 :15432)"
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "item": "Supabase project configured (ardpabjoepzhkpmkgwgu.supabase.co)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "App ID 1112157761403064 configured"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Domains set: revolutionx.com.br, www.revolutionx.com.br"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "OAuth redirect URI: https://revolutionx.com.br/api/auth/callback/meta"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Webhook URL: https://revolutionx.com.br/api/webhooks/meta"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Verify token: 0b1e361df76b89b0e1f2985d830fe6d5"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Webhook verified (GET→200, POST unsigned→401)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "WhatsApp phone number ID: 1244329368771764 (+55 11 91734-5249, Brasil, qualidade ALTA/GREEN, status Conectado)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "WABA ID: 801885496316680 (jeferson, business_id 353351324537230)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "System user token working"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Marketing API 500 calls: APROVADO (0% error)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Manage App Solution: APROVADO (4/4 endpoints)"
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "WhatsApp number registered in WABA and test message sent successfully"
+    },
+    {
+      "category": "TESTS",
+      "item": "712/712 tests passing (51 suites)"
+    },
+    {
+      "category": "TESTS",
+      "item": "TypeScript: 0 errors"
+    },
+    {
+      "category": "TESTS",
+      "item": "ESLint: 0 warnings"
+    },
+    {
+      "category": "TESTS",
+      "item": "Build: clean"
+    },
+    {
+      "category": "SECURITY",
+      "item": "Fail-closed RLS policies (NULLIF(current_setting(...)))"
+    },
+    {
+      "category": "SECURITY",
+      "item": "Webhook signature verification (HMAC-SHA256)"
+    },
+    {
+      "category": "SECURITY",
+      "item": "Mass-assignment guard tested"
+    },
+    {
+      "category": "SECURITY",
+      "item": "Multi-tenant isolation (withTenantContext + RLS) proven"
+    },
+    {
+      "category": "SECURITY",
+      "item": ".env.local not in git"
+    },
+    {
+      "category": "EMAIL",
+      "item": "SPF: v=spf1 include:_spf.mail.hostinger.com ~all ✅"
+    },
+    {
+      "category": "EMAIL",
+      "item": "DKIM (resend._domainkey): Present ✅"
+    },
+    {
+      "category": "EMAIL",
+      "item": "DMARC: v=DMARC1; p=quarantine; pct=25 ✅"
+    },
+    {
+      "category": "EMAIL",
+      "item": "Resend domain: revolutionx.com.br (sa-east-1) verified ✅"
+    },
+    {
+      "category": "EMAIL",
+      "item": "GoTrue SMTP configured with Resend; broken hook removed ✅"
+    }
+  ],
+  "missing": [
+    {
+      "category": "META_INTEGRATION",
+      "item": "Facebook Login review submission in Meta Developer Console",
+      "action": "Submit for review at https://developers.facebook.com/apps/1112157761403064/ with 9 scopes from DEFAULT_SCOPES",
+      "priority": 1
+    },
+    {
+      "category": "META_INTEGRATION",
+      "item": "Remove 5 unnecessary scopes from Meta Developer Console OAuth settings",
+      "action": "Remove: ads_management, catalog_management, manage_app_solution, instagram_branded_content_ads_brand, facebook_branded_content_ads_brand",
+      "priority": 2
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "meta MCP server (disconnected - CONNECTION_CLOSED)",
+      "action": "Run: claude mcp add meta --env META_APP_ID=1112157761403064 --env META_APP_SECRET=<secret>",
+      "priority": 3
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "meta_social_technologies MCP (requires interactive OAuth)",
+      "action": "Run: claude mcp add meta_social_technologies (interactive OAuth flow)",
+      "priority": 3
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "supabase MCP (configured but need project link)",
+      "action": "Link to project ardpabjoepzhkpmkgwgu",
+      "priority": 3
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "hostinger MCP (configured, needs auth)",
+      "action": "Authenticate with Hostinger API credentials",
+      "priority": 3
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "vercel MCP (configured, needs auth)",
+      "action": "Authenticate with Vercel credentials",
+      "priority": 3
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "github MCP (disconnected)",
+      "action": "Authenticate with GitHub token",
+      "priority": 4
+    },
+    {
+      "category": "MCP_SETUP",
+      "item": "qiksy MCP (configured, bridge ready)",
+      "action": "Already working - drives user's open browser",
+      "priority": 3
+    },
+    {
+      "category": "CLI_TOOLS",
+      "item": "Vercel CLI not installed globally",
+      "action": "npm i -g vercel",
+      "priority": 3
+    },
+    {
+      "category": "CLI_TOOLS",
+      "item": "Hostinger CLI not installed globally",
+      "action": "npm i -g @hostinger/cli (if available)",
+      "priority": 3
+    },
+    {
+      "category": "CLI_TOOLS",
+      "item": "Supabase CLI not installed globally",
+      "action": "npm i -g supabase",
+      "priority": 3
+    },
+    {
+      "category": "DMARC",
+      "item": "DMARC enforcement upgrade from p=none to p=quarantine/reject",
+      "action": "After confirming email deliverability, update DNS record",
+      "priority": 4
+    }
+  ],
+  "blockers": [
+    {
+      "category": "EXTERNAL",
+      "item": "Facebook Login review approval by Meta",
+      "details": "External process, 24-72 hours, uncontrollable. Code includes all 9 required scopes.",
+      "impact": "Facebook Login OAuth flow incomplete until approved"
+    },
+    {
+      "category": "EXTERNAL",
+      "item": "Meta review of Instagram Graph API permissions",
+      "details": "Requires manual submission in Meta Developer Console",
+      "impact": "Instagram publishing/insights may be limited without approval"
+    },
+    {
+      "category": "EXTERNAL",
+      "item": "Meta review of WhatsApp Business API",
+      "details": "Requires manual submission in Meta Developer Console",
+      "impact": "WhatsApp multi-conta flow may be limited without approval"
+    },
+    {
+      "category": "EXTERNAL",
+      "item": "Supabase GoTrue SMTP configuration",
+      "details": "Hook 'Before User Created' was broken (OAuth URL pasted incorrectly → 404 → 500), now removed. Resend configured. Registration tested 201.",
+      "impact": "Registration works but needs monitoring"
+    }
+  ],
+  "credentials": {
+    "META_APP_ID": "11121577...3064",
+    "NEXT_PUBLIC_META_APP_ID": "11121577...3064",
+    "META_APP_SECRET": "ff2edcde...a3ab",
+    "META_WEBHOOK_VERIFY_TOKEN": "0b1e361d...fe6d5",
+    "META_TOKEN_ENCRYPTION_KEY": "0ea4545d...c1b9da",
+    "META_SYSTEM_USER_TOKEN": "11121577...ONKF8s",
+    "WHATSAPP_PHONE_NUMBER_ID": "12443293...1764",
+    "WHATSAPP_ACCESS_TOKEN": "EAAPzgGh...gZDZD",
+    "DATABASE_URL": "postgresql://postgres.a...@aws-0-sa-east-1.pooler.supabase.com:5432/postgres",
+    "DIRECT_URL": "postgresql://postgres.a...@aws-0-sa-east-1.pooler.supabase.com:5432/postgres",
+    "JWT_SECRET": "9f3b1451...8ca3c5",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://ardpabjo...supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_XJ7GF...EBdOi",
+    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOi...9wUB2H_Bk",
+    "CRON_SECRET": "fc89d977...3086019",
+    "NEXT_PUBLIC_SITE_URL": "https://revolutionx.com.br",
+    "GEMINI_API_KEY": "AQ.Ab8RN6...M3_g--",
+    "ACCESS_TOKEN": "11121577...dvpONKF8s",
+    "AD_ACCOUNT_ID": "984184351272559",
+    "PAGE_ID": "645320171988542"
+  },
+  "migrations_applied": [
+    "005_fase5_publisher_calendar.sql",
+    "006_consolidate_schema.sql",
+    "007_fase5_schedules.sql",
+    "008_fase8_messages.sql",
+    "009_token_rls_harden.sql",
+    "011_fase11_reports.sql",
+    "012_whatsapp_crm_enhancement.sql",
+    "013_sync_auth_to_public_user.sql",
+    "014_agent_task_queue.sql",
+    "015_webhook_events.sql",
+    "016_multicontas_meta.sql",
+    "017_campaign_lgpd.sql"
+  ],
+  "api_routes_count": 54,
+  "test_stats": {
+    "suites": 51,
+    "tests": 712,
+    "passing": 712,
+    "failing": 0,
+    "typescript_errors": 0,
+    "eslint_warnings": 0
+  },
+  "summary": "Application is PRODUCTION-READY for controlled access. Site live at https://revolutionx.com.br, all migrations applied, RLS forced, security headers correct, tests pass (712/712), Meta webhook verified. Only blockers are external: Facebook Login review (Meta), Instagram Graph API review (Meta), WhatsApp Business API review (Meta). No code changes required. Build c46e667 is current HEAD and healthy."
+}

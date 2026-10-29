@@ -57,8 +57,9 @@ function fakeGeminiOk(text: string): AiProvider {
 
 describe('generateWithFallback', () => {
   it('nenhum provedor configurado → BLOQUEADO honesto', async () => {
+    const emptyProviders: import('@/ai').AiProvider[] = [];
     const r = await generateWithFallback({
-      providers: buildAiProviders({ env: {} }),
+      providers: emptyProviders,
       request: { prompt: 'x' },
     });
     expect(r.ok).toBe(false);

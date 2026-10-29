@@ -1,0 +1,19 @@
+arquivo,tipo,permissao,round,nivel,status,tamanho,obs
+
+RX_DOC_PADROES_SCREENCAST_20261027.md,DOC,,,,,
+RX_DOC_DEPENDENCIAS_OFICIAIS_20261027.md,DOC,,,,,
+RX_DOC_API_TEST_CALLS_20261027.md,DOC,,,,,
+RX_VID_whatsapp_business_messaging_20261027.webm,VID,whatsapp_business_messaging,1,AUSENTE,1 bytes,Apenas warm-up Facebook (1 video gravado sem login no Facebook); sem gravao do app revolutionx.com.br; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_business_management_20261027.webm,VID,business_management,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_ads_read_20261027.webm,VID,ads_read,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_pages_show_list_20261027.webm,VID,pages_show_list,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_instagram_basic_20261027.webm,VID,instagram_basic,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_instagram_content_publish_20261027.webm,VID,instagram_content_publish,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_pages_manage_posts_20261027.webm,VID,pages_manage_posts,1,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_pages_read_engagement_20261027.webm,VID,pages_read_engagement,1,B,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_pages_manage_ads_20261027.webm,VID,pages_manage_ads,1,B,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_pages_read_user_content_20261027.webm,VID,pages_read_user_content,1,B,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+RX_VID_whatsapp_business_management_20261027.webm,VID,whatsapp_business_management,1,B,PARCIAL,Nao gravado — perfil sem sessao Facebook ativa; ffmpeg nao disponivel; mantido .webm + .srt vazio
+MANIFEST.csv,CSV,,,,,
+00_LEIA_PRIMEIRO.md,MD,,,,,
+00_MANIFEST.csv,CSV,,,,,

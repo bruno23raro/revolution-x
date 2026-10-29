@@ -23,3 +23,8 @@ Regra: aqui vao APENAS identificadores e referencias. Valores puros vivem em
 | EMAIL_FROM | .env.local + hPanel | Remetente padrão | no-reply@revolutionx.com.br | OK |
 | SUPABASE_DEV_DB_PASSWORD | .env.local | Senha Postgres DEV (rotacionada) | RxDev!j3g...9p6u9 | Rotacionada; aguardando propagação |
 | SEARXNG_URL | .env.local | Busca local (docker) | http://localhost:8888 | Config criado |
+| WHATSAPP_PROVIDER | .env.local | Factory do provedor oficial | openbsp | OK |
+| OPENBSP_BASE_URL | .env.local | PostgREST do OpenBSP | https://nheelwshzbgenpavwhcy.supabase.co/rest/v1 | OK |
+| OPENBSP_PUBLISHABLE_KEY | .env.local | Chave publica OpenBSP (header apikey) | sb_publ...hUd_ | OK (publica por design; validada ao vivo 2026-10-29) |
+| OPENBSP_API_KEY | .env.local | Chave owner OpenBSP "REVOLUTION X" (header api-key) | sk_dcca...1699 | OK (mint onboarding_token 201 ao vivo 2026-10-29) |
+| OPENBSP_ORG_ID | .env.local | Organizacao OpenBSP "REVOLUTION X" | 9d7114cd...6514 | OK (lida do proprio GET organizations) |

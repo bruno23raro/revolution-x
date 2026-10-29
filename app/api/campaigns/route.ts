@@ -11,7 +11,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '../../../src/lib/auth';
 import { campaignRepoReal } from '../../../src/repositories/campaignRepoReal';
 
-const CHANNELS = new Set(['whatsapp', 'email', 'manual']);
+// 'whatsapp_api' = canal OFICIAL (OpenBSP/Cloud API, migration 019);
+// 'whatsapp' permanece o canal legado (QR/MetaIntegration). Nunca mesmo
+// numero nos dois.
+const CHANNELS = new Set(['whatsapp', 'whatsapp_api', 'email', 'manual']);
 const RESULT_KINDS = new Set(['auto', 'manual']);
 const MAX_TITLE = 300;
 const MAX_MESSAGE = 4096;

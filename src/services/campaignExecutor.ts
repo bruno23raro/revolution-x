@@ -11,6 +11,7 @@ import { campaignRepoReal } from '@/repositories/campaignRepoReal';
 import {
   buildRecipientVars,
   interpolateVars,
+  isWhatsAppChannel,
   runCampaignBatch,
   type CampaignStatus,
 } from './campaignService';
@@ -95,7 +96,7 @@ export async function executeCampaignBatch(opts: ExecuteOpts): Promise<ExecuteRe
     texts[p.contactId] = text;
     recipients.push({
       id: p.contactId,
-      to: c.channel === 'whatsapp' ? (p.contact.phone ?? '') : (p.contact.email ?? ''),
+      to: isWhatsAppChannel(c.channel) ? (p.contact.phone ?? '') : (p.contact.email ?? ''),
     });
   }
 

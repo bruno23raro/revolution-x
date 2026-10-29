@@ -80,3 +80,14 @@ CLAUDE.local.md
 review-artifacts/
 .pw-fb-profile/
 .chrome-fb/
+
+agent/CREDENCIAIS.md
+
+agent/BLOQUEIOS.md
+
+agent/PLANO_CONTINUACAO.md
+
+supabase-docker/.env
+supabase-docker/.secrets.json
+supabase-docker/volumes/db/data/
+supabase-docker/volumes/storage/

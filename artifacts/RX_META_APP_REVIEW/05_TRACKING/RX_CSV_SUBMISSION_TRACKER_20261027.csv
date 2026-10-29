@@ -1,0 +1,49 @@
+# RX_CSV_SUBMISSION_TRACKER_20261027 — Tracker de Submissão
+
+## Formato do CSV
+
+O tracker é um arquivo CSV com as seguintes colunas:
+- **data** — data da submissão ou atualização (YYYY-MM-DD)
+- **permissao** — nome da permissão
+- **acao** — what was done (submitted, approved, rejected, pending)
+- **status** — OK | PARCIAL | REJECTED
+- **comentarios** — observações livres
+- **video_referencia** — RX_VID_<permissao>_<data>.webm
+
+## Header da Linha
+
+```
+data,permissao,acao,status,comentarios,video_referencia
+```
+
+## Registros Iniciais (data: 2026-10-27)
+
+```
+data,permissao,acao,status,comentarios,video_referencia
+2026-10-27,whatsapp_business_messaging,submitted,OK,RX_VID_whatsapp_business_messaging_20261027.webm
+2026-10-27,business_management,submitted,OK,RX_VID_business_management_20261027.webm
+2026-10-27,ads_read,submitted,OK,RX_VID_ads_read_20261027.webm
+2026-10-27,pages_show_list,submitted,OK,RX_VID_pages_show_list_20261027.webm
+2026-10-27,instagram_basic,submitted,OK,RX_VID_instagram_basic_20261027.webm
+2026-10-27,instagram_content_publish,submitted,OK,RX_VID_instagram_content_publish_20261027.webm
+2026-10-27,pages_manage_posts,submitted,OK,RX_VID_pages_manage_posts_20261027.webm
+2026-10-27,pages_read_engagement,submitted,OK,RX_VID_pages_read_engagement_20261027.webm
+2026-10-27,pages_manage_ads,submitted,OK,RX_VID_pages_manage_ads_20261027.webm
+2026-10-27,pages_read_user_content,submitted,OK,RX_VID_pages_read_user_content_20261027.webm
+2026-10-27,whatsapp_business_management,submitted,OK,RX_VID_whatsapp_business_management_20261027.webm
+```
+
+## Atualizações Posteriores
+
+Após cada etapa (video recording, console cleanup, review submission), atualizar este CSV com:
+- Nova data
+- Status atual (pending → approved/rejected)
+- Comentários sobre o processo
+- Referência ao vídeo gravado
+
+## Como usar
+
+1. Manter este CSV sincronizado com os vídeos em `02_VIDEOS/`
+2. Após submissão no Meta Console, preencher `status` e `comentarios`
+3. Se houver rejeição, anotar os motivos e próximos passos
+4. Este CSV é referenciado no `00_MANIFEST.csv` e no `06_CONSOLE/RX_DOC_CONSOLE_LOG_<data>.md`

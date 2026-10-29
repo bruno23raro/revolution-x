@@ -64,3 +64,18 @@ RevolutionX/
 
 Executar FASE 2: autenticação e multi-tenant (users, organizations, roles, permissions).
 Antes: analisar arquivo existente se houver código anterior.
+
+## INTEGRAÇÕES ATIVAS (estado 2026-10-29)
+
+| Integração | Como funciona | Config | Validação |
+|---|---|---|---|
+| Meta Login/Graph (app 1112157761403064) | OAuth por usuário; tokens criptografados (AES-GCM) na tabela `integrations` (migração 018) | `META_APP_ID/SECRET`, `META_TOKEN_ENCRYPTION_KEY` em `.env.local` | 11 scopes mantidos; análise em andamento na Meta |
+| Meta CAPI | `src/integrations/meta/capi.ts` → POST `graph.facebook.com/v26.0/{PIXEL}/events`; dedup por `(event_name,event_id)`; e-mail/telefone SHA-256 | `META_PIXEL_ID`, `META_CAPI_ACCESS_TOKEN` | evento teste aceito (`events_received:1`, 2026-10-29) |
+| WhatsApp Cloud API | templates + mensagens via WABA; token system user | `WHATSAPP_ACCESS_TOKEN`, `WABA_ID` | webhook verificado (GET 200 / POST sem assinatura 401) |
+| Resend (email) | SMTP `smtp.resend.com:465` no GoTrue + SDK p/ transacionais | `EMAIL_API_KEY`, `EMAIL_FROM` no `.env.local` **e** hPanel | registro produção 201 + e-mail de verificação delivered (2026-10-29) |
+| Refresh de tokens (cron) | `scripts/refresh-tokens.js` renova tokens OAuth expirados | cron hPanel `0 3 * * *` (uid `cEokuaB3WI`), caminho `hbuilds/current/nodejs` | listado via API Hostinger |
+| IA local (Ollama) | OpenAI-compatível `http://localhost:11434/v1`, modelo `llama3.1:8b` | `AI_API_URL`, `AI_API_KEY=ollama`, `AI_MODEL` | chat completion OK |
+| Busca (SearXNG) | agregador local de Google/Bing/DDG/Wikipedia com API JSON; MCP `search` (`scripts/mcp-search/server.mjs`) | `SEARXNG_URL=http://localhost:8888`; container `rx-searxng` | `/search?format=json` → 43 resultados |
+| Supabase dev local | stack self-hosted docker (gateway :8432) p/ testes de schema | `supabase-docker/` | cadeia 002a→018 aplicada local |
+
+Credenciais: apenas máscaras em `CREDENCIAIS.md`; valores vivem em `.env` / `.env.local` (gitignored). NUNCA rodar scripts de apply do DEV contra o projeto de produção.

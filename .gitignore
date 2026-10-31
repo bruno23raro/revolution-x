@@ -91,3 +91,8 @@ supabase-docker/.env
 supabase-docker/.secrets.json
 supabase-docker/volumes/db/data/
 supabase-docker/volumes/storage/
+
+.swarm/backups/
+playwright-report/
+artifacts/playwright-report/
+artifacts/playwright-results/

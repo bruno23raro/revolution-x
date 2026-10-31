@@ -2,7 +2,7 @@
 
 // Facebook Pages OAuth com dropdown de seleção de página
 import { useRef, useState, useEffect } from 'react';
-import IntegrationCard, { type IntegrationStatus } from './IntegrationCard';
+import IntegrationCard, { type AccountRow, type IntegrationStatus } from './IntegrationCard';
 
 const FACEBOOK_OAUTH_URL = '/api/auth/meta?provider=facebook';
 
@@ -19,10 +19,15 @@ export default function FacebookPagesCard({
   status,
   onConnected,
   onDisconnect,
+  accounts,
+  onRemoveAccount,
 }: {
   status?: IntegrationStatus;
   onConnected?: () => void;
   onDisconnect?: () => void;
+  /** Contas conectadas (multi-conta): cada página do Facebook vira uma linha removível. */
+  accounts?: AccountRow[];
+  onRemoveAccount?: (accountId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [pages, setPages] = useState<PageOption[]>([]);
@@ -119,6 +124,8 @@ export default function FacebookPagesCard({
         </div>
       }
       onDisconnect={onDisconnect}
+      accounts={accounts}
+      onRemoveAccount={onRemoveAccount}
     >
       <p>Conecte uma página do Facebook para publicação e anúncios.</p>
       <p className="text-gray-500 mt-1">Selecione a página no dropdown antes de conectar.</p>

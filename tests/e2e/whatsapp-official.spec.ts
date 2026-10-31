@@ -27,7 +27,7 @@ test('b) clique em Conectar no card oficial abre popup OpenBSP', async ({ page, 
     }),
   );
   await page.goto('/integracoes');
-  const card = page.locator('div', { hasText: 'WhatsApp API Oficial' }).last();
+  const card = page.locator('div.rounded-xl', { hasText: 'WhatsApp API Oficial' });
   const [popup] = await Promise.all([
     context.waitForEvent('page'),
     card.getByRole('button', { name: 'Conectar' }).click(),
@@ -52,6 +52,8 @@ test('c) conectado: UI mostra numero e tier (callback mockado)', async ({ page }
     }),
   );
   await page.goto('/integracoes');
+  const card = page.locator('div.rounded-xl', { hasText: 'WhatsApp API Oficial' });
+  await card.getByText('Mais informações ▼').click(); // numero/tier vivem na area expansivel do card
   await expect(page.getByText('+5511999990000')).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('30/250')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Desconectar' }).filter({ hasText: 'Desconectar' }).last()).toBeVisible();

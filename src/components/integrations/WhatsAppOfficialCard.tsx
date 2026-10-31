@@ -3,7 +3,7 @@
 // WhatsApp OFICIAL via OpenBSP (019) — popup de onboarding + poll do callback.
 // Additivo: nao toca no card QR legado; nunca mesmo numero nos dois canais.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import IntegrationCard, { type IntegrationStatus } from './IntegrationCard';
+import IntegrationCard, { type AccountRow, type IntegrationStatus } from './IntegrationCard';
 
 interface OfficialStatus {
   connected: boolean;
@@ -15,8 +15,15 @@ interface OfficialStatus {
 
 export default function WhatsAppOfficialCard({
   onConnected,
+  onDisconnect,
+  accounts,
+  onRemoveAccount,
 }: {
   onConnected?: () => void;
+  onDisconnect?: () => void;
+  /** Contas conectadas (multi-conta): cada número registrado vira uma linha removível. */
+  accounts?: AccountRow[];
+  onRemoveAccount?: (accountId: string) => void;
 }) {
   const [st, setSt] = useState<OfficialStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +104,9 @@ export default function WhatsAppOfficialCard({
         </svg>
       }
       status={status}
+      onDisconnect={onDisconnect}
+      accounts={accounts}
+      onRemoveAccount={onRemoveAccount}
       actions={
         connected ? (
           <button

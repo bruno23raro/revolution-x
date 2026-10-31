@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/encryption';
 
 export async function POST(req: NextRequest) {
@@ -27,12 +27,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    // Leitura de leitura/ownership: RLS da 018 so libera linhas com a GUC
+    // app.current_user_id (exclusiva do Prisma), entao o cliente anon veria 0
+    // linhas. Service role + .eq('user_id', user.id) explicito mantem o escopo.
+    const supabase = createServiceRoleClient();
 
     // Buscar integração para validar ownership
     let query = supabase
       .from('integrations')
-      .select('id, channel, access_token, meta_account_id, status')
+      .select('id, channel, mode, access_token, meta_account_id, status')
       .eq('user_id', user.id);
 
     if (integrationId) {
@@ -55,6 +58,23 @@ export async function POST(req: NextRequest) {
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
     for (const integration of integrations) {
+      // Contas MANUAis (sem API): remoção dura — não há token para revogar na
+      // plataforma e a credential cifrada não deve permanecer no banco.
+      if (integration.mode === 'MANUAL') {
+        const { error: deleteError } = await serviceSupabase
+          .from('integrations')
+          .delete()
+          .eq('id', integration.id)
+          .eq('user_id', user.id);
+        if (deleteError) {
+          console.error('[integrations-disconnect] manual delete error:', deleteError);
+          results.push({ id: integration.id, success: false, error: 'db_error' });
+        } else {
+          results.push({ id: integration.id, success: true });
+        }
+        continue;
+      }
+
       // Revogar token na Meta se solicitado
       if (revokeToken && integration.access_token) {
         try {

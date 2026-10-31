@@ -1,6 +1,6 @@
 'use client';
 
-// Navegação principal compartilhada (FASE 2).
+// Navegação principal compartilhada (FASE 2) — sidebar fixa à esquerda.
 //
 // Um menu consistente em todas as páginas internas:
 //  - mostra itens por papel (admin/owner veem o bloco administrativo);
@@ -27,10 +27,11 @@ interface NavItem {
   href: string;
 }
 
+// Grupos visuais claros com cores distintivas para categorias
 const BASE: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'CRM', href: '/crm' },
-  { label: 'Relatórios', href: '/reports' },
+  { label: 'Dashboard 📊', href: '/dashboard' },
+  { label: 'CRM 📋', href: '/crm' },
+  { label: 'Relatórios 📈', href: '/reports' },
 ];
 
 const CRM_SUB: NavItem[] = [
@@ -39,18 +40,36 @@ const CRM_SUB: NavItem[] = [
   { label: 'Deals', href: '/crm/deals' },
 ];
 
+// Integrações Oficiais — cor verde/azul
+const INTEGRATIONS_OFFICIAL: NavItem[] = [
+  { label: 'WhatsApp API Oficial 💬', href: '/whatsapp' },
+  { label: 'Instagram Business 📸', href: '/instagram' },
+  { label: 'Facebook Pages 📘', href: '/facebook' },
+  { label: 'TikTok 🎵', href: '/tiktok' },
+];
+
+// Ferramentas de Extração — cor laranja/vermelho
+const EXTRACTION_TOOLS: NavItem[] = [
+  { label: 'Scrapers', href: '/scrapers' },
+  { label: 'Extração de Grupos', href: '/group-extraction' },
+  { label: 'Disparo em Massa', href: '/mass-sending' },
+];
+
+// Integrações adicionais no grupo admin
+const ADMIN_INTEGRATIONS: NavItem[] = [
+  { label: 'Integrações', href: '/integracoes' },
+  { label: 'Hub', href: '/integrations' },
+];
+
 const ADMIN: NavItem[] = [
   { label: 'Centro IA', href: '/admin/chat' },
   { label: 'Tarefas', href: '/admin/tasks' },
   { label: 'Memória', href: '/admin/memory' },
-  { label: 'Integrações', href: '/integracoes' },
-  { label: 'Hub', href: '/integrations' },
-  { label: 'WhatsApp', href: '/whatsapp' },
-  { label: 'Instagram', href: '/instagram' },
-  { label: 'Facebook', href: '/facebook' },
-  { label: 'TikTok', href: '/tiktok' },
+  ...ADMIN_INTEGRATIONS,
   { label: 'Config', href: '/admin/settings' },
 ];
+
+const ADMIN_GROUP = { label: 'Administração', items: ADMIN };
 
 const SELF: NavItem[] = [{ label: 'Meu perfil', href: '/account' }];
 
@@ -67,7 +86,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`block px-3 py-1.5 rounded-lg text-sm transition ${
+      className={`block px-3 py-1.5 rounded-lg text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
         active
           ? 'text-white bg-purple-600/20 border border-purple-500/30'
           : 'text-gray-400 border border-transparent hover:text-white hover:bg-white/5'
@@ -120,54 +139,116 @@ export default function AppNav() {
     router.refresh();
   };
 
-  const groups: Array<{ label: string; items: NavItem[] }> = [];
-  if (authed) {
-    groups.push({ label: 'Visão geral', items: BASE });
-    groups.push({ label: 'CRM', items: CRM_SUB });
-    if (isAdmin) groups.push({ label: 'Administração', items: ADMIN });
-    groups.push({ label: 'Conta', items: SELF });
-  }
+  // Helper para verificar links ativos (inclui subrotas)
+  const isActive = (href: string): boolean => {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#08040F]/95 backdrop-blur border-b border-white/10">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="text-base font-extrabold tracking-tight text-white" onClick={close}>
-          Revolution X
-        </Link>
+    <>
+      {/* Sidebar fixa à esquerda (desktop) */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-[#08040F] border-r border-white/10 md:flex">
+        <div className="h-14 border-b border-white/10 flex items-center px-4 shrink-0">
+          <Link href="/dashboard" className="text-base font-extrabold tracking-tight text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500">
+            Revolution X
+          </Link>
+        </div>
 
-        {/* Desktop */}
-        <nav className="hidden md:flex items-center gap-1 flex-wrap">
+        <nav aria-label="Menu principal (desktop)" className="flex-1 overflow-y-auto py-4 px-3">
           {loading ? (
-            <span className="text-xs text-gray-400 px-2">carregando…</span>
+            <span className="text-xs text-gray-400 px-3">carregando…</span>
           ) : authed ? (
-            groups.map((g) => (
-              <div key={g.label} className="flex items-center gap-1 mx-1 border-l border-white/10 pl-2">
-                <span className="text-[10px] uppercase tracking-wider text-gray-400 w-14 shrink-0">{g.label}</span>
-                {g.items.map((it) => (
-                  <NavLink key={it.href} item={it} active={pathname === it.href} />
-                ))}
+            <div className="space-y-6">
+              {/* Visão geral */}
+              <div>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-gray-400">Visão geral</div>
+                <div className="space-y-1">
+                  {BASE.map((it) => (
+                    <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                  ))}
+                </div>
               </div>
-            ))
+
+              {/* CRM */}
+              <div>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-gray-400">CRM</div>
+                <div className="space-y-1">
+                  {CRM_SUB.map((it) => (
+                    <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Integrações Oficiais */}
+              <div>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-green-400">Integrações Oficiais</div>
+                <div className="space-y-1">
+                  {INTEGRATIONS_OFFICIAL.map((it) => (
+                    <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Ferramentas de Extração */}
+              <div>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-orange-400">Ferramentas de Extração</div>
+                <div className="space-y-1">
+                  {EXTRACTION_TOOLS.map((it) => (
+                    <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Outras integrações (se admin) */}
+              {isAdmin && ADMIN_INTEGRATIONS.length > 0 && (
+                <div>
+                  <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-gray-400">Integrações</div>
+                  <div className="space-y-1">
+                    {ADMIN_INTEGRATIONS.map((it) => (
+                      <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Administração (admin/owner) */}
+              {isAdmin && ADMIN.length > 0 && (
+                <div>
+                  <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-purple-400">Administração</div>
+                  <div className="space-y-1">
+                    {ADMIN.map((it) => (
+                      <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Conta */}
+              <div>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-gray-400">Conta</div>
+                <div className="space-y-1">
+                  {SELF.map((it) => (
+                    <NavLink key={it.href} item={it} active={isActive(it.href)} />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
-            <span className="text-xs text-gray-400">Área pública</span>
+            <div className="px-3 text-xs text-gray-400">Área pública</div>
           )}
         </nav>
 
-        <div className="hidden md:flex items-center gap-2">
-          <Link
-            href="/testcenter"
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:text-white hover:bg-white/5"
-          >
-            Testes
-          </Link>
+        {/* Rodapé da sidebar */}
+        <div className="shrink-0 border-t border-white/10 p-3">
           {authed ? (
             <>
-              <span className="text-xs text-gray-400 truncate max-w-[160px]" title={session?.user.email ?? undefined}>
+              <div className="truncate text-xs text-gray-300" title={session?.user.email ?? undefined}>
                 {session?.user.email ?? '…'}
-              </span>
+              </div>
               <button
                 onClick={logout}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/15 text-gray-300 hover:text-white hover:bg-white/5"
+                className="mt-2 w-full rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
               >
                 Sair
               </button>
@@ -175,70 +256,164 @@ export default function AppNav() {
           ) : (
             <Link
               href="/login"
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+              className="block w-full rounded-lg bg-purple-600 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
             >
               Entrar
             </Link>
           )}
         </div>
+      </aside>
 
-        {/* Mobile toggle */}
+      {/* Topbar mobile */}
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/10 bg-[#08040F]/95 px-4 backdrop-blur md:hidden">
         <button
-          className="md:hidden p-2 text-gray-300"
           aria-label="Abrir menu"
+          aria-controls="rx-mobile-menu"
+          aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
+          className="rounded-lg p-2 text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
         >
-          <span className="block w-5 h-0.5 bg-current mb-1" />
-          <span className="block w-5 h-0.5 bg-current mb-1" />
-          <span className="block w-5 h-0.5 bg-current" />
+          <span className="block mb-1 h-0.5 w-5 bg-current" />
+          <span className="block mb-1 h-0.5 w-5 bg-current" />
+          <span className="block h-0.5 w-5 bg-current" />
         </button>
-      </div>
-
-      {/* Mobile dropdown */}
-      {open && (
-        <div className="md:hidden border-t border-white/10 bg-[#08040F] px-4 py-3 space-y-3">
-          {authed && (
-            <div className="text-xs text-gray-400 truncate">{session?.user.email}</div>
-          )}
-          {loading ? (
-            <p className="text-xs text-gray-400">Carregando seu menu…</p>
-          ) : (
-            groups.map((g) => (
-              <div key={g.label}>
-                <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">{g.label}</div>
-                <div className="grid grid-cols-2 gap-1">
-                  {g.items.map((it) => (
-                    <NavLink key={it.href} item={it} active={pathname === it.href} onNavigate={close} />
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-          <div className="pb-2">
-            <Link
-              href="/testcenter"
-              onClick={close}
-              className="block w-full text-center px-3 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
+        <Link href="/dashboard" className="text-sm font-extrabold tracking-tight text-white">
+          Revolution X
+        </Link>
+        <div className="flex items-center gap-2">
+          {authed ? (
+            <button
+              onClick={logout}
+              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/5"
             >
-              Centro de Testes
+              Sair
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
+            >
+              Entrar
             </Link>
-          </div>
-          <div className="pt-1 border-t border-white/10">
-            {authed ? (
+          )}
+        </div>
+      </header>
+
+      {/* Drawer mobile */}
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            aria-label="Fechar menu"
+            onClick={close}
+            className="absolute inset-0 h-full w-full cursor-default bg-black/60"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            tabIndex={-1}
+            className="absolute inset-y-0 left-0 w-72 max-w-[85%] overflow-y-auto bg-[#08040F] p-4 focus:outline-none"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm font-extrabold text-white">Revolution X</span>
               <button
-                onClick={logout}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-white/15 text-gray-300 hover:bg-white/5"
+                aria-label="Fechar menu"
+                onClick={close}
+                className="rounded-lg p-1.5 text-gray-300 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
               >
-                Sair
+                ✕
               </button>
-            ) : (
-              <Link href="/login" onClick={close} className="block w-full text-center px-3 py-2 text-sm rounded-lg bg-purple-600 text-white">
-                Entrar
-              </Link>
-            )}
+            </div>
+
+            <nav aria-label="Menu principal (celular)" className="pb-8">
+              {loading ? (
+                <p className="text-xs text-gray-400">Carregando seu menu…</p>
+              ) : authed ? (
+                <div className="space-y-6">
+                  {BASE.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-2">Visão geral</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {BASE.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {CRM_SUB.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-2">CRM</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {CRM_SUB.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {INTEGRATIONS_OFFICIAL.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-green-400 mb-2">Integrações Oficiais</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {INTEGRATIONS_OFFICIAL.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {EXTRACTION_TOOLS.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-orange-400 mb-2">Ferramentas de Extração</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {EXTRACTION_TOOLS.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isAdmin && ADMIN_INTEGRATIONS.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-2">Integrações</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {ADMIN_INTEGRATIONS.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isAdmin && ADMIN_GROUP.items.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-purple-400 mb-2">Administração</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {ADMIN_GROUP.items.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {SELF.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-2">Conta</div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {SELF.map((it) => (
+                          <NavLink key={it.href} item={it} active={isActive(it.href)} onNavigate={close} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400">Área pública</div>
+              )}
+            </nav>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

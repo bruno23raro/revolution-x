@@ -2,7 +2,7 @@
 
 // Instagram OAuth
 import { useRef, useState } from 'react';
-import IntegrationCard, { type IntegrationStatus } from './IntegrationCard';
+import IntegrationCard, { type AccountRow, type IntegrationStatus } from './IntegrationCard';
 
 const INSTAGRAM_OAUTH_URL = '/api/auth/meta?provider=instagram';
 
@@ -14,10 +14,15 @@ export default function InstagramCard({
   status,
   onConnected,
   onDisconnect,
+  accounts,
+  onRemoveAccount,
 }: {
   status?: IntegrationStatus;
   onConnected?: () => void;
   onDisconnect?: () => void;
+  /** Contas conectadas (multi-conta): cada uma com botão "Remover conta". */
+  accounts?: AccountRow[];
+  onRemoveAccount?: (accountId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const popupRef = useRef<Window | null>(null);
@@ -78,6 +83,8 @@ export default function InstagramCard({
         </button>
       }
       onDisconnect={onDisconnect}
+      accounts={accounts}
+      onRemoveAccount={onRemoveAccount}
     >
       <p>Conecte sua conta Instagram Business para publicação e agendamento.</p>
       <p className="text-gray-500 mt-1">Usa OAuth da Meta — token criptografado no banco.</p>

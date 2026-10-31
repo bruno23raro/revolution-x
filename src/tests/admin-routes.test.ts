@@ -773,6 +773,14 @@ describe('POST /api/admin/alerts', () => {
     expect(arg.data.userId).toBeNull();
   });
 
+  it('201 com prefixo Bearer duplicado (n8n: env já traz "Bearer ")', async () => {
+    asUnauthorized();
+    const res = await alertsPOST(
+      bearerReq({ type: 'capi_dead_letter', message: 'x' }, 'Bearer Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'),
+    );
+    expect(res.status).toBe(201);
+  });
+
   it('422 payload inválido: severity fora do enum', async () => {
     const res = await alertsPOST(bearerReq({
       type: 'schema_drift', severity: 'invalid', title: 'Teste', message: 'Teste' },

@@ -8,7 +8,9 @@ const RAW = (process.env.ADMIN_ALERT_TOKEN ?? '').replace(/^Bearer\s+/i, '');
 export function verifyAdminBearer(req: NextRequest): boolean {
   const auth = req.headers.get('authorization') ?? '';
   if (!auth.startsWith('Bearer ')) return false;
-  const a = Buffer.from(auth.slice('Bearer '.length), 'utf8');
+  // C2 tolerante: n8n monta "Bearer {{ $env.ADMIN_ALERT_TOKEN }}" e o valor
+  // do env já carrega o prefixo → aceita "Bearer Bearer x" (strip repetido).
+  const a = Buffer.from(auth.replace(/^(?:Bearer\s+)+/i, ''), 'utf8');
   const b = Buffer.from(RAW, 'utf8');
   if (a.length === 0 || b.length === 0) return false;
   if (a.length !== b.length) return false;

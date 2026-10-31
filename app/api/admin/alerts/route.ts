@@ -27,7 +27,8 @@ function timingSafeEqual(a: Buffer, b: Buffer): boolean {
 function verifyBearerToken(req: NextRequest): boolean {
   const authHeader = req.headers.get('authorization') ?? '';
   if (!authHeader.startsWith('Bearer ')) return false;
-  const token = authHeader.slice('Bearer '.length);
+  // C2 tolerante: aceita prefixo duplicado "Bearer Bearer x" (n8n env já traz o prefixo)
+  const token = authHeader.replace(/^(?:Bearer\s+)+/i, '');
   const tokenBuf = Buffer.from(token, 'utf8');
   if (tokenBuf.length !== ADMIN_ALERT_TOKEN_BUF.length) return false;
   // timingSafeEqual prevents timing side-channel attacks

@@ -3,6 +3,7 @@
 // WhatsApp QR Code pairing (unofficial/Baileys)
 import { useState } from 'react';
 import IntegrationCard, { type IntegrationStatus } from './IntegrationCard';
+import RiskBanner from '@/components/RiskBanner';
 
 export default function WhatsAppQrCard({
   status,
@@ -77,9 +78,10 @@ export default function WhatsAppQrCard({
             </p>
           </div>
         )}
-        <div className="text-amber-400 text-xs bg-amber-400/10 p-2 rounded">
-          Aviso: método não oficial. Viola os ToS da Meta — use em conta de sacrifício.
-        </div>
+        <RiskBanner title="Aviso de risco">
+          <p>Método não oficial (WhatsApp Web / Baileys).</p>
+          <p className="mt-1">Viola os Termos de Uso da Meta — risco real de bloqueio ou banimento do número. Use em conta de sacrifício, nunca na principal. A sessão fica no navegador; proteja o token.</p>
+        </RiskBanner>
       </div>
     </IntegrationCard>
   );

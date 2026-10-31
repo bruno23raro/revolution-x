@@ -75,6 +75,15 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Ferramentas de extração (alto risco)',
+    items: [
+      { label: 'WhatsApp QR', href: '/integracoes' },
+      { label: 'Instagram scraping', href: '/integracoes' },
+      { label: 'Facebook scraping', href: '/integracoes' },
+      { label: 'Disparo em massa', href: '/campaigns' },
+    ],
+  },
+  {
     label: 'IA e modelos',
     items: [
       { label: 'IA e modelos', href: '/ai' },
@@ -241,7 +250,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="space-y-1">
             {g.items.map((it) => (
-              <SideLink key={it.href} item={it} pathname={pathname} onNavigate={closeMobile} />
+              <SideLink key={it.label} item={it} pathname={pathname} onNavigate={closeMobile} />
             ))}
           </div>
         </div>

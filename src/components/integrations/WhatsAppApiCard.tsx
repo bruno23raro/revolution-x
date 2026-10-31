@@ -2,7 +2,7 @@
 
 // WhatsApp Business API (Official) — OAuth + signup option
 import { useRef, useState } from 'react';
-import IntegrationCard, { type Channel, type IntegrationStatus } from './IntegrationCard';
+import IntegrationCard, { type AccountRow, type IntegrationStatus } from './IntegrationCard';
 
 const WHATSAPP_OAUTH_URL = '/api/auth/meta?provider=whatsapp';
 
@@ -14,10 +14,15 @@ export default function WhatsAppApiCard({
   status,
   onConnected,
   onDisconnect,
+  accounts,
+  onRemoveAccount,
 }: {
   status?: IntegrationStatus;
   onConnected?: () => void;
   onDisconnect?: () => void;
+  /** Contas conectadas (multi-conta): cada uma vira uma linha removível. */
+  accounts?: AccountRow[];
+  onRemoveAccount?: (accountId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const popupRef = useRef<Window | null>(null);
@@ -91,6 +96,8 @@ export default function WhatsAppApiCard({
         </>
       }
       onDisconnect={onDisconnect}
+      accounts={accounts}
+      onRemoveAccount={onRemoveAccount}
     >
       <p>Via API oficial da Meta. Você será redirecionado para autorizar o aplicativo.</p>
       <p className="text-gray-500 mt-1">O token fica criptografado (AES-256-GCM) no banco.</p>

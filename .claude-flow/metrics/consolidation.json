@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-26T21:31:32.471Z",
+  "timestamp": "2026-10-30T23:57:04.812Z",
   "distillationEnabled": true,
   "patternsConsolidated": 0,
   "memoryCleaned": 0,
@@ -16,13 +16,13 @@
   "skipped": "target table episodes missing (agentdb schema not initialised); no-db",
   "stores": [
     {
-      "dbPath": "C:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\memory.db",
+      "dbPath": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\memory.db",
       "processed": 0,
       "patterns": 0,
       "skipped": "target table episodes missing (agentdb schema not initialised)"
     },
     {
-      "dbPath": "C:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\agentdb-memory.db",
+      "dbPath": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\agentdb-memory.db",
       "processed": 0,
       "patterns": 0,
       "skipped": "no-db"

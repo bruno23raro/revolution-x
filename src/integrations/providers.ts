@@ -48,7 +48,7 @@ export interface ProviderDef {
 // ---------------------------------------------------------------------------
 
 export const PROVIDERS: ProviderDef[] = [
-  // ===== API Oficial =====
+  // ===== API Oficial (Seguro) =====
   {
     id: 'meta',
     name: 'Meta (Facebook + Instagram + WhatsApp)',
@@ -221,7 +221,7 @@ export const PROVIDERS: ProviderDef[] = [
     ],
   },
 
-  // ===== Sem API / Avançado =====
+  // ===== Ferramentas de Extração (Alto Risco) =====
   {
     id: 'scraper_instagram',
     name: 'Instagram (scraping / sem API)',

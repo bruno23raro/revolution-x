@@ -574,10 +574,44 @@ model CampaignRecipient {
 }
 
 // ============================================================
+// MÓDULO DE SCRAPERS DE RISCO (migration 020)
+// Registra todas as ações de scraping para auditoria e compliance.
+// ============================================================
+
+model RiskLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  action         String   @db.VarChar(200)
+  platform       String   @db.VarChar(50)
+  target         String   @db.VarChar(255)
+  riskLevel      String   @db.VarChar(20)
+  context        Json     @default("{}")
+  result         String   @db.VarChar(50)
+  timestamp      DateTime @default(now()) @db.Timestamp(6)
+  organizationId String   @db.Uuid
+  @@index([organizationId])
+  @@index([userId])
+  @@index([platform])
+  @@index([riskLevel])
+  @@index([result])
+}
+
+model ScraperConfig {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  platform       String   @db.VarChar(50)
+  maxResults     Int?
+  rateLimitMs    Int?
+  proxyUrl       String?
+  timeoutMs      Int?
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime @updatedAt
+  @@unique([organizationId, platform])
+  @@index([organizationId])
+}
+
+// ============================================================
 // WHATSAPP OFICIAL (migration 019) — OpenBSP agora, meta_direct depois.
-// Aditivo: nada dos modelos acima muda. Campanhas/destinatários reutilizam
-// Campaign/CampaignRecipient (017) com channel='whatsapp_api'; inbound reusa
-// WebhookEvent (015). Acesso via service-role + RLS FORCE (app.current_org).
 // ============================================================
 
 model WhatsappChannel {

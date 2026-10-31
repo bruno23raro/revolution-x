@@ -749,17 +749,28 @@ describe('POST /api/admin/alerts', () => {
     prisma.adminAlert.findMany = jest.fn().mockResolvedValue([]);
   });
 
-  it('401 sem autorização Bearer', async () => {
-    // Sem header authorization
+  it('401 sem header authorization', async () => {
     const res = await alertsPOST(bearerReq(undefined, ''));
     expect(res.status).toBe(401);
     expect((await res.json()).error).toBe('Unauthorized');
   });
 
-  it('401 com token Bearer inválido', async () => {
+  it('401 com token Bearer inválido (sem oráculo com o caso ausente)', async () => {
     const res = await alertsPOST(bearerReq(undefined, 'Bearer token-errado'));
     expect(res.status).toBe(401);
     expect((await res.json()).error).toBe('Unauthorized');
+  });
+
+  it('201 com Bearer válido mesmo sem sessão Supabase (n8n service call)', async () => {
+    // Contrato P0.8-G: Bearer válido = autenticação de serviço; requireAdmin é
+    // best-effort — sem sessão, o escopo cai para os headers (ou null).
+    asUnauthorized();
+    const res = await alertsPOST(bearerReq({ type: 'capi_dead_letter', message: 'x' }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).ok).toBe(true);
+    const arg = prisma.adminAlert.create.mock.calls[0][0];
+    expect(arg.data.organizationId).toBeNull();
+    expect(arg.data.userId).toBeNull();
   });
 
   it('422 payload inválido: severity fora do enum', async () => {

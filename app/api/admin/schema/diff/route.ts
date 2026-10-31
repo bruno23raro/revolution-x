@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { getAuthenticatedUser, getAllOrganizationMemberships } from '../../../../../src/lib/auth';
+import { verifyAdminBearer } from '../../../../../src/lib/admin-bearer';
 import { prisma } from '../../../../../src/lib/prisma';
 
 // C3 — schema/diff: cache 60s + timeout 10s
@@ -40,12 +41,16 @@ const LEGACY_SNAKE_TABLES = new Set([
 // GET — Gerar diff de schema (esperado via Prisma DMMF vs real via information_schema)
 // ------------------------------------------------------------------
 export async function GET(req: NextRequest) {
-  const user = await requireAdmin(req);
-  if (!user) {
-    return NextResponse.json(
-      { error: 'Unauthorized (papel admin/owner exigido)' },
-      { status: 401 },
-    );
+  // n8n service calls (WF-03) authenticate with the ADMIN_ALERT_TOKEN
+  // Bearer only — no Supabase session exists in the n8n runtime.
+  if (!verifyAdminBearer(req)) {
+    const user = await requireAdmin(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized (papel admin/owner exigido)' },
+        { status: 401 },
+      );
+    }
   }
 
   // C3 — Retornar cache se válido (60s TTL)

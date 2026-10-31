@@ -58,13 +58,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const user = await requireAdmin(req);
-  if (!user) {
-    return NextResponse.json(
-      { error: 'Unauthorized (papel admin/owner exigido)' },
-      { status: 401 },
-    );
-  }
+  // requireAdmin é best-effort: n8n chama com Bearer válido e sem sessão
+  // Supabase (WF-02/03/04/05); o escopo cai para os headers x-org-id/x-user-id.
+  const user = await requireAdmin(req).catch(() => null);
+  const scope = user
+    ? { organizationId: user.organizationId, userId: user.id }
+    : {
+        organizationId: req.headers.get('x-org-id') || req.headers.get('x-organization-id'),
+        userId: req.headers.get('x-user-id'),
+      };
 
   let body: {
     type?: string;
@@ -118,13 +120,11 @@ const severity: 'warning' | 'critical' = body.severity || 'warning';
   const route = body.route;
   const metadata = body.metadata ? JSON.parse(JSON.stringify(body.metadata)) : {};
 
-  const scope = { organizationId: user.organizationId, userId: user.id };
-
   try {
     await prisma.adminAlert.create({
       data: {
-        organizationId: user.organizationId,
-        userId: user.id,
+        organizationId: scope.organizationId,
+        userId: scope.userId,
         type: body.type || 'schema_drift', // default para compatibilidade n8n
         severity,
         title,

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, getAllOrganizationMemberships } from '../../../../src/lib/auth';
+import { verifyAdminBearer } from '../../../../src/lib/admin-bearer';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +20,20 @@ async function requireAdmin(req: NextRequest) {
 // POST — Notificação Slack
 // ------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  const user = await requireAdmin(req);
-  if (!user) {
-    return NextResponse.json(
-      { error: 'Unauthorized (papel admin/owner exigido)' },
-      { status: 401 },
-    );
+  // n8n service calls (WF-04) authenticate with the ADMIN_ALERT_TOKEN
+  // Bearer only — the n8n runtime has no Supabase session.
+  const isBearer = verifyAdminBearer(req);
+  const session = isBearer ? null : await requireAdmin(req);
+  if (!session) {
+    if (!isBearer) {
+      return NextResponse.json(
+        { error: 'Unauthorized (papel admin/owner exigido)' },
+        { status: 401 },
+      );
+    }
+    // Bearer valid but no session (n8n): synthetic scope, body still drives the send.
   }
+  const user = session ?? { organizationId: null, id: null };
 
   let body: {
     channel?: string;

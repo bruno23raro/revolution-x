@@ -1,0 +1,283 @@
+{
+  "id": "rxWf000000000005",
+  "name": "WF-05_integracao-poll",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 0,
+              "minute": 0
+            },
+            {
+              "hour": 6,
+              "minute": 0
+            },
+            {
+              "hour": 12,
+              "minute": 0
+            },
+            {
+              "hour": 18,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "America/Sao_Paulo"
+      },
+      "id": "cron_4x_daily",
+      "name": "Cron 4x/dia (0,6,12,18h)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/integrations/status",
+        "method": "GET",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SYSTEM_USER_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "poll_status",
+      "name": "Poll /api/integrations/status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        500,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.statusCode >= 500 || $json.error }}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "check_500",
+      "name": "500 or Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Build alert for 500 */\nreturn {\n  type: 'integration_status_500',\n  statusCode: $json.statusCode,\n  error: $json.error || $json.message || 'Unknown error',\n  route: '/api/integrations/status',\n  severity: 'critical',\n  timestamp: new Date().toISOString(),\n  alertId: require('crypto').randomUUID()\n};"
+      },
+      "id": "build_500_alert",
+      "name": "Build 500 Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.connected === false && $json.integrations?.length === 0 }}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "check_no_integrations",
+      "name": "No Integrations?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        750,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Warning: user has no active integrations */\nreturn {\n  type: 'integration_status_empty',\n  message: 'User has no active integrations',\n  route: '/api/integrations/status',\n  severity: 'warning',\n  timestamp: new Date().toISOString(),\n  alertId: require('crypto').randomUUID()\n};"
+      },
+      "id": "build_empty_alert",
+      "name": "Build Empty Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Success — all good */\nreturn {\n  type: 'integration_status_ok',\n  connected: $json.connected,\n  integrationCount: $json.integrations?.length || 0,\n  modes: [...new Set($json.integrations?.map((i) => i.mode) || [])],\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "build_ok",
+      "name": "Build OK Log",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        550
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/alerts",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"{{ $json.type }}\",\n  \"message\": \"{{ $json.message || $json.error }}\",\n  \"statusCode\": {{ $json.statusCode || 'null' }},\n  \"route\": \"{{ $json.route }}\",\n  \"severity\": \"{{ $json.severity }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"alertId\": \"{{ $json.alertId }}\"\n}"
+      },
+      "id": "send_alert",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Cron 4x/dia (0,6,12,18h)": {
+      "main": [
+        [
+          {
+            "node": "Poll /api/integrations/status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll /api/integrations/status": {
+      "main": [
+        [
+          {
+            "node": "500 or Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "500 or Error?": {
+      "main": [
+        [
+          {
+            "node": "Build 500 Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Integrations?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Integrations?": {
+      "main": [
+        [
+          {
+            "node": "Build Empty Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build OK Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build 500 Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Empty Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build OK Log": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "rxWf000000000004"
+  },
+  "meta": {
+    "description": "Consulta /api/integrations/status 4x/dia e alerta em 500 ou usuário sem integrações ativas"
+  }
+}

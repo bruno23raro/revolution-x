@@ -1,0 +1,82 @@
+# n8n — camada de orquestração, retry e agendamento do Revolution X.
+# Banco próprio (rx-n8n-db), nunca o do app. Porta 5678 só em localhost.
+# Versões pinadas. Reinicia sempre. Healthcheck real.
+#
+# Subir (da raiz do repo — --env-file injeta as credenciais do .env.local):
+#   docker compose -f n8n/docker-compose.yml --env-file .env.local up -d
+# Logs:  docker compose -f n8n/docker-compose.yml logs -f
+# Parar: docker compose -f n8n/docker-compose.yml down
+#
+# Nomes de env do banco: DB_TYPE/DB_POSTGRESDB_* (os N8N_DATABASE_* não existem
+# no n8n — foi por isso que ele caía em SQLite efêmero).
+
+services:
+  n8n:
+    image: n8nio/n8n:1.100.0
+    container_name: rx-n8n
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_RUNNERS_ENABLED=false
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=rx-n8n-db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DATABASE_NAME:-n8n}
+      - DB_POSTGRESDB_USER=${N8N_DATABASE_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DATABASE_PASSWORD}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      # tokens lidos pelos workflows via $env.*
+      - ADMIN_ALERT_TOKEN=${ADMIN_ALERT_TOKEN}
+      - SYSTEM_USER_TOKEN=${SYSTEM_USER_TOKEN}
+      - ALERT_WHATSAPP_NUMBER=${ALERT_WHATSAPP_NUMBER}
+      - SLACK_ALERT_CHANNEL=${SLACK_ALERT_CHANNEL}
+      - META_PIXEL_ID=${META_PIXEL_ID}
+      - META_CAPI_ACCESS_TOKEN=${META_CAPI_ACCESS_TOKEN}
+      - META_APP_SECRET=${META_APP_SECRET}
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_EXECUTIONS_DATA_MAX_AGE=168
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - TZ=America/Sao_Paulo
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - n8n-stored:/files
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5678/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:false
+
+  n8n-db:
+    image: postgres:17-alpine
+    container_name: rx-n8n-db
+    restart: always
+    environment:
+      - POSTGRES_DB=${N8N_DATABASE_NAME:-n8n}
+      - POSTGRES_USER=${N8N_DATABASE_USER:-n8n}
+      - POSTGRES_PASSWORD=${N8N_DATABASE_PASSWORD}
+    volumes:
+      - n8n-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  n8n-data:
+  n8n-stored:
+  n8n-db-data:

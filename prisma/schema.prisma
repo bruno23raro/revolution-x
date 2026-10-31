@@ -49,6 +49,7 @@ model User {
   // FASE AGENT (Phase 2 — Centro Administrativo com IA)
   tasks        Task[]
   agentMemories AgentMemory[]
+  adminAlerts AdminAlert[]
 }
 
 // Modelo 3: organização (tenant)
@@ -85,6 +86,7 @@ model Organization {
   agentMemories AgentMemory[]
   // FASE 17 — Campanhas e disparos
   campaigns    Campaign[]
+  adminAlerts AdminAlert[]
 }
 
 // Modelo 4: membro de organização
@@ -502,6 +504,24 @@ model AgentMemory {
   updatedAt      DateTime     @updatedAt
   @@unique([organizationId, userId, kind, memoryKey])
   @@index([organizationId, userId])
+}
+
+model AdminAlert {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String?       @db.Uuid
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type           String       @db.VarChar(50)
+  severity       String       @db.VarChar(20) @default("warning")
+  title          String       @db.VarChar(255)
+  message        String       @db.Text
+  statusCode     Int?
+  route          String?       @db.VarChar(255)
+  timestamp      DateTime     @default(now()) @db.Timestamp(6)
+  metadata       Json         @default("{}")
+  @@index([organizationId])
+  @@index([timestamp])
 }
 
 // ============================================================

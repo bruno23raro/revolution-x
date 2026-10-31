@@ -1,0 +1,269 @@
+{
+  "id": "rxWf000000000003",
+  "name": "WF-03_recon-noturno",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 3,
+              "minute": 0
+            }
+          ]
+        },
+        "timezone": "America/Sao_Paulo"
+      },
+      "id": "cron_0300",
+      "name": "Cron 03:00 BRT",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Fetch local Prisma schema as SQL */\nconst fs = require('fs');\nconst path = require('path');\n\n// Try to read prisma schema and generate SQL (simplified)\n// In production, this would run `npx prisma migrate diff` against local DB\nconst schemaPath = '/app/prisma/schema.prisma';\nlet prismaSchema = '';\ntry {\n  prismaSchema = fs.readFileSync(schemaPath, 'utf8');\n} catch (e) {\n  console.warn('Prisma schema not found at', schemaPath);\n}\n\n// For now, we'll query the local Postgres directly\n// This node returns config for the next nodes\nreturn {\n  timestamp: new Date().toISOString(),\n  checkTypes: ['drift', 'missing_tables', 'missing_columns', 'index_mismatch', 'constraint_mismatch']\n};"
+      },
+      "id": "setup_check",
+      "name": "Setup Check Config",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/schema/diff",
+        "method": "GET",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "get_diff",
+      "name": "Get Schema Diff from App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        750,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hasDrift === true }}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "has_drift",
+      "name": "Has Drift?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* No drift — log success */\nreturn {\n  status: 'ok',\n  message: 'Schema in sync',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "sync_ok",
+      "name": "Schema In Sync",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Drift detected — build detailed alert */\nconst drift = $json.drift || {};\nreturn {\n  status: 'drift_detected',\n  driftSummary: {\n    missingTables: drift.missingTables?.length || 0,\n    missingColumns: drift.missingColumns?.length || 0,\n    extraTables: drift.extraTables?.length || 0,\n    extraColumns: drift.extraColumns?.length || 0,\n    indexMismatches: drift.indexMismatches?.length || 0,\n    constraintMismatches: drift.constraintMismatches?.length || 0\n  },\n  driftDetails: drift,\n  timestamp: new Date().toISOString(),\n  severity: 'critical'\n};"
+      },
+      "id": "build_alert",
+      "name": "Build Drift Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/alerts",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"schema_drift\",\n  \"driftSummary\": {{ JSON.stringify($json.driftSummary) }},\n  \"driftDetails\": {{ JSON.stringify($json.driftDetails) }},\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"severity\": \"{{ $json.severity }}\"\n}"
+      },
+      "id": "alert_drift",
+      "name": "Alert Schema Drift",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1500,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/alerts",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"schema_sync\",\n  \"message\": \"{{ $json.message }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\"\n}"
+      },
+      "id": "alert_sync",
+      "name": "Alert Schema Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1500,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Cron 03:00 BRT": {
+      "main": [
+        [
+          {
+            "node": "Setup Check Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup Check Config": {
+      "main": [
+        [
+          {
+            "node": "Get Schema Diff from App",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Schema Diff from App": {
+      "main": [
+        [
+          {
+            "node": "Has Drift?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Drift?": {
+      "main": [
+        [
+          {
+            "node": "Build Drift Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schema In Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema In Sync": {
+      "main": [
+        [
+          {
+            "node": "Alert Schema Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Drift Alert": {
+      "main": [
+        [
+          {
+            "node": "Alert Schema Drift",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "rxWf000000000004"
+  },
+  "meta": {
+    "description": "Compara schema local (Prisma) vs migrations vs produção todas as noites às 03:00; falha em drift"
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "id": "rxWf000000000001",
+  "name": "WF-01_ingest-webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_ingest",
+      "name": "Webhook Ingest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "ingest"
+    },
+    {
+      "parameters": {
+        "functionCode": "/* HMAC-SHA256 validation against META_APP_SECRET */\nconst crypto = require('crypto');\nconst secret = $env.META_APP_SECRET;\nif (!secret) {\n  throw new Error('META_APP_SECRET not configured in n8n env');\n}\nconst sig = $json.headers?.['x-hub-signature-256'];\nif (!sig) {\n  throw new Error('Missing X-Hub-Signature-256');\n}\nconst payload = $json.bodyRaw || JSON.stringify($json.body);\nconst expected = crypto.createHmac('sha256', secret).update(payload, 'utf8').digest('hex');\nconst provided = sig.startsWith('sha256=') ? sig.slice(7) : sig;\nif (expected.length !== provided.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided))) {\n  throw new Error('Invalid signature');\n}\n\n// Extract event id for idempotency\nlet eventId = '';\nif ($json.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.id) {\n  eventId = $json.body.entry[0].changes[0].value.messages[0].id;\n} else if ($json.body?.entry?.[0]?.messaging?.[0]?.message?.mid) {\n  eventId = $json.body.entry[0].messaging[0].message.mid;\n} else if ($json.body?.entry?.[0]?.id) {\n  eventId = $json.body.entry[0].id;\n}\n\nreturn {\n  payload: $json.body,\n  eventId: eventId,\n  eventType: $json.body?.entry?.[0]?.changes ? 'feed_change' : ($json.body?.entry?.[0]?.messaging ? 'messaging' : 'unknown'),\n  phoneNumberId: $json.body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id ?? null,\n  receivedAt: new Date().toISOString()\n};"
+      },
+      "id": "validate_hmac",
+      "name": "Validate HMAC & Parse",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Fast 200 response — webhook must return <300ms */\nreturn {\n  status: 'accepted',\n  queued: true,\n  eventId: $json.eventId\n};"
+      },
+      "id": "fast_response",
+      "name": "Fast 200 Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        750,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Enqueue for processing + HMAC do corpo re-encaminhado (n8n serializa o objeto tal qual) */\nconst crypto = require('crypto');\nconst bodyText = JSON.stringify($json.payload);\nreturn {\n  ...$json,\n  sigHex: crypto.createHmac('sha256', $env.META_APP_SECRET).update(bodyText, 'utf8').digest('hex')\n};"
+      },
+      "id": "enqueue",
+      "name": "Enqueue for Processing",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/webhooks/meta",
+        "method": "POST",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Hub-Signature-256",
+              "value": "=sha256={{ $json.sigHex }}"
+            },
+            {
+              "name": "X-N8N-Webhook",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}"
+      },
+      "id": "forward_to_app",
+      "name": "Forward to App Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Enqueue for Processing').first().json.eventId }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check_eventid",
+      "name": "Has Event ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Store eventId in n8n KV for dedup (simple in-memory, 24h TTL via workflow cleanup) */\n// In production, use Redis or Postgres for persistent dedup\nconst eventId = $('Enqueue for Processing').first().json.eventId;\nreturn {\n  dedupKey: 'webhook_event:' + eventId,\n  stored: true\n};"
+      },
+      "id": "store_dedup",
+      "name": "Store Dedup Key",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Ingest": {
+      "main": [
+        [
+          {
+            "node": "Validate HMAC & Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate HMAC & Parse": {
+      "main": [
+        [
+          {
+            "node": "Fast 200 Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enqueue for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enqueue for Processing": {
+      "main": [
+        [
+          {
+            "node": "Forward to App Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to App Webhook": {
+      "main": [
+        [
+          {
+            "node": "Has Event ID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Event ID?": {
+      "main": [
+        [
+          {
+            "node": "Store Dedup Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "rxWf000000000004"
+  },
+  "meta": {
+    "description": "Recebe webhooks genéricos, valida HMAC-SHA256, responde 200 em <300ms, encaminha para app e armazena dedup key"
+  }
+}

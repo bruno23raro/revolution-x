@@ -1,0 +1,333 @@
+{
+  "id": "rxWf000000000002",
+  "name": "WF-02_meta-capi-retry",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "capi-retry",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_capi",
+      "name": "Webhook CAPI Retry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "capi-retry"
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Validate input and prepare CAPI payload — corpo do webhook v2 vem em body.* */\nconst src = $json.body ?? $json;\nconst events = src.events;\nif (!events || !Array.isArray(events) || events.length === 0) {\n  throw new Error('events array required and non-empty');\n}\n\n// Build user_data with hashed PII\nconst crypto = require('crypto');\nfunction sha256hex(input) {\n  return crypto.createHash('sha256').update(input, 'utf8').digest('hex');\n}\nconst normalizeEmail = (e) => e.trim().toLowerCase();\nconst normalizePhone = (p) => p.replace(/\\D/g, '');\n\nconst payload = {\n  data: events.map((e) => {\n    const user_data = {};\n    if (e.emails?.length) user_data.em = e.emails.map((x) => sha256hex(normalizeEmail(x)));\n    if (e.phones?.length) user_data.ph = e.phones.map((x) => sha256hex(normalizePhone(x)));\n    if (e.clientId) user_data.client_ip_address = e.clientId;\n    const d = {\n      event_name: e.eventName,\n      event_id: e.eventId || crypto.randomUUID(),\n      event_time: e.eventTime || Math.floor(Date.now() / 1000),\n      action_source: 'website',\n    };\n    if (Object.keys(user_data).length) d.user_data = user_data;\n    if (e.value !== undefined || e.currency)\n      d.custom_data = { value: e.value, currency: e.currency, ...e.customData };\n    else if (e.customData) d.custom_data = e.customData;\n    return d;\n  }),\n  ...(src.testEventCode ? { test_event_code: src.testEventCode } : {})\n};\n\nreturn {\n  payload: payload,\n  pixelId: src.pixelId || $env.META_PIXEL_ID,\n  accessToken: src.accessToken || $env.META_CAPI_ACCESS_TOKEN,\n  attempts: src.attempts || 0,\n  maxAttempts: 3,\n  originalEventIds: events.map((e) => e.eventId).filter(Boolean)\n};"
+      },
+      "id": "prepare_payload",
+      "name": "Prepare CAPI Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v26.0/{{ $json.pixelId }}/events?access_token={{ $json.accessToken }}",
+        "method": "POST",
+        "options": {
+          "timeout": 15000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}"
+      },
+      "id": "send_capi",
+      "name": "Send to CAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        750,
+        300
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.events_received }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check_success",
+      "name": "Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Success response */\nreturn {\n  ok: true,\n  eventsReceived: $json.events_received || 0,\n  eventIds: $('Prepare CAPI Payload').first().json.originalEventIds || []\n};"
+      },
+      "id": "success_response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Prepare CAPI Payload').first().json.attempts }}",
+              "operation": "lessThan",
+              "value2": "={{ $json.maxAttempts }}"
+            }
+          ]
+        }
+      },
+      "id": "check_retry",
+      "name": "Retry Available?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Exponential backoff: 2s, 4s, 8s */\nconst baseDelay = 2000;\nconst delay = baseDelay * Math.pow(2, $json.attempts);\nreturn { delayMs: delay };"
+      },
+      "id": "calc_backoff",
+      "name": "Calculate Backoff",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delayMs }}",
+        "unit": "milliseconds"
+      },
+      "id": "wait_backoff",
+      "name": "Wait Backoff",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Increment attempt counter and re-queue — recupera contexto (payload/pixel/token) do nó de preparo */\nconst base = $('Prepare CAPI Payload').first().json;\nreturn {\n  ...base,\n  attempts: (base.attempts || 0) + 1\n};"
+      },
+      "id": "increment_attempt",
+      "name": "Increment Attempt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Dead letter — all retries exhausted */\nconst base = $('Prepare CAPI Payload').first().json;\nreturn {\n  ok: false,\n  error: 'max_retries_exceeded',\n  errorDetail: $json.error?.message || $json.error || 'Unknown error after ' + (base.maxAttempts || 3) + ' attempts',\n  eventIds: base.originalEventIds || [],\n  deadLetter: true,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "dead_letter",
+      "name": "Dead Letter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/alerts",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"capi_dead_letter\",\n  \"eventIds\": {{ JSON.stringify($json.eventIds) }},\n  \"error\": {{ JSON.stringify($json.errorDetail) }},\n  \"timestamp\": \"{{ $json.timestamp }}\"\n}"
+      },
+      "id": "alert_dead_letter",
+      "name": "Alert Dead Letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1500,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook CAPI Retry": {
+      "main": [
+        [
+          {
+            "node": "Prepare CAPI Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare CAPI Payload": {
+      "main": [
+        [
+          {
+            "node": "Send to CAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to CAPI": {
+      "main": [
+        [
+          {
+            "node": "Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success?": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Available?": {
+      "main": [
+        [
+          {
+            "node": "Calculate Backoff",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Backoff": {
+      "main": [
+        [
+          {
+            "node": "Wait Backoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Backoff": {
+      "main": [
+        [
+          {
+            "node": "Increment Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Attempt": {
+      "main": [
+        [
+          {
+            "node": "Send to CAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dead Letter": {
+      "main": [
+        [
+          {
+            "node": "Alert Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "rxWf000000000004"
+  },
+  "meta": {
+    "description": "Dispara eventos CAPI com backoff exponencial 3x (2s/4s/8s) e dead-letter ao esgotar"
+  }
+}

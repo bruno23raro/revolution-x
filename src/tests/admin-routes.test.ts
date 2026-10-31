@@ -6,6 +6,19 @@
 // máquina de estados (transições, progresso real, upsert de memória) é
 // exercitada de verdade em cada chamada.
 // @ts-nocheck  -- wiring de mocks dinâmicos; coerente com auth-security.test.ts
+
+// Mock crypto.timingSafeEqual for bearer token verification (not available in test env)
+jest.mock('crypto', () => {
+  const actual = jest.requireActual('crypto');
+  return {
+    ...actual,
+    timingSafeEqual: jest.fn((a, b) => a.equals(b)),
+  };
+});
+
+// Mock ADMIN_ALERT_TOKEN from .env.local for bearer token verification
+process.env.ADMIN_ALERT_TOKEN = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+
 import { NextRequest } from 'next/server';
 
 // ── omniRouter (rota do chat importa via relative path; sem alias @/ai) ──────
@@ -45,6 +58,11 @@ jest.mock('@/lib/prisma', () => {
       findMany: jest.fn(),
       deleteMany: jest.fn(),
     },
+    adminAlert: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+    $queryRaw: jest.fn(),
     $executeRaw: jest.fn().mockResolvedValue(0),
   };
   return {
@@ -64,6 +82,7 @@ const { GET: taskByIdGET, POST: taskByIdPOST } = require('../../app/api/admin/ta
 const { GET: memoryGET, POST: memoryPOST } = require('../../app/api/admin/memory/route');
 const { GET: chatGET, POST: chatPOST } = require('../../app/api/admin/chat/route');
 const { GET: aiConfigGET, POST: aiConfigPOST, DELETE: aiConfigDELETE } = require('../../app/api/admin/ai-config/route');
+const { GET: alertsGET, POST: alertsPOST } = require('../../app/api/admin/alerts/route');
 
 // ── fixtures de usuário ───────────────────────────────────────────────────────
 const ADMIN = { id: 'user-admin', role: 'admin', organizationId: 'org-admin', email: 'admin@x.com' };
@@ -706,5 +725,313 @@ describe('DELETE /api/admin/ai-config', () => {
     expect(arg.where.memoryKey).toBe('ai_config');
     expect(arg.where.organizationId).toBe('org-admin');
     expect(arg.where.userId).toBe('user-admin');
+  });
+});
+
+// ============================================================================
+// POST /api/admin/alerts — Gravar alerta
+// ============================================================================
+describe('POST /api/admin/alerts', () => {
+  function bearerReq(body?: unknown, token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9') {
+    const init: Record<string, unknown> = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: token },
+    };
+    if (body !== undefined) {
+      init.body = typeof body === 'string' ? body : JSON.stringify(body);
+    }
+    return new NextRequest('http://localhost/api/admin/alerts', init);
+  }
+
+  beforeEach(() => {
+    asNoAdmin(); // setup admin user for requireAdmin
+    prisma.adminAlert.create = jest.fn().mockResolvedValue({});
+    prisma.adminAlert.findMany = jest.fn().mockResolvedValue([]);
+  });
+
+  it('401 sem autorização Bearer', async () => {
+    // Sem header authorization
+    const res = await alertsPOST(bearerReq(undefined, ''));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Unauthorized');
+  });
+
+  it('401 com token Bearer inválido', async () => {
+    const res = await alertsPOST(bearerReq(undefined, 'Bearer token-errado'));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Unauthorized');
+  });
+
+  it('422 payload inválido: severity fora do enum', async () => {
+    const res = await alertsPOST(bearerReq({
+      type: 'schema_drift', severity: 'invalid', title: 'Teste', message: 'Teste' },
+    ));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toBe('Payload inválido');
+    expect(json.details).toContain('severity deve ser warning ou critical');
+  });
+
+  it('422: message excede 1000 caracteres', async () => {
+    const res = await alertsPOST(bearerReq({
+      type: 'schema_drift', severity: 'warning', title: 'Teste', message: 'a'.repeat(1001) },
+    ));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toBe('Payload inválido');
+    expect(json.details).toContain('message deve ter no máximo 1000 caracteres');
+  });
+
+  it('422: source (type ou route) é obrigatório', async () => {
+    const res = await alertsPOST(bearerReq({
+      severity: 'warning', title: 'Teste', message: 'Teste' },
+    ));
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toBe('Payload inválido');
+    expect(json.details).toContain('source (type ou route) é obrigatório');
+  });
+
+  it('201 sucesso: alerta gravado com token válido', async () => {
+    const res = await alertsPOST(bearerReq({
+      type: 'schema_drift', severity: 'warning', title: 'Teste', message: 'Teste' },
+    ));
+    expect(res.status).toBe(201);
+    expect((await res.json()).ok).toBe(true);
+  });
+
+  it('D2: POST persiste a linha com escopo do tenant (create chamado com org/user)', async () => {
+    const res = await alertsPOST(bearerReq({
+      type: '5xx_error', severity: 'critical', title: 'Boom', message: 'rota 500',
+      statusCode: 500, route: '/api/campaigns', metadata: { hits: 3 } },
+    ));
+    expect(res.status).toBe(201);
+    expect(prisma.adminAlert.create).toHaveBeenCalledTimes(1);
+    const arg = prisma.adminAlert.create.mock.calls[0][0];
+    expect(arg.data.organizationId).toBe(ADMIN.organizationId);
+    expect(arg.data.userId).toBe(ADMIN.id);
+    expect(arg.data.type).toBe('5xx_error');
+    expect(arg.data.severity).toBe('critical');
+    expect(arg.data.statusCode).toBe(500);
+    expect(arg.data.route).toBe('/api/campaigns');
+    expect(arg.data.metadata).toEqual({ hits: 3 });
+  });
+});
+
+// ============================================================================
+// GET /api/admin/alerts — Listar alertas recentes
+// ============================================================================
+describe('GET /api/admin/alerts', () => {
+  function bearerReqGet(token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', qs = '') {
+    const init: Record<string, unknown> = {
+      method: 'GET',
+      headers: { 'content-type': 'application/json', authorization: token },
+    };
+    return new NextRequest('http://localhost/api/admin/alerts' + qs, init);
+  }
+
+  beforeEach(() => {
+    asNoAdmin(); // setup admin user for requireAdmin
+    prisma.adminAlert.findMany = jest.fn().mockResolvedValue([]);
+  });
+
+  it('200 listing de alertas com token válido', async () => {
+    const res = await alertsGET(bearerReqGet());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(Array.isArray(json.alerts)).toBe(true);
+  });
+
+  it('D2: GET pagina por cursor — nextCursor aponta para a última linha da página', async () => {
+    // sonda: rota pede limit+1; mock devolve 3 (= limit 2 + 1) → existe próxima página
+    prisma.adminAlert.findMany = jest.fn().mockResolvedValue([
+      { id: 'a3' }, { id: 'a2' }, { id: 'a1' },
+    ]);
+    const res = await alertsGET(bearerReqGet('Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', '?limit=2'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.alerts).toHaveLength(2);
+    expect(json.nextCursor).toBe('a2');
+    const query = prisma.adminAlert.findMany.mock.calls[0][0];
+    expect(query.take).toBe(3); // limit + sonda
+  });
+
+  it('D2: GET com cursor consulta após o cursor (skip=1) e devolve null no fim', async () => {
+    prisma.adminAlert.findMany = jest.fn().mockResolvedValue([{ id: 'a1' }]);
+    const res = await alertsGET(bearerReqGet('Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', '?limit=2&cursor=a2'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.nextCursor).toBeNull();
+    const query = prisma.adminAlert.findMany.mock.calls[0][0];
+    expect(query.cursor).toEqual({ id: 'a2' });
+    expect(query.skip).toBe(1);
+  });
+});
+
+// ============================================================================
+// GET /api/admin/schema/diff — D3: drift entre schema Prisma e banco real
+// ============================================================================
+describe('GET /api/admin/schema/diff', () => {
+  const { GET: schemaDiffGET } = require('../../app/api/admin/schema/diff/route');
+
+  // info_schema "real" derivada do próprio DMMF → zero drift por construção
+  function schemaRowsFromDmmf() {
+    const { Prisma: P } = require('@prisma/client');
+    const legacy = new Set(['meta_integrations', 'webhook_events', 'admin_alerts']);
+    const rows: Array<{ table_name: string; column_name: string }> = [];
+    for (const m of P.dmmf.datamodel.models) {
+      const table = m.dbName ?? m.name;
+      if (legacy.has(table)) continue;
+      for (const f of m.fields) {
+        if (f.kind === 'object') continue;
+        rows.push({ table_name: table, column_name: f.dbName ?? f.name });
+      }
+    }
+    return rows;
+  }
+
+  // cache de 60s da rota é medido por Date.now() — relógio controlado por teste
+  let clock = Date.now();
+  beforeEach(() => {
+    clock += 120_000; // sempre > TTL → cada teste reconsult
+    jest.spyOn(Date, 'now').mockImplementation(() => clock);
+    asNoAdmin();
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    expect(res.status).toBe(401);
+  });
+
+  it('D3: schema igual ao esperado → hasDrift=false', async () => {
+    prisma.$queryRaw = jest.fn().mockResolvedValue(schemaRowsFromDmmf());
+    const res = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    expect(res.status).toBe(200);
+    const { diff } = await res.json();
+    expect(diff.hasDrift).toBe(false);
+    expect(diff.extraColumns).toEqual([]);
+    expect(diff.missingColumns).toEqual([]);
+  });
+
+  it('D3: coluna extra no banco (alter table via psql) → hasDrift=true e extraColumns a nomeia', async () => {
+    const rows = schemaRowsFromDmmf();
+    rows.push({ table_name: 'AdminAlert', column_name: 'coluna_do_psql' });
+    prisma.$queryRaw = jest.fn().mockResolvedValue(rows);
+    const res = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    expect(res.status).toBe(200);
+    const { diff } = await res.json();
+    expect(diff.hasDrift).toBe(true);
+    expect(diff.extraColumns).toEqual([{ table: 'AdminAlert', column: 'coluna_do_psql' }]);
+  });
+
+  it('D3: coluna esperada ausente no banco → missingColumns a nomeia', async () => {
+    const rows = schemaRowsFromDmmf().filter(
+      (r) => !(r.table_name === 'AdminAlert' && r.column_name === 'metadata'),
+    );
+    prisma.$queryRaw = jest.fn().mockResolvedValue(rows);
+    const res = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    const { diff } = await res.json();
+    expect(diff.hasDrift).toBe(true);
+    expect(diff.missingColumns).toEqual([{ table: 'AdminAlert', column: 'metadata' }]);
+  });
+
+  it('C3: duas chamadas seguidas usam cache (uma só consulta ao banco)', async () => {
+    prisma.$queryRaw = jest.fn().mockResolvedValue(schemaRowsFromDmmf());
+    const r1 = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    const r2 = await schemaDiffGET(adminReq('/api/admin/schema/diff'));
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('C3: query de schema não responde → 500 após timeout de 10s (simulado)', async () => {
+    // módulo fresco: cache de módulo do teste anterior não pode responder 200
+    let freshGET: (r: NextRequest) => Promise<Response>;
+    jest.isolateModules(() => {
+      freshGET = require('../../app/api/admin/schema/diff/route').GET;
+    });
+    jest.useFakeTimers();
+    prisma.$queryRaw = jest.fn().mockReturnValue(new Promise(() => {})); // nunca resolve
+    const pending = freshGET!(adminReq('/api/admin/schema/diff'));
+    await jest.advanceTimersByTimeAsync(10_001);
+    const res = await pending;
+    jest.useRealTimers();
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toContain('diff');
+  });
+});
+
+// ============================================================================
+// POST /api/admin/notify-slack e /api/admin/notify-whatsapp
+// ============================================================================
+describe('POST /api/admin/notify-slack', () => {
+  const { POST: slackPOST } = require('../../app/api/admin/notify-slack/route');
+
+  function post(body?: unknown) {
+    const init: Record<string, unknown> = { method: 'POST', headers: { 'content-type': 'application/json' } };
+    if (body !== undefined) init.body = typeof body === 'string' ? body : JSON.stringify(body);
+    return new NextRequest('http://localhost/api/admin/notify-slack', init);
+  }
+
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await slackPOST(post({ message: 'x' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('400 JSON inválido', async () => {
+    asNoAdmin();
+    const res = await slackPOST(post('{'));
+    expect(res.status).toBe(400);
+  });
+
+  it('200: usa channel do body, senão env, senão default; ecoa severity/title', async () => {
+    asNoAdmin();
+    const res = await slackPOST(post({ channel: '#ops', severity: 'critical', title: 'P1', message: 'caiu' }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toMatchObject({ ok: true, sent: true, channel: '#ops', severity: 'critical', title: 'P1' });
+
+    const res2 = await slackPOST(post({ message: 'x' }));
+    const json2 = await res2.json();
+    expect(json2.channel).toBe(process.env.SLACK_ALERT_CHANNEL || '#alerts-production');
+    expect(json2.severity).toBe('warning');
+  });
+});
+
+describe('POST /api/admin/notify-whatsapp', () => {
+  const { POST: waPOST } = require('../../app/api/admin/notify-whatsapp/route');
+
+  function post(body?: unknown) {
+    const init: Record<string, unknown> = { method: 'POST', headers: { 'content-type': 'application/json' } };
+    if (body !== undefined) init.body = typeof body === 'string' ? body : JSON.stringify(body);
+    return new NextRequest('http://localhost/api/admin/notify-whatsapp', init);
+  }
+
+  it('401 sem admin', async () => {
+    asUnauthorized();
+    const res = await waPOST(post({ message: 'x' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('400: message vazio é obrigatório', async () => {
+    asNoAdmin();
+    const res = await waPOST(post({ title: 'sem corpo' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('message');
+  });
+
+  it('200: usa to do body, senão env, senão default', async () => {
+    asNoAdmin();
+    const res = await waPOST(post({ to: '5511888887777', severity: 'critical', title: 'P1', message: 'caiu' }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toMatchObject({ ok: true, sent: true, number: '5511888887777', severity: 'critical' });
+
+    const res2 = await waPOST(post({ message: 'x' }));
+    const json2 = await res2.json();
+    expect(json2.number).toBe(process.env.ALERT_WHATSAPP_NUMBER || '5511999999999');
   });
 });

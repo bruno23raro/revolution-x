@@ -1,0 +1,239 @@
+{
+  "id": "rxWf000000000004",
+  "name": "WF-04_alerta-5xx",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alerta-5xx",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_alert",
+      "name": "Webhook Alerta 5xx",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "alerta-5xx"
+    },
+    {
+      "parameters": {},
+      "id": "error_trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Parse and enrich alert payload */\nconst alert = $json;\nconst now = new Date().toISOString();\n\nconst enriched = {\n  ...alert,\n  receivedAt: now,\n  severity: alert.severity || (alert.statusCode >= 500 ? 'critical' : 'warning'),\n  source: alert.source || (alert.trigger?.error ? 'errorWorkflow' : 'app'),\n  environment: 'production',\n  message: alert.message || alert.trigger?.error?.message || null,\n  // Generate a unique alert ID for deduplication\n  alertId: alert.alertId || require('crypto').randomUUID()\n};\n\nreturn enriched;"
+      },
+      "id": "enrich_alert",
+      "name": "Enrich Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.severity }}",
+              "operation": "equals",
+              "value2": "critical"
+            }
+          ]
+        }
+      },
+      "id": "check_critical",
+      "name": "Critical Severity?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        750,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/notify-whatsapp",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $env.ALERT_WHATSAPP_NUMBER }}\",\n  \"message\": \"🚨 *CRITICAL ALERT*\\n\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
+      },
+      "id": "send_whatsapp_critical",
+      "name": "Send WhatsApp Critical",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://revolutionx.com.br/api/admin/notify-slack",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.ADMIN_ALERT_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $env.SLACK_ALERT_CHANNEL }}\",\n  \"text\": \"*{{ $json.severity | uppercase }} ALERT*\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
+      },
+      "id": "send_slack",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "functionCode": "/* Store alert in n8n for history (simple in-memory, production should use DB) */\nreturn {\n  alertId: $json.alertId,\n  stored: true,\n  storedAt: new Date().toISOString()\n};"
+      },
+      "id": "store_alert",
+      "name": "Store Alert History",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Enrich Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Alerta 5xx": {
+      "main": [
+        [
+          {
+            "node": "Enrich Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Alert": {
+      "main": [
+        [
+          {
+            "node": "Critical Severity?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical Severity?": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Critical",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Critical": {
+      "main": [
+        [
+          {
+            "node": "Store Alert History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Store Alert History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Consome logs de erro 5xx e notifica no Slack/WhatsApp em erro de produção"
+  }
+}

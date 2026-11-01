@@ -1,5 +1,10 @@
 # Plano: Gerar System User Token para App Meta 1421814643397349
 
+> **STATUS 2026-10-31 (P0.8-H): BLOQUEADO — exige ação humana no Meta Console.**
+> O secret conhecido (`ff2edcde…a3ab`) pertence ao app 1112157761403064, não ao 1421814643397349
+> (probe → error 101 "Error validating application"; app controle com o mesmo secret → token OK).
+> Evidência completa e caminho de saída em `docs/admin-endpoints-implementation-2026-10-31.md` (Bloco H).
+
 ## Visão Geral
 
 O objetivo é gerar um system user token para o app Meta **1421814643397349** (descobrido em conteúdo colado anteriormente), que já possui 17 permissões configuradas incluindo `instagram_branded_content_ads_brand`, `ads_read`, `pages_read_engagement`, etc.
@@ -97,6 +102,8 @@ Testar o status:
    - Tentar OAuth flow (pode exigir revisão da Meta)
    - Verificar se há documentação ou suporte
    - Considerar se o app 1112157761403064 atende às necessidades atuais
+
+2. **Revisão Meta — ads_read** (P4): Submetido em 2026-10-31 via Meta Console. Request ID pendente de captura. Status atual: "Em análise".
 
 2. **Permissões incompletas** — Mesmo com o system user token, algumas permissões podem exigir revisão da Meta (Facebook Login, Instagram Graph API em modo produção, etc.)
 

@@ -75,7 +75,7 @@
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ $json.hasDrift === true }}",
+              "value1": "true",
               "operation": "true"
             }
           ]

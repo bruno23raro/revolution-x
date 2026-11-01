@@ -90,7 +90,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"to\": \"{{ $env.ALERT_WHATSAPP_NUMBER }}\",\n  \"message\": \"🚨 *CRITICAL ALERT*\\n\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
+        "jsonBody": "={\n  \"to\": \"{{ $env.ALERT_WHATSAPP_NUMBER }}\",\n  \"severity\": \"={{ $json.severity }}\",\n  \"message\": \"🚨 *{{ $json.severity | uppercase }} ALERT*\\n\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
       },
       "id": "send_whatsapp_critical",
       "name": "Send WhatsApp Critical",

@@ -95,3 +95,29 @@ All endpoints follow the project's authentication pattern (admin/owner role veri
 
 **Canônica: `SYSTEM_USER_TOKEN`** — é o nome que o WF-05 lê (`$env.SYSTEM_USER_TOKEN`) e o único com consumidor real. A duplicata `META_SYSTEM_USER_TOKEN` (mesmo valor, zero referências em código) foi removida do `.env.local`. A variante numerada `META_SYSTEM_USER_TOKEN_1421814643397349` nunca existiu como variável — ideia de `plan_meta_system_user.md` para token do app 1421814643397349 ainda não gerado; quando for gerado, adicionar como variável NOVA com o sufixo do app_id (não substitui a canônica). Bônus corrigido: comentário inline em `ALERT_WHATSAPP_NUMBER` vazava para o valor da env (linha 58 do formato antigo) — movido para linha própria; `.env.local` reescrito UTF-8 sem BOM.
 
+## Bloco G — Validação em produção (2026-10-31)
+
+Commits `980cc03` (Bearer service sem sessão) + `27d7a16` (tolerância a prefixo "Bearer Bearer") deployados no Hostinger (auto-deploy, ~3 min). Sondas ao vivo em `https://revolutionx.com.br`:
+
+| Probe | Resultado |
+|---|---|
+| `POST /api/admin/notify-slack` (Bearer) | 200 `{"ok":true,"sent":true,"channel":"#rx-alerts","severity":"critical"}` |
+| `POST /api/admin/notify-whatsapp` (Bearer) | 200 `{"ok":true,"sent":true,"number":"5511999999999"}` |
+| `POST /api/admin/alerts` (Bearer) | 201 `{"ok":true}` — linhas `smoke_g`/`smoke_g_dup`/`x` gravadas em `AdminAlert` com `organizationId=null` |
+| `GET /api/admin/schema/diff` (Bearer) | 200 diff real (hasDrift=true; faltam RiskLog, ScraperConfig; extra integrations) |
+| sem header / token errado | 401 idêntico `{"error":"Unauthorized"}` (sem oráculo — C1 provado ao vivo) |
+| prefixo duplicado `Bearer Bearer …` nos 3 endpoints | WA 200 / Slack 200 / Alerts 201 (C2 provado ao vivo) |
+
+**WF-04 re-smoke pós-deploy** (exec 54, webhook `alerta-5xx`): todos os nós `err=false` — `Send WhatsApp Critical` → 200 `{"ok":true,"sent":true}` (antes: "Authorization failed — papel admin/owner exigido"). Observação menor: o body do nó WhatsApp não envia `severity`, então o log grava `warning` por default — cosmetic, envio ok.
+
+## Bloco H — System user token (app 1421814643397349) — BLOQUEADO, evidenciado
+
+Sonda da Etapa 1 do plano (`oauth/access_token?client_id=1421814643397349&client_secret=…`): **error 101 "Error validating application"** com o único secret disponível (`ff2edcde…a3ab`). App controle `1112157761403064` + o MESMO secret → token válido, provando que o método funciona e o secret pertence ao app 1112157761403064, não ao alvo.
+
+Evidências adicionais:
+- `debug_token` do `SYSTEM_USER_TOKEN` atual → `type=APP` do app 1112157761403064 (não é system user de verdade); `/1112157761403064/roles` → vazio (nenhum system user criado nesse app).
+- Único system user real encontrado: token CAPI (`META_CAPI_ACCESS_TOKEN`) do app 1410364207725643 "Conversions API Application", escopo `read_ads_dataset_quality` apenas.
+- `act_984184351272559` → erro #200 (faltam `ads_management`/`ads_read` no token); página `645320171988542` → erro #100 (falta `pages_read_engagement`).
+
+**Conclusão:** o sucesso de `plan_meta_system_user.md` é inalcançável só com CLI/segredos locais. Caminho humano obrigatório: (1) obter o App Secret real de 1421814643397349 no Meta Console (ou migrar as permissões para o app 1112157761403064), (2) criar system user + senha via Business Manager, (3) gerar token com `ads_management`/`ads_read`/`pages_*` aprovados. Então gravar como `META_SYSTEM_USER_TOKEN_1421814643397349` (variável NOVA, por A-FIX2). Nada foi sobrescrito; `.env.local` e `CREDENCIAIS.md` permanecem como estavam.
+

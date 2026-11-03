@@ -35,8 +35,10 @@ function encryptToken(plaintext) {
   return iv.toString('hex') + ':' + c.getAuthTag().toString('hex') + ':' + c.update(plaintext, 'utf8', 'hex') + c.final('hex');
 }
 
-if (!SUPABASE_URL || !SERVICE_KEY || !META_APP_ID || !META_APP_SECRET) {
-  console.error('❌ Faltam variáveis de ambiente necessárias: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, META_APP_ID, META_APP_SECRET');
+// ENC_KEY é obrigatória: sem ela decryptToken/encryptToken estouram TypeError
+// linha a linha (o erro vira "failed" genérico e ninguém acha a causa).
+if (!SUPABASE_URL || !SERVICE_KEY || !META_APP_ID || !META_APP_SECRET || !ENC_KEY) {
+  console.error('❌ Faltam variáveis de ambiente necessárias: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, META_APP_ID, META_APP_SECRET, META_TOKEN_ENCRYPTION_KEY');
   process.exit(1);
 }
 

@@ -446,3 +446,163 @@ Aplicado:
   disparado; link agora deve ser `https://revolutionx.com.br/reset-password?token=...`.
 - **PENDENTE [HUMANO]**: conferir no Resend (link sem 0.0.0.0) +
   Gmail + click no link para abrir a tela de reset.
+
+## 2026-11-03 — Sessão de retomada: FASE C (Publicação) + FASE A (IA Resilience) + FASE B (Human Blockers) parcial
+
+### Diagnóstico inicial (2026-11-03 11:59)
+- Git: `main @ bf9174e` (local, NÃO pushado) → `origin/main @ 1981f69` (remoto)
+- Base revalidada: **jest 778/778 (56 suítes) PASS**, **tsc 0**, **lint 0**, **build limpo** (71 rotas)
+- Docker stack saudável: app :3000 + db Postgres17 :15432 (29 tabelas)
+- Produção: 10 migrations aplicadas (005–017), FORCE RLS em todas tabelas `public`
+- Site live Hostinger: 200/301-s/robots-s/a11y, build `1981f69` (CI success)
+- BLOCKERS.md sanitizado (commit 1981f69) — chaves n8n mascaradas, repo público seguro
+
+### FASE C — Publicação (COMPLETADA)
+- **Push**: 3 commits (`bf9174e` → `cdbf3a3` → `6c4a40e` → `1981f69`) para `origin/main`
+- **CI**: Actions run `build-and-test` → **SUCCESS** (todos steps green)
+- **Hostinger Deploy**: Auto-triggered via Git integration, concluído
+- **Smoke Tests Produção** (read-only):
+  - `GET /` → 200
+  - `GET /api/admin/chat` → 200 `{"routerConfigured":false}` (resíduo E, esperado)
+  - `GET /api/auth/session` → 200 `{"authenticated":false}`
+  - `GET /login` → 200
+  - `GET /api/admin/alerts` (sem Bearer) → 401 (correto)
+  - `GET /api/admin/schema/diff` (sem Bearer) → 401 (correto)
+
+### FASE A — IA Resilience / FreeLLMAPI Local Dev (COMPLETADA)
+- **FreeLLMAPI** container `freellmapi-freellmapi-1` saudável em :3001
+- **Configuração `.env.local`** (dev ONLY, produção intocada):
+  - `OMNIROUTER_BASE_URL=http://127.0.0.1:3001`
+  - `OMNIROUTER_API_KEY=freellmapi-...` (mascarada em CREDENCIAIS.md)
+  - `OMNIROUTER_MODEL=auto`
+- **Probes reais validados**:
+  - `GET /v1/models` → 200 (lista modelos: auto, fusion, claude-haiku-4-5, qwen3.8-flash-next, agnes-3.0-flash, gpt-oss-120b, etc.)
+  - `POST /v1/chat/completions` (model: gpt-oss-120b) → 200, resposta válida
+  - Fallback chain testado via `generateWithFallback` (omni → gemini → ollama)
+  - Rate-limit simulation (429) → retry com backoff exponencial
+  - Auto-selection determinístico (`selectModelForTask`) → OK
+  - All-fail blocking → `ok: false` honesto com erro legível
+- **Testes unitários IA**: 31/31 PASS (ai-providers, ai-facade, ai-routes)
+
+### FASE B — Bloqueadores Humanos (PARCIAL: H-4 RESOLVIDO)
+| ID | Blocker | Status | Evidência |
+|----|---------|--------|-----------|
+| **H-1** | Meta System User Token | 📋 Preparado | Steps em `docs/H_BLOQUEIO.md` (Business Manager → app 1421814643397349) |
+| **H-2** | Facebook Login Review | 📋 Preparado | Remover 8 scopes desnecessários, submeter 5 + ads_read no Meta Console |
+| **H-3** | GoTrue SMTP Produção | 📋 Preparado | hPanel Supabase proj `ardpabjoepzhkpmkgwgu` → Auth → SMTP (host, 587, creds, `no-reply@revolutionx.com.br`) |
+| **H-4** | n8n WF-04 severity | ✅ **RESOLVIDO** | Webhook testado, exec #75 success, admin alert persistido, severity dinâmica do JSON body confirmada |
+
+#### H-4 Detalhes (WF-04)
+- **Workflow JSON** já tinha severity dinâmica: `"severity": "={{ $json.severity }}"` no node `send_whatsapp_critical`
+- **Enrich Alert** function computa: `severity: alert.severity || (alert.statusCode >= 500 ? 'critical' : 'warning')`
+- **Teste real**: payload crítico postado no webhook → execução #75 success
+- **AdminAlert** persistido via `/api/admin/notify-whatsapp` (Bearer token ADMIN_ALERT_TOKEN)
+- **Documentado**: `docs/N8N.md` com before/after, tabelas workflow, endpoints confirmados
+
+### ✅ Multi-conta Meta por organização (H-1 técnico) — 2026-11-03
+- **Escopo**: Permitir múltiplas contas do MESMO provedor Meta (WhatsApp, Facebook, Instagram) por tenant
+- **Status**: ✅ TÉCNICAMENTE COMPLETO — implementação + testes + migração 016 validada
+- **Implementado**:
+  - **Resolvers determinísticos** (`resolveTenantMetaAccess`, `resolveTenantPublisherAccess`, `resolveTenantFacebookPageAccess`, `resolveTenantMetaAdsAccess`): seleção por `connected_at desc` + ancoragem por `accountId` (row id)
+  - **Seletor de contas na UI**: `/api/integrations/meta` GET → lista multicontas; `/api/whatsapp/accounts` → rótulo com `display_name` (migration 016); fallback gracioso sem coluna
+  - **IDOR remediation**: rotas usam `user.organizationId` do banco + RLS (anon key); `accountId` explícito no body
+  - **Refresh por conta** (`/api/integrations/meta/refresh-token`): aceita `account` (row id); ausente → conta padrão
+  - **Campanhas com seleção por conta** (`/api/campaigns` + UI): `accountId` ancorado na criação e no disparo
+  - **Migração 016** (`supabase/migrations/016_multi_meta_accounts.sql`): `display_name`; remove `UNIQUE(org,provider)`; adiciona `uq_meta_integrations_account` (expressão) + `uq_meta_integrations_page`
+- **Testes**: `meta-resolver-multi.test.ts` (15), `meta-idor.test.ts` (5), `whatsapp-accounts-route.test.ts`, `campaigns-routes.test.ts` — **70 testes PASS**
+- **Pré-requisito pendente**: Aplicar migration 016 no Supabase **produção** (passo humano). Sem 016, 2ª+ conta do mesmo provedor falha com erro UNIQUE constraint.
+
+### Próximos passos (aguardando humano)
+1. **H-1**: Criar System User Token no Meta Business Manager → salvar em `.env.local` + hPanel
+2. **H-3**: Configurar GoTrue SMTP no hPanel Supabase produção → testar register flow (400 → 200)
+3. **H-2**: Submeter Facebook Login Review no Meta Console (após remoção dos 8 scopes)
+4. **H-4**: Fechar item em BLOCKERS.md (já validado técnico)
+5. **016 em produção**: Aplicar migração 016 no Supabase produção (desbloqueia 2ª+ conta Meta por tenant)
+
+### Arquivos tocados nesta sessão
+- `docs/PROJECT_HANDOFF.md` (reescrito completo)
+- `docs/PROGRESSO.md` (atualizado estado real)
+- `docs/EXECUTION_LOG.md` (esta entrada)
+- `docs/N8N.md` (criado - documentação n8n)
+- `docs/H_BLOQUEIO.md` (já existia, validado)
+- `BLOCKERS.md` (sanitização segurança - commit 1981f69)
+- `src/components/integrations/FacebookPagesCard.tsx` (lint fix)
+- `src/components/integrations/WhatsAppQrCard.tsx` (lint fix)
+
+### Regras obedecidas
+- ✅ Português do Brasil sempre
+- ✅ Permissão total — não perguntei "posso?"
+- ✅ Segredos em `.env`/`.env.local` (nunca hardcode)
+- ✅ `.env`/`.env.local` no `.gitignore`
+- ✅ CREDENCIAIS.md com valores mascarados (8+4)
+- ✅ BLOCKERS.md sanitizado (chaves n8n mascaradas) — repo público
+- ✅ Produção intocada (FreeLLMAPI só em `.env.local` dev)
+- ✅ PowerShell syntax (sem `\` continuação, `Set-Content -Encoding ascii`)
+- ✅ Commits com `Co-Authored-By: Claude Code <noreply@anthropic.com>`
+
+---
+
+## 2026-11-03 — H-3 GoTrue SMTP: verificação ao vivo e fechamento
+
+### Motivo
+BLOCKERS.md / PENDENCIAS_HUMANAS.md / PROGRESSO.md marcavam H-3 como pendente ("SMTP
+not yet configured", "pending hPanel access"), mas `artifacts/RX_INTEGRATIONS_FINAL_REPORT.md`
+passo 2 registrava o contrário (201 + delivered). Divergência resolvida com leitura ao vivo,
+não por voto de confiança.
+
+### O que foi feito
+- `GET https://api.supabase.com/v1/projects/ardpabjoepzhkpmkgwgu/config/auth` via Management
+  API (PAT lido do Credential Manager `Supabase CLI:supabase`, nunca impresso). **Somente
+  leitura — nenhuma configuração alterada, produção intocada.**
+- Confirmado: `smtp.resend.com:465`, user `resend`, senha definida, admin e remetente
+  `no-reply@revolutionx.com.br`, `MAILER_AUTOCONFIRM=false`, `DISABLE_SIGNUP=false`,
+  subjects e templates de confirmação/recuperação presentes.
+- `URI_ALLOW_LIST` inclui `https://revolutionx.com.br/auth/callback`.
+- DNS do domínio de envio checado à parte por DoH: SPF de `send.` ✅, DKIM
+  `resend._domainkey` ✅, DMARC `p=quarantine; pct=25` ✅.
+- Inventário dos 4 fluxos (cadastro, confirmação, recuperação, redefinição): os quatro
+  existem em código, com token de 1h, hash SHA-256 e rotação de token antigo.
+- Base revalidada: **jest 778/778 (56 suítes)**, `tsc --noEmit` limpo, testes de e-mail
+  7/7 e register 6/6.
+
+### Achado novo (não bloqueante)
+`SITE_URL` de produção = `http://localhost:3000`. O cadastro não quebra porque
+`resolvePublicSiteOrigin()` monta o `emailRedirectTo` no domínio canônico, que está na
+allowlist. Correção é 1 campo no painel → **[HUMANO]**, por decisão de não mexer em produção.
+
+### Correções de documentação
+- `BLOCKERS.md`: H-3 movido para resolvido (com data e evidência).
+- `PENDENCIAS_HUMANAS.md`: item 3 fechado; contagem de bloqueadores humanos 4 → 3.
+- `docs/PROGRESSO.md`: H-3 resolvido + tabela da config lida ao vivo + achado do `SITE_URL`.
+- `evidence/2-gotrue-smtp.md`: reescrito com a evidência real (antes era um plano).
+- Novos scripts de releitura: `scripts/check_gotrue_smtp.ps1`, `scripts/check_gotrue_uris.ps1`.
+
+### Regras obedecidas
+- ✅ Permissão total, sem pedir confirmação
+- ✅ Produção não alterada (leitura apenas)
+- ✅ Nenhum segredo em log, doc ou chat (senha SMTP e PAT nunca saíram da memória)
+- ✅ PowerShell; scripts sem valores puros embutidos (PAT vem do Credential Manager)
+
+## 2026-11-03 (2) — Auditoria multi-agente (Meta + SaaS) e consolidação de scopes
+
+### O que foi feito
+- 2 workflows de auditoria executados (meta-integrations-audit wf_07f5e24f, saas-features-audit wf_de60ba87).
+- **Consolidação DEFAULT_SCOPES 11→9** (`src/integrations/meta/constants.ts`): removidos
+  `pages_read_user_content` e `whatsapp_business_management` — zero referências no código
+  (grep confirmado). Base revalidada após a mudança: **jest 778/778, tsc 0, lint 0**.
+- `scripts/refresh-tokens.js`: agora exige `META_TOKEN_ENCRYPTION_KEY` na validação de env
+  (sem ela o crash era um TypeError "failed" genérico linha a linha).
+- Estado SaaS (auditoria, 8 features classificadas): WhatsApp **5/5 completo**; Revolution X
+  (núcleo) 5; Campanhas 4 (lacuna: contagens skipped não persistidas, sem rate-limit);
+  Importação CSV 4; CRM 4 (débito known: dual-schema drift); Multi-contas 3 (bloqueado só
+  pela aplicação da 016 em produção); TikTok 3; IA/autoSelect 3.
+- Confirmações da auditoria Meta: webhook HMAC + idempotência OK; fluxo OAuth state CSPRNG OK;
+  dois planos de e-mail independentes documentados (GoTrue = confirmação cadastro; app Resend =
+  reset/reenvio) — H-3 depende só do lado GoTrue, já resolvido.
+- Migrações visíveis via MCP no produção: registro histórico parcial (005, 006, 013) — o
+  tracker do painel não espelha as 014–018 aplicadas via SQL direto; **aplicação da 016 segue
+  pendente e deve ser feita + registrada no schema_migrations junto [HUMANO/autorização DDL]**.
+
+### Pendências que sobraram (reais)
+- H-1 System User Token [HUMANO], H-2 review "Em análise" desde 2026-10-31 [aguardar Meta],
+  016 em produção [DDL], SITE_URL produção → https://revolutionx.com.br [HUMANO, não bloqueante].

@@ -21,13 +21,12 @@ These blockers remain because the CDP browser, Graph API primitives, Docker, and
 - **Related**: `plan_meta_system_user.md` step 4 mentions review submission
 - **Last updated**: 2026-11-01 — awaiting Meta Console approval
 
-### 3. GoTrue SMTP Configuration
+### 3. GoTrue SMTP Configuration ✅ RESOLVIDO 2026-10-29
 - **Why inalcançável**: Requires Supabase hPanel → Auth → SMTP setup
-- **What's needed**: Configure host, port 587, username, password, sender `no-reply@revolutionx.com.br`
-- **CDP limitation**: Cannot access hPanel SMTP configuration UI programmatically
-- **Expected outcome**: Register 400 error should resolve after proper SMTP config
-- **Related**: `evidence/2-gotrue-smtp.md` has full details
-- **Last updated**: 2026-11-01 — pending hPanel access and configuration
+- **What was needed**: Configure host, port 587, username, password, sender `no-reply@revolutionx.com.br`
+- **Resolução**: Configurado via Management API (PAT) no hPanel. Registro produção → 201; "Confirm your email" delivered (19:02:15Z). Cleanup do usuário de teste feito.
+- **Related**: `evidence/2-gotrue-smtp.md` has full details; `artifacts/RX_INTEGRATIONS_FINAL_REPORT.md` passo 2.
+- **Last updated**: 2026-10-29 — **FECHADO**
 
 ### 4. n8n Workflow Execution (Local REST API)
 - **Why inalcançável**: Local n8n REST API returns 401 despite valid N8N_API_KEY
@@ -70,17 +69,16 @@ These items were already completed during protocol sections 0-8:
 |----------|---------|----------------|--------|
 | 1 | System User Token | Business Manager UI → create system user | ⬜ Pending |
 | 2 | Facebook Login Review | Meta Console → submit 5 scopes for review | ⬜ Pending |
-| 3 | GoTrue SMTP | hPanel → Auth → SMTP → configure mailer | ⬜ Pending |
+| 3 | GoTrue SMTP | hPanel → Auth → SMTP → configure mailer | ✅ **RESOLVIDO 2026-10-29** |
 | 4 | n8n Local REST | Use MCP cloud instead of local API | ✅ Documented workaround |
 
 ---
 
-**Protocol P0.8 Final Human Blocker Count**: 4 items (all require external UI/platform interaction)
+**Protocol P0.8 Final Human Blocker Count**: 3 items requiring external UI/platform interaction (SMTP resolved)
 
-**All 4 items documented with full rationale and next steps in this file.**
+**All items documented with full rationale and next steps in this file.**
 
 **Next human actions** (in priority order):
 1. Business Manager → System Users → create system user for app 1421814643397349
 2. Meta Console → App Review → submit 5 remaining scopes for review
-3. Supabase hPanel → Auth → SMTP → configure mailer with host/port/user/pass/sender
-4. n8n: Continue using MCP cloud path; local REST API documented as 401 blocker
+3. n8n: Continue using MCP cloud path; local REST API documented as 401 blocker

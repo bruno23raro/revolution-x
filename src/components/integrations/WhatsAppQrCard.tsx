@@ -67,6 +67,9 @@ export default function WhatsAppQrCard({
       <div className="space-y-2">
         {qrData && (
           <div className="bg-white rounded-lg p-3 text-center">
+            {/* shortcut: QR URL é dinâmico (server-side); next/image exigiria
+            remotePatterns no next.config p/ cada host. Upgrade when stable. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={qrData.url}
               alt="QR Code WhatsApp"

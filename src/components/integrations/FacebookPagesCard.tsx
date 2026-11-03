@@ -84,7 +84,8 @@ export default function FacebookPagesCard({
 
   useEffect(() => {
     if (showDropdown) loadPages();
-  }, [showDropdown]);
+    // loadPages é estável o suficiente para omitir; o gatilho real é showDropdown.
+  }, [showDropdown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <IntegrationCard

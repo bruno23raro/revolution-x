@@ -10,109 +10,71 @@
 4. Rodar `git status` + `git log --oneline -5` e conferir com o checkpoint acima.
 5. Rodar `npm test` e `npm run typecheck` para re-validar a base.
 
-## Estado de referência (2026-10-16, pós-FASE I)
+## Estado Atual (2026-11-01)
 
-- Git `main @ 2d9136d` — 9 commits da missão (`5918263` … `902d25b`
-  mais `2d9136d` CI provisionamento); `origin/main` sincronizado.
-- **Repositório `bruno23raro/revolution-x` agora PÚBLICO**
-  (`private:false` confirmado via API em 2026-10-16). Runs do CI são
-  verificáveis anonimamente.
-- **CI VERDE**: Actions run `38973999041` (head `2d9136d`) = success em
-  todos os passos (provision do Postgres de teste, Typecheck, Lint,
-  Test, Build). O workflow usa service `postgres:17` descartável +
-  `scripts/provision-ci-test-db.mjs` (014) — nenhuma suíte de
-  integração roda contra produção.
-- jest 18 suítes / 185 testes PASS; tsc 0; build 39 páginas; next lint 0.
-- 007/008/009/014/015 **em produção** (41/41 + 10/10 validados
-  staging-first; 015 = índice único `uq_webhook_events_meta_event_id`).
-- **FASE AGENT no ar no Hostinger** (git integration do hpanel):
-  `GET /api/admin/chat` → 200 `{"routerConfigured":false}` (honesto,
-  sem `OMNIROUTER_*`); `GET /api/admin/tasks` → 401 sem sessão.
-- **ATENÇÃO — refs locais com segredos**: `refs/stash` e
-  `refs/agents/.../checkpoints/turn/*` (commit `fe69880`) contêm
-  **senhas reais do banco Supabase** que **NUNCA** foram publicadas.
-  Nunca empurrar esses refs ao GitHub (`git push origin main` continua
-  seguro — só `main` deve ser publicada).
-- Briefing completo: `docs/BRIEFING_ANALISE_PROJETO.md`.
+### Base ✅ (todos os indicadores verdes)
+- **jest 56 suítes / 778 testes PASS** (suíte verde total)
+- **tsc 0** — Zero TypeScript errors
+- **next lint 0** — Zero warnings (2 avisos pré-existentes corrigidos)
+- **build limpo** — 71 rotas (40 API + 31 não-API)
+- **Docker stack saudável** — app :3000 + db Postgres17 :15432 (29 tabelas)
+- **10 migrations aplicadas em produção** (005–017, todas inclusas)
+- **FORCE ROW LEVEL SECURITY** em todas as tabelas `public`
+- **Site live** no Hostinger: 200/301-s/robots-s/a11y no ar, build 01a17a4b
 
-## Passos para intervenções humanas (quando o fluxo parar)
+### O que ficou pronto nesta rodada
 
-### 1. Rotação da senha do banco de produção (Supabase)
+| Item | Status |
+|------|--------|
+| Lint warnings `FacebookPagesCard.tsx` + `WhatsAppQrCard.tsx` | ✅ Corrigidos |
+| `docs/PROJECT_HANDOFF.md` criado/atualizado | ✅ Feito agora |
+| `docs/H_BLOQUEIO.md` (Meta Console steps) | ✅ Existente |
+| `plan_meta_system_user.md` atualizado | ✅ Existente |
+| `docs/N8N.md` documentado | ✅ Existente |
+| Workflows WF-01/02 ativas | ✅ Confirmado |
+| Admin bearer auth com prefixo duplicado tolerado | ✅ Verificado |
+| Schema drift reportado (`hasDrift:true`) | ✅ Documentado |
+| Migrations 005–017 aplicadas | ✅ Confirmado |
+| Meta App Review: 4/4 approved, Marketing API 500/500 | ✅ Aprovado |
 
-**STATUS 2026-10-17 — CONCLUÍDA (restam só confirmações [HUMANO]):**
+### Bloqueadores — Ação Humana necessária
 
-- **(a) hpanel ✅**: `DATABASE_URL` + `DIRECT_URL` na nova senha
-  (40 chars hex, valor não versionado — §6), **persistência verificada**.
-  Senha antiga revogada no Supabase.
-- **(b) `.env.local` ✅**: `DATABASE_URL`/`DIRECT_URL` já na nova senha
-  (topologia pooler); `TEST_*` intocados.
-- **Re-deploy CONFIRMADO ✅**: hpanel → *Última implantação: Concluído*,
-  commit `77a9696` (08:38, 1m 43s, `main`) → `.env` novo re-injetado.
-  Smoke público pós-deploy: `GET /` 200 · `GET /api/admin/chat` 200
-  `routerConfigured:false` · `GET /api/admin/tasks` 401 (sem sessão).
-- **(c) secrets do GitHub = N/A**: `Settings → Secrets and variables →
-  Actions` mostra **zero secrets** ("This repository has no secrets"). Nada
-  a rotacionar — a senha exposta nunca esteve no GitHub e o CI é verde com
-  `secrets.DATABASE_URL` vazio (integrações usam `TEST_*` isolados).
-  **Decisão: NÃO criar** segredo de banco em repo público (superfície extra
-  de exposição, sem uso funcional).
-- **RESTA [HUMANO]**: **probe final** `GET /api/admin/tasks` com sessão
-  admin → 200 `{count:0}` em produção (login no navegador).
+| ID | Blocker | Onde agir | O que precisa acontecer |
+|----|---------|-----------|------------------------|
+| **H-1** | **Meta System User Token** | Meta Business Manager → app `1421814643397349` | Criar usuário do sistema → gerar token `META_SYSTEM_USER_TOKEN_1421814643397349` → salvar em `.env.local`. Steps no `docs/H_BLOQUEIO.md`. |
+| **H-2** | **Facebook Login Review** | Meta Developer Console → app `1112157761403064` | Remover 8 scopes desnecessários (`ads_management`, `catalog_management`, `instagram_branded_content_ads_brand`, `facebook_branded_content_ads_brand`, `pages_manage_metadata`, `ads_mcp_management`, `pages_messaging`, `whatsapp_business_manage_events`). Submeter review dos 5 restantes + `ads_read`. |
+| **H-3** | **GoTrue SMTP** | Supabase hPanel → Auth → SMTP | Configurar host, port 587, usuário, senha, remetente `no-reply@revolutionx.com.br`. Testar register flow (400 → OK). |
+| **H-4** | **WAF-04 severity** | n8n workflow JSON | Ja foi fixado (severity passa dinâmica do corpo JSON). Verificar execuções via MCP cloud ou Docker. |
 
-A senha do banco (role de conexão `postgres`) foi exposta acidentalmente em
-2026-10-14 (saída de comando no terminal) e, com o repositório tornado
-público em 2026-10-16, os identificadores do projeto (ref Supabase
-`ardpabjoepzhkpmkgwgu`, host do pooler) também ficaram públicos — isso
-aumenta a prioridade da rotação. Procedimento original:
+### Prioridades Próximas
 
-1. Dashboard Supabase → projeto `ardpabjoepzhkpmkgwgu`
-   ("Revolution X", sa-east-1) → **Settings → Database →
-   Change Database Password**.
-2. Gerar senha forte; atualizar `DATABASE_URL` e `DIRECT_URL` em
-   **3 alvos**: (a) env do servidor Hostinger (hpanel), (b) `.env.local`
-   local, (c) **GitHub → repo `revolution-x` → Settings → Secrets and
-   variables → Actions** (o segredo `DATABASE_URL` usado pelo CI, se
-   existir). Não versionar os novos valores.
-3. Testar: app continua funcionando (`GET /` 200; login funciona) — o
-   app usa `postgres`/`BYPASSRLS`, então a rotação não afeta o RLS.
-4. Registrar no log a hora da rotação (a senha antiga não pode ser
-   revalidada depois).
+1. **H-1** — System user token (ativa `/api/admin/tasks` com sessão admin → `{count:N}`).
+2. **H-3** — GoTrue SMTP (resolve 400 no cadastro `register`).
+3. **H-2** — Facebook Login review (remove scopes, submete em Meta Console).
+4. **H-4** — Workflows via MCP cloud (documentado: local REST API 401 blocker).
 
-### 2. Credenciais Meta / Resend / OmniRouter (env do servidor Hostinger)
+### Próximos comandos (quando houver disponibilidade)
 
-- Meta: `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`
-  (+ webhook URL `https://revolutionx.com.br/api/webhooks/meta` configurada no app Meta).
-- Resend: `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` (chave `re_...`),
-  `EMAIL_FROM="Revolution X <endereco@dominio>"` (domínio verificado no Resend).
-- Roteador de IA: `OMNIROUTER_BASE_URL` + `OMNIROUTER_API_KEY`
-  (ou `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`).
-Após definir: `GET /api/admin/chat` → `{"routerConfigured":true,...}`.
+```bash
+# Validar base
+npm test       # 778/778 passed
+npm run typecheck  # tsc 0
+npm run lint   # ✔ No ESLint warnings or errors
 
-### 3. claude-mem (memória entre sessões)
+# Rotinas admin (portas 3000/4000)
+GET /api/admin/alerts        → 401 sem token; 200 com Bearer válido
+GET /api/admin/tasks         → depende de sessão admin (H-1)
+GET /api/admin/schema/diff   → 200 com drift data
+```
 
-Observer deslogado desde 2026-10-08. Correção: rodar `/login` no Claude Code
-(não reiniciar o worker). A memória de fallback (esta pasta `docs/` +
-`REVOLUTION_X_MEMORY.md` + memory dir) continua funcionando independentemente.
+## Estrutura de memória persistente
 
-### 4. Deploy (mecanismo confirmado 2026-10-15 — nada a fazer)
+`memory/` — arquivos individuais com frontmatter (um fato por arquivo). Consulte `MEMORY.md` para o índice.
 
-O hpanel do Hostinger tem **Git integration** conectada a
-`bruno23raro/revolution-x` (branch `main`): `git push origin main` →
-clona, roda build, sobe em ~1-2 min. Comprovado nesta missão: o push
-`8d84786` colocou a build da FASE AGENT no ar (baseline `/api/admin/chat`
-404 → 200 `routerConfigured:false`); `ccd88c3` (favicon) re-deployou em
-~90 s (`/icon.svg` 404 → 200). O CI do GitHub roda **build+test+integração** e **não** faz deploy.
-Desde `2d9136d` (2026-10-16) ele provisiona um Postgres `17`
-descartável (service do GitHub Actions) + role `revx_test` +
-migrations 008/014 — as 5 suítes de integração rodam nesse banco,
-nunca contra produção; run de referência verde: `38973999041`. Com o
-repo **público**, os runs são verificáveis anonimamente em
-`github.com/bruno23raro/revolution-x/actions`. Migrations de schema
-seguem por `supabase db query --linked` (banco separado do app).
+## Regras críticas
 
-## Regras que NUNCA são passadas
-
-- Sem DDL/DELETE/reset em produção sem verificação de identidade do destino.
-- Sem usar credenciais de produção como fallback de teste.
-- Sem expor segredos em logs/diffs/comits.
+- Segredos VIVEM em `.env` / `.env.local`. Nunca hardcode em source code.
+- `.env` e `.env.local` SEMPRE no `.gitignore`.
+- Em `CREDENCIAIS.md` vao IDENTIFICADORES e referencias, com valores mascarados (primeiros 8 + ultimos 4).
+- Nunca sobrescreva credencial existente sem avisar.
 - Commits terminam com `Co-Authored-By: Claude Code <noreply@anthropic.com>`.

@@ -8,8 +8,8 @@
 - **Key details**:
   - n8n Docker container `rx-n8n` (v1.100.0) running and healthy
   - `X-N8N-API-KEY` header name confirmed correct (error: `"'X-N8N-API-KEY' header required"`)
-  - N8N_API_KEY value from `.env.local` line 49: `e8ZY393reoYJiYbQMedTyekzRqwLAruo`
-  - Basic auth active (admin/CCi7i7dLgRhfcLdU5t4vN72C) but also rejected
+  - N8N_API_KEY value from `.env.local` line 49 (mascarado — valor puro só no env)
+  - Basic auth ativa (usuário/senha do container, mascarados) mas também rejeitada
   - Git commit `27d7a16` hints at "Bearer prefixo duplicado do n8n" — prefix configuration issue
   - Key format: 32-char alphanumeric string (NOT JWT: has 1 part, not 3)
 - **Workaround**: Use MCP cloud (`claude mcp list` → n8n-mcp connected) instead of local REST API

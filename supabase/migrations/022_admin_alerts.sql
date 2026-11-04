@@ -31,7 +31,7 @@ BEGIN;
   CREATE POLICY "AdminAlert_tenant" ON "AdminAlert"
     USING (
       "organizationId" IS NULL
-      OR "organizationId" = current_setting('app.current_org_id', true)::uuid
+      OR "organizationId" = NULLIF(current_setting('app.current_org', TRUE), '')::uuid
     );
 
   COMMENT ON TABLE "AdminAlert" IS 'Alertas de sistema/admin via /api/admin/alerts (n8n WF-02/04/05)';

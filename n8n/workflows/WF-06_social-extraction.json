@@ -1,0 +1,127 @@
+{
+  "id": "rxWf000000000006",
+  "name": "WF-06_social-extraction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-extraction",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_trigger",
+      "name": "Trigger - Social Extraction",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "social-extraction"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse e validar payload do frontend Revolution X\nconst payload = $json.body || $json;\n\nreturn {\n  organizationId: payload.organizationId,\n  targetProfile: payload.targetProfile || null,\n  city: payload.city || null,\n  gender: payload.gender || null,\n  provider: payload.provider || 'instaloader',\n  triggerId: Math.random().toString(36).substr(2, 9),\n  triggeredAt: new Date().toISOString(),\n};\n"
+      },
+      "id": "parse_payload",
+      "name": "Parse & Validate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"growth_extraction\",\n  \"severity\": \"warning\",\n  \"title\": \"Extração de leads iniciada\",\n  \"message\": \"Workflow WF-06 iniciou extração de leads para org {{ $json.organizationId }}\",\n  \"metadata\": {\n    \"triggerId\": \"{{ $json.triggerId }}\",\n    \"provider\": \"{{ $json.provider }}\",\n    \"targetProfile\": \"{{ $json.targetProfile }}\",\n    \"city\": \"{{ $json.city }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log_start",
+      "name": "Log Extraction Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Simulação de extração de leads (instaloader mock)\n// Em produção, conectar com service de scraping real\nconst leads = [];\nconst count = Math.floor(Math.random() * 5) + 3; // 3-7 leads por simulação\n\nfor (let i = 0; i < count; i++) {\n  leads.push({\n    id: Math.random().toString(36).substr(2, 9),\n    organizationId: $json.organizationId,\n    source: 'instagram',\n    contact: `55${Math.floor(Math.random() * 9000000000 + 1000000000)}`,\n    metadata: {\n      name: `Lead ${i + 1}`,\n      targetProfile: $json.targetProfile || 'unknown',\n      city: $json.city || 'unknown',\n      gender: $json.gender || null,\n      provider: $json.provider,\n      extractedAt: $json.triggeredAt\n    },\n    status: 'pending',\n    createdAt: $json.triggeredAt,\n    updatedAt: $json.triggeredAt\n  });\n}\n\nreturn {\n  organizationId: $json.organizationId,\n  triggerId: $json.triggerId,\n  leadsExtracted: leads.length,\n  leads: leads\n};\n"
+      },
+      "id": "simulate_extraction",
+      "name": "Simulate Lead Extraction",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"growth_extraction\",\n  \"severity\": \"warning\",\n  \"title\": \"Extração de leads concluída\",\n  \"message\": \"Workflow WF-06 extraíu {{ $json.leadsExtracted }} leads para org {{ $json.organizationId }}\",\n  \"metadata\": {\n    \"triggerId\": \"{{ $json.triggerId }}\",\n    \"leadsExtracted\": {{ $json.leadsExtracted }},\n    \"completedAt\": \"{{ $now }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log_complete",
+      "name": "Log Extraction Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Trigger - Social Extraction": {
+      "main": [[{"node": "Parse & Validate", "type": "main", "index": 0}]]
+    },
+    "Parse & Validate": {
+      "main": [[{"node": "Simulate Lead Extraction", "type": "main", "index": 0}]]
+    },
+    "Simulate Lead Extraction": {
+      "main": [[{"node": "Log Extraction Complete", "type": "main", "index": 0}]]
+    },
+    "Parse & Validate": {
+      "main": [[{"node": "Log Extraction Start", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Workflow de extração de leads via Instagram/Facebook. Recebe trigger do frontend, simula scraping e retorna leads para o banco."
+  }
+}

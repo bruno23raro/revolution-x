@@ -1,0 +1,174 @@
+{
+  "id": "rxWf000000000007",
+  "name": "WF-07_smart-dispatch",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smart-dispatch",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_dispatch",
+      "name": "Trigger - Smart Dispatch",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "smart-dispatch"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse payload de dispatch em massa\nconst payload = $json.body || $json;\n\nreturn {\n  organizationId: payload.organizationId,\n  selectedLeads: payload.selectedLeads || [],\n  messageText: payload.messageText || '',\n  targetInstance: payload.targetInstance || 'default',\n  dispatchId: Math.random().toString(36).substr(2, 9),\n  triggeredAt: new Date().toISOString(),\n  batchSize: 50,\n  antiBanDelayMs: 1000 + Math.floor(Math.random() * 4000)\n};\n"
+      },
+      "id": "parse_dispatch",
+      "name": "Parse Dispatch Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"growth_dispatch\",\n  \"severity\": \"warning\",\n  \"title\": \"Disparo em massa iniciado\",\n  \"message\": \"Workflow WF-07 iniciou dispatch de {{ $json.selectedLeads.length }} mensagens para org {{ $json.organizationId }}\",\n  \"metadata\": {\n    \"dispatchId\": \"{{ $json.dispatchId }}\",\n    \"batchSize\": {{ $json.batchSize }},\n    \"antiBanDelayMs\": {{ $json.antiBanDelayMs }},\n    \"targetInstance\": \"{{ $json.targetInstance }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log_dispatch_start",
+      "name": "Log Dispatch Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Processa leads em batches com delay anti-ban\nconst leads = $json.selectedLeads || [];\nconst batchSize = $json.batchSize || 50;\nconst delayMs = $json.antiBanDelayMs || 2000;\n\nconst batches = [];\nfor (let i = 0; i < leads.length; i += batchSize) {\n  batches.push(leads.slice(i, i + batchSize));\n}\n\nreturn {\n  dispatchId: $json.dispatchId,\n  organizationId: $json.organizationId,\n  totalLeads: leads.length,\n  batchCount: batches.length,\n  batches: batches,\n  delayMs: delayMs,\n  targetInstance: $json.targetInstance,\n  messageText: $json.messageText\n};\n"
+      },
+      "id": "split_batches",
+      "name": "Split into Batches",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "seconds", "seconds": "={{ $json.delayMs / 1000 }}"}]
+        },
+        "options": {}
+      },
+      "id": "anti_ban_timer",
+      "name": "Anti-Ban Delay Timer",
+      "type": "n8n-nodes-base.timer",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.EVOLUTION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "jsonBody": "{\n  \"instanceName\": \"{{ $json.targetInstance }}\",\n  \"to\": \"{{ $currentNode.parameters.to }}\",\n  \"text\": \"{{ $json.messageText }}\",\n  \"kind\": \"text\"\n}",
+        "options": {}
+      },
+      "id": "send_message",
+      "name": "Send via Evolution API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"growth_dispatch\",\n  \"severity\": \"warning\",\n  \"title\": \"Disparo em massa concluído\",\n  \"message\": \"Workflow WF-07 enviou {{ $json.totalLeads }} mensagens para org {{ $json.organizationId }} em {{ $json.batchCount }} batches\",\n  \"metadata\": {\n    \"dispatchId\": \"{{ $json.dispatchId }}\",\n    \"totalLeads\": {{ $json.totalLeads }},\n    \"batchCount\": {{ $json.batchCount }},\n    \"completedAt\": \"{{ $now }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log_dispatch_complete",
+      "name": "Log Dispatch Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1750, 300]
+    }
+  ],
+  "connections": {
+    "Trigger - Smart Dispatch": {
+      "main": [[{"node": "Parse Dispatch Request", "type": "main", "index": 0}]]
+    },
+    "Parse Dispatch Request": {
+      "main": [
+        [{"node": "Log Dispatch Start", "type": "main", "index": 0}],
+        [{"node": "Split into Batches", "type": "main", "index": 0}]
+      ]
+    },
+    "Split into Batches": {
+      "main": [[{"node": "Anti-Ban Delay Timer", "type": "main", "index": 0}]]
+    },
+    "Anti-Ban Delay Timer": {
+      "main": [[{"node": "Send via Evolution API", "type": "main", "index": 0}]]
+    },
+    "Send via Evolution API": {
+      "main": [[{"node": "Log Dispatch Complete", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "rxWf000000000004"
+  },
+  "meta": {
+    "description": "Workflow de dispatch inteligente em massa com anti-ban delays. Processa leads em batches e envia via Evolution API."
+  }
+}

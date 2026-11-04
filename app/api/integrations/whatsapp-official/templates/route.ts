@@ -66,13 +66,16 @@ export async function POST(req: NextRequest) {
 
   const client = createServiceRoleClient();
   const channel = await getChannelDecrypted(client, user.organizationId);
-  if (!channel || channel.status !== 'CONNECTED' || !channel.wabaId || !channel.accessToken) {
+  // Conexão válida se: status CONNECTED E (tem wabaId+accessToken do Meta OU phoneNumberId do OpenBSP)
+  const isMetaConnected = channel?.status === 'CONNECTED' && channel?.wabaId && channel?.accessToken !== null;
+  const isOpenBSPConnected = channel?.status === 'CONNECTED' && channel?.phoneNumberId;
+  if (!isMetaConnected && !isOpenBSPConnected) {
     return NextResponse.json({ error: 'whatsapp_channel_not_connected' }, { status: 409 });
   }
 
   const spec: OfficialTemplateSpec = { name, category: category as OfficialTemplateSpec['category'], language, body: bodyText };
   const r = await getWhatsAppProvider().createTemplate(
-    { accessToken: channel.accessToken, phoneNumberId: channel.phoneNumberId ?? '', wabaId: channel.wabaId },
+    { accessToken: channel.accessToken ?? '', phoneNumberId: channel.phoneNumberId ?? '', wabaId: channel.wabaId ?? '' },
     spec,
   );
   if (!r.ok) {

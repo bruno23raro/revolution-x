@@ -127,19 +127,32 @@ function MassSendCard() {
         body.text = text.trim();
       }
       if (account) body.account = account; // MULTICONTAS — ancorado número escolhido
-      const r = await fetch('/api/whatsapp/send', {
+      // Verifica se há conexão OpenBSP (phoneNumberId) ou Meta (wabaId/accessToken)
+      const r = await fetch('/api/integrations/whatsapp-official/status', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const status = await r.json().catch(() => ({}));
+      const hasOpenBSPConnection = status?.integrations?.some((ig: any) => ig.channel === 'whatsapp' && ig.mode === 'OFFICIAL' && ig.status === 'CONNECTED');
+      const hasMetaConnection = status?.integrations?.some((ig: any) => ig.channel === 'whatsapp' && ig.mode === 'OFFICIAL' && ig.metaAccountId);
+      const isConnected = hasOpenBSPConnection || hasMetaConnection;
+      if (!isConnected) {
+        setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'WhatsApp não conectado neste tenant. Conecte em /integrations.' });
+        return;
+      }
+      const r2 = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok) {
+      const d = await r2.json().catch(() => ({}));
+      if (r2.ok) {
         setResult({ ok: true, total: d.total ?? 0, sent: d.sent ?? 0, failed: d.failed ?? 0, tracked: Boolean(d.tracked), msg: 'Enviado.' });
-      } else if (r.status === 409) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'WhatsApp não conectado neste tenant. Conecte em /integrations.' });
-      else if (r.status === 503) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'Meta não configurada no servidor (META_* / token ausentes) — item P0 do hpanel.' });
-      else if (r.status === 400) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: d.error ? `Entrada inválida: ${d.error}` : 'Entrada inválida.' });
-      else if (r.status === 401) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'Faça login para disparar.' });
-      else setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: `Falha ao enviar (HTTP ${r.status}).` });
+      } else if (r2.status === 409) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'WhatsApp não conectado neste tenant. Conecte em /integrations.' });
+      else if (r2.status === 503) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'Meta não configurada no servidor (META_* / token ausentes) — item P0 do hpanel.' });
+      else if (r2.status === 400) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: d.error ? `Entrada inválida: ${d.error}` : 'Entrada inválida.' });
+      else if (r2.status === 401) setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'Faça login para disparar.' });
+      else setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: `Falha ao enviar (HTTP ${r2.status}).` });
     } catch {
       setResult({ ok: false, total: 0, sent: 0, failed: 0, tracked: false, msg: 'Falha de rede ao enviar.' });
     } finally {
@@ -245,15 +258,20 @@ function TemplatesCard() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = () => {
-    fetch('/api/whatsapp/templates')
+    fetch('/api/integrations/whatsapp-official/status')
       .then(async (r) => {
         const d = await r.json().catch(() => ({}));
         if (r.ok) {
-          setTemplates(Array.isArray(d.templates) ? d.templates : []);
-          setLoadMsg(null);
-        } else if (r.status === 409) setLoadMsg('WhatsApp não conectado neste tenant.');
-        else if (r.status === 503) setLoadMsg('Meta não configurada no servidor (item P0).');
-        else if (r.status === 401) setLoadMsg('Faça login para listar templates.');
+          const hasOpenBSP = d.integrations?.some((ig: any) => ig.channel === 'whatsapp' && ig.mode === 'OFFICIAL' && ig.status === 'CONNECTED');
+          const hasMeta = d.integrations?.some((ig: any) => ig.channel === 'whatsapp' && ig.mode === 'OFFICIAL' && ig.metaAccountId);
+          const isConnected = hasOpenBSP || hasMeta;
+          if (isConnected) {
+            setTemplates(Array.isArray(d.templates) ? d.templates : []);
+            setLoadMsg(null);
+          } else {
+            setLoadMsg('WhatsApp não conectado neste tenant.');
+          }
+        } else if (r.status === 401) setLoadMsg('Faça login para listar templates.');
         else setLoadMsg(`Não foi possível listar (HTTP ${r.status}).`);
       })
       .catch(() => setLoadMsg('Falha de rede ao listar templates.'));

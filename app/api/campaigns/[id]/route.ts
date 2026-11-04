@@ -342,7 +342,10 @@ async function doStartOfficial(
 ) {
   const client = createServiceRoleClient();
   const channel = await getChannelDecrypted(client, org);
-  if (!channel || channel.status !== 'CONNECTED' || !channel.phoneNumberId) {
+  // Conexão válida se: status CONNECTED E (tem wabaId+accessToken do Meta OU phoneNumberId do OpenBSP)
+  const isMetaConnected = channel?.status === 'CONNECTED' && channel?.wabaId && channel?.accessToken;
+  const isOpenBSPConnected = channel?.status === 'CONNECTED' && channel?.phoneNumberId;
+  if (!isMetaConnected && !isOpenBSPConnected) {
     return NextResponse.json(
       { error: 'whatsapp_channel_not_connected', hint: 'Conecte o WhatsApp oficial em /integracoes.' },
       { status: 409 },

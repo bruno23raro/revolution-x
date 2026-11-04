@@ -29,39 +29,43 @@ async function send(access: ChannelAccess, to: string, payload: DispatchPayload,
   const dest = e164(to);
   if (!dest) return { ok: false, error: 'invalid_message' };
 
-  // 1) Caminho preferido: Cloud API direta com o token do número.
-  if (access.accessToken && access.phoneNumberId) {
+  // 1) Fallback: proxy OpenBSP — prioritizado para uso exclusivo OpenBSP.
+  //    Quando o canal tem phoneNumberId, tentamos o proxy OpenBSP primeiro.
+  const content = payload.kind === 'text' ? textContent(payload.text) : templateContent(payload.name, payload.language, payload.variables);
+  const r = await sendViaOpenbsp(access, dest, content, opts);
+  if (r.ok) {
+    return { ok: true, messageId: r.data?.id, via: 'openbsp' };
+  }
+  // Se OpenBSP falhar por erro de negócio (não network), NÃO caímos de volta para Meta.
+  // Só caímos de volta para Meta se for erro de network/infra structure.
+  if (r.error === 'network_error' || r.error === 'fetch_unavailable') {
+    // 2) Fallback: Cloud API direta com Meta — somente erros de network/infra.
+    if (!access.accessToken || !access.phoneNumberId) {
+      return { ok: false, via: 'openbsp', error: r.error ?? 'network_error', errorDetail: r.errorDetail };
+    }
     const accessMeta = {
       accessToken: access.accessToken,
       phoneNumberId: access.phoneNumberId,
       version: GRAPH_VERSION(),
     };
-    const r =
+    const mr =
       payload.kind === 'text'
         ? await sendWhatsAppText(accessMeta, dest, payload.text, opts)
         : await sendWhatsAppTemplate(accessMeta, dest, payload.name, payload.variables, {
             ...opts,
             language: payload.language,
           });
-    if (r.ok) return { ok: true, messageId: r.messageId, via: 'meta_direct' };
-    // Configuração ausente na trilha direta NUNCA deve cair em fallback
-    // silencioso com outro provedor sem registro; erros de negócio Meta
-    // (131047 etc.) também não — a fila decide retry. Só network/infra cai.
-    if (r.error !== 'network_error' && r.error !== 'fetch_unavailable') {
-      return { ok: false, via: 'meta_direct', error: 'provider_error', errorCode: (r as { errorCode?: string | number }).errorCode, errorDetail: r.errorDetail ?? r.error };
+    if (mr.ok) return { ok: true, messageId: mr.messageId, via: 'meta_direct' };
+    // Erros de negócio Meta (131047 etc.) NÃO caem de volta — só network/infra.
+    if (mr.error !== 'network_error' && mr.error !== 'fetch_unavailable') {
+      return { ok: false, via: 'meta_direct', error: 'provider_error', errorCode: (mr as { errorCode?: string | number }).errorCode, errorDetail: mr.errorDetail ?? mr.error };
     }
-    if (!openbspConfig()) {
-      return { ok: false, via: 'meta_direct', error: r.error ?? 'network_error', errorDetail: r.errorDetail };
-    }
+    // Ainda é network/infra → retorna o erro OpenBSP original
+    return { ok: false, via: 'openbsp', error: r.error ?? 'network_error', errorDetail: r.errorDetail };
   }
 
-  // 2) Fallback: proxy OpenBSP.
-  const content = payload.kind === 'text' ? textContent(payload.text) : templateContent(payload.name, payload.language, payload.variables);
-  const r = await sendViaOpenbsp(access, dest, content, opts);
-  if (!r.ok) {
-    return { ok: false, via: 'openbsp', error: (r.error ?? 'network_error') as OfficialSendResult['error'], errorDetail: r.errorDetail };
-  }
-  return { ok: true, messageId: r.data?.id, via: 'openbsp' };
+  // OpenBSP business error — não caímos de volta para Meta.
+  return { ok: false, via: 'openbsp', error: r.error ?? 'provider_error', errorDetail: r.errorDetail };
 }
 
 async function createTemplate(access: ChannelAccess, spec: OfficialTemplateSpec, opts: ProviderCallOpts = {}): Promise<TemplateOpResult> {

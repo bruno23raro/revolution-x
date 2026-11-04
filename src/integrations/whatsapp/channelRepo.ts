@@ -38,6 +38,7 @@ type Query = {
 
 export interface ChannelDecrypted extends WhatsappChannelRow {
   accessToken: string | null;
+  isOpenBSPConnected: boolean;
 }
 
 async function findOrg(client: Query, organizationId: string): Promise<WhatsappChannelRow | null> {
@@ -54,15 +55,22 @@ async function findOrg(client: Query, organizationId: string): Promise<WhatsappC
 export async function getChannelDecrypted(client: Query, organizationId: string): Promise<ChannelDecrypted | null> {
   const row = await findOrg(client, organizationId);
   if (!row) return null;
+
+  // Verifica se há conexão Meta (wabaId + accessToken) OU OpenBSP (phoneNumberId presente)
+  const isMetaConnected = !!row.wabaId && row.accessTokenEnc ? true : false;
+  const isOpenBSPConnected = row.phoneNumberId;
+
   let accessToken: string | null = null;
-  if (row.accessTokenEnc) {
+  if (isMetaConnected) {
     try {
-      accessToken = decryptToken(row.accessTokenEnc);
+      const decrypted = row.accessTokenEnc ? decryptToken(row.accessTokenEnc) : null;
+      accessToken = decrypted ?? null;
     } catch {
       accessToken = null;
     }
   }
-  return { ...row, accessToken };
+
+  return { ...row, accessToken: accessToken ?? null, isOpenBSPConnected: !!isOpenBSPConnected };
 }
 
 /** Canal pelo phone_number_id (roteamento do webhook Meta → tenant). */

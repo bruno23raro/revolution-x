@@ -1,0 +1,199 @@
+{
+  "id": "rxWf000000000008",
+  "name": "WF-08_lead_status_update",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-status-update",
+        "responseMode": "onReceived",
+        "responseData": {
+          "propertyName": "response",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "webhook_trigger",
+      "name": "Trigger - Lead Status Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "lead-status-update"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse webhook payload from WhatsApp inbound\nconst payload = $json.body || $json;\n\nreturn {\n  organizationId: payload.organizationId || payload.org_id,\n  contact: payload.contact || payload.phone || payload.from,\n  message: payload.message || payload.text || '',\n  messageId: payload.messageId || payload.id,\n  timestamp: payload.timestamp || new Date().toISOString(),\n  eventType: payload.type || 'message',\n  isNewConversation: payload.isNewConversation || false,\n  triggerId: Math.random().toString(36).substr(2, 9),\n  receivedAt: new Date().toISOString(),\n};\n"
+      },
+      "id": "parse_payload",
+      "name": "Parse Webhook Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"lead_response\",\n  \"severity\": \"info\",\n  \"title\": \"Lead respondeu mensagem\",\n  \"message\": \"Lead {{ $json.contact }} respondeu para org {{ $json.organizationId }}\",\n  \"metadata\": {\n    \"triggerId\": \"{{ $json.triggerId }}\",\n    \"contact\": \"{{ $json.contact }}\",\n    \"messagePreview\": \"{{ $json.message.substring(0, 100) }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log_response",
+      "name": "Log Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, funnel_status, response_count, last_contact_at FROM growth_leads WHERE organization_id = $1 AND contact = $2 ORDER BY created_at DESC LIMIT 1",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "org_id",
+              "value": "={{ $json.organizationId }}"
+            },
+            {
+              "name": "contact",
+              "value": "={{ $json.contact }}"
+            }
+          ]
+        }
+      },
+      "id": "find_lead",
+      "name": "Find Lead in DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "credentials": {
+        "postgres": {
+          "id": "your-postgres-credential-id",
+          "name": "PostgreSQL Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Determine new funnel status based on response\nconst lead = $json.items?.[0] || null;\nconst isNew = $json.isNewConversation;\n\nlet newStatus = lead?.funnel_status || 'pending';\nlet newResponseCount = (lead?.response_count || 0) + 1;\nlet isNewLead = false;\n\n// If first response, move to first_contact or interested\nif (isNew || newResponseCount === 1) {\n  newStatus = 'first_contact';\n  isNewLead = true;\n} else if (newResponseCount >= 2) {\n  // After multiple responses, could move to interested\n  if (newStatus === 'first_contact') {\n    newStatus = 'interested';\n  }\n}\n\nreturn {\n  leadId: lead?.id,\n  organizationId: $json.organizationId,\n  contact: $json.contact,\n  newStatus,\n  newResponseCount,\n  lastContactAt: $json.receivedAt,\n  isNewLead,\n  triggerId: $json.triggerId,\n  shouldUpdate: !!lead?.id,\n};\n"
+      },
+      "id": "determine_status",
+      "name": "Determine New Status",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE growth_leads SET funnel_status = $1, response_count = $2, last_contact_at = $3, updated_at = now() WHERE id = $4 RETURNING *",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "funnel_status",
+              "value": "={{ $json.newStatus }}"
+            },
+            {
+              "name": "response_count",
+              "value": "={{ $json.newResponseCount }}"
+            },
+            {
+              "name": "last_contact_at",
+              "value": "={{ $json.lastContactAt }}"
+            },
+            {
+              "name": "lead_id",
+              "value": "={{ $json.leadId }}"
+            }
+          ]
+        }
+      },
+      "id": "update_lead",
+      "name": "Update Lead Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1500, 300],
+      "credentials": {
+        "postgres": {
+          "id": "your-postgres-credential-id",
+          "name": "PostgreSQL Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NEXT_PUBLIC_SITE_URL }}/api/admin/alerts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env.ADMIN_ALERT_TOKEN }}"
+            },
+            {
+              "name": "x-org-id",
+              "value": "={{ $json.organizationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\n  \"type\": \"lead_status_change\",\n  \"severity\": \"info\",\n  \"title\": \"Status do lead atualizado\",\n  \"message\": \"Lead {{ $json.contact }} mudou para {{ $json.newStatus }} (org: {{ $json.organizationId }})\",\n  \"metadata\": {\n    \"triggerId\": \"{{ $json.triggerId }}\",\n    \"contact\": \"{{ $json.contact }}\",\n    \"oldStatus\": \"pending\",\n    \"newStatus\": \"{{ $json.newStatus }}\",\n    \"isNewLead\": {{ $json.isNewLead }}\n  }\n}",
+        "options": {}
+      },
+      "id": "log_status_change",
+      "name": "Log Status Change",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1750, 300]
+    }
+  ],
+  "connections": {
+    "Trigger - Lead Status Update": {
+      "main": [[{"node": "Parse Webhook Payload", "type": "main", "index": 0}]]
+    },
+    "Parse Webhook Payload": {
+      "main": [
+        [{"node": "Find Lead in DB", "type": "main", "index": 0}],
+        [{"node": "Log Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Find Lead in DB": {
+      "main": [[{"node": "Determine New Status", "type": "main", "index": 0}]]
+    },
+    "Determine New Status": {
+      "main": [[{"node": "Update Lead Status", "type": "main", "index": 0}]]
+    },
+    "Update Lead Status": {
+      "main": [[{"node": "Log Status Change", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Workflow que atualiza automaticamente o status do funil quando um lead responde mensagem via WhatsApp. Detecta primeira resposta, conta respostas, e move o lead através do funil."
+  }
+}

@@ -53,6 +53,11 @@ export async function openbspPost<T = unknown>(
   const url = `${cfg.base}/${table}${opts.select ? `?select=${encodeURIComponent(opts.select)}` : ''}`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+  // signal externo (timeout global da conexao) aborta junto com o timer interno
+  if (opts.signal) {
+    if (opts.signal.aborted) ctrl.abort();
+    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
   try {
     const res = await fetchImpl(url, {
       method: 'POST',
@@ -151,6 +156,10 @@ export async function fetchConnectedAddress(
     `&select=address,extra&order=created_at.desc&limit=50`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+  if (opts.signal) {
+    if (opts.signal.aborted) ctrl.abort();
+    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
   try {
     const res = await fetchImpl(url, {
       signal: ctrl.signal,

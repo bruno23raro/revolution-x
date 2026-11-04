@@ -67,6 +67,8 @@ export interface OfficialTemplateInfo {
 export interface ProviderCallOpts {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** AbortController externo — aborta o fetch em voo (timeout global da conexão). */
+  signal?: AbortSignal;
 }
 
 export interface TemplateOpResult {

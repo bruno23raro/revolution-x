@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,11 +27,7 @@ export default function GrowthLeadsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ funnelStatus: '', notes: '' });
 
-  useEffect(() => {
-    loadLeads();
-  }, [filter]);
-
-  const loadLeads = async () => {
+  const loadLeads = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -63,7 +59,11 @@ export default function GrowthLeadsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    loadLeads();
+  }, [loadLeads]);
 
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     try {

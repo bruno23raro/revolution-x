@@ -100,8 +100,14 @@ export interface IntegrationAdapter {
     data?: Record<string, unknown>;
   }>;
 
-  /** Desconecta a integração. */
-  disconnect(): Promise<{
+  /**
+   * Desconecta a integração.
+   * `integrationId` é opcional e uniforme em todos os adaptadores: quem tem o id do
+   * registro passa; quem não tem (chamada vinda da UI, por canal) não passa e o
+   * adaptador resolve o registro sozinho. Nenhum adaptador pode exigir argumento
+   * obrigatório aqui — ver docs/decisions.md §7.
+   */
+  disconnect(integrationId?: string): Promise<{
     success: boolean;
     status: 'DISCONNECTED';
     reason?: string;

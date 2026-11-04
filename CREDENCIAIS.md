@@ -9,7 +9,9 @@ Regra: aqui vao APENAS identificadores e referencias. Valores puros vivem em
 | META_APP_SECRET | .env.local | App Meta | — | OK |
 | META_WEBHOOK_VERIFY_TOKEN | .env.local | Webhook | — | OK |
 | META_TOKEN_ENCRYPTION_KEY | .env.local | Criptografia token-a-token | — | OK |
-| SUPABASE_SERVICE_ROLE_KEY | .env.local | Admin Supabase | — | OK |
+| SUPABASE_SERVICE_ROLE_KEY | .env.local | Admin Supabase | 0qn1a..._Bk | OK (prod ardpabjoepzhkpmkgwgu, validado 2026-11-04) |
+| SUPABASE_DB_PASSWORD (prod) | .env.local.prisma? | Senha Postgres PRODUCAO (valida) | MWf4HWz...EMMw | OK (auth validada; `B23b23v1814*` REVOGADA, nao conecta) |
+| ADMIN_USER_ID | — | auth.users admin recriado (2026-11-04) | e1b2592b...a26266 | OK |
 | GEMINI_API_KEY | .mcp.json | MCP de imagem | AQ.Ab8RN6...M3_g-- | OK |
 | ACCESS_TOKEN | .env | System user (Ads CLI) | 11121577...dvpONKF8s | OK |
 | AD_ACCOUNT_ID | .env | Ads CLI | 984184351272559 (Bla, ACTIVE) | OK |

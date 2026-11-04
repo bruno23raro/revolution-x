@@ -1,0 +1,32 @@
+{
+  "fase": 2,
+  "status": "iniciada",
+  "branch": "refactor/integrations-f2",
+  "concluidas": [
+    "Branch refactor/integrations-f2 criado a partir de main",
+    "ENABLE_META_OAUTH permanece OFF ✅",
+    "Índice uq_integrations_workspace_channel_mode herdado da migration 024",
+    "Trigger sync_mode_connection_mode() ativo"
+  ],
+  "pendentes": [
+    "Criar rota única /integrations (unificada para todos os canais/modos)",
+    "Adicionar rota /hub-integracoes com 301 preservando querystring",
+    "Remover card e serviço WhatsApp Oficial Meta direto",
+    "Manter dados antigos leitura somente com aviso reconexão OpenBSP",
+    "Remover botão 'Conta sem api do WhatsApp'",
+    "Um card por par canal-modo sem repetição",
+    "Seletor modo no topo persistido por usuário em ?mode=official|non_official",
+    "Corrigir todos links internos",
+    "Timeout 90s ao estado 'conectando' com cancel e retry",
+    "Badge bloqueio por modo via supports() com botão que troca de modo no canal",
+    "Adicionar novos testes UI",
+    "Teste 301: rota /hub-integracoes retornando zero",
+    "Busca por /hub-integracoes retornando zero resultados",
+    "Evidence em docs/evidence/f2-gate-1.md"
+  ],
+  "credenciais": {
+    "ENABLE_META_OAUTH": "OFF",
+    "META_APP_ID": "1112157761403064",
+    "SUPABASE_SERVICE_ROLE_KEY": "0qn1a..._Bk"
+  }
+}

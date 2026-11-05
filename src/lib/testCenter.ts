@@ -71,7 +71,7 @@ export const PARTS: PartDef[] = [
   { id: 'account', label: 'Meu perfil', group: 'plataforma', kind: 'page', href: '/account', protected: true },
 
   // ===== Integrações & canais (admin/owner) =====
-  { id: 'integrations', label: 'Hub de integrações', group: 'integracoes', kind: 'page', href: '/integrations', adminOnly: true },
+  { id: 'integrations', label: 'Hub de integrações', group: 'integracoes', kind: 'page', href: '/integracoes', adminOnly: true },
   { id: 'whatsapp', label: 'WhatsApp Business', group: 'integracoes', kind: 'page', href: '/whatsapp', adminOnly: true },
   { id: 'instagram', label: 'Instagram', group: 'integracoes', kind: 'page', href: '/instagram', adminOnly: true },
   { id: 'facebook', label: 'Facebook', group: 'integracoes', kind: 'page', href: '/facebook', adminOnly: true },

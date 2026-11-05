@@ -94,7 +94,7 @@ function ConnectionStatusCard() {
           Nenhuma Página do Facebook conectada ainda.
           <div className="mt-2">
             <a
-              href="/integrations"
+              href="/integracoes"
               className="inline-block px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
             >
               Conectar via OAuth →

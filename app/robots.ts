@@ -19,6 +19,8 @@ export default function robots(): MetadataRoute.Robots {
           '/video',
           '/account',
           '/integrations',
+          '/integracoes',
+          '/hub-integracoes',
           '/facebook',
           '/instagram',
           '/whatsapp',

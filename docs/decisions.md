@@ -44,3 +44,7 @@ O suíte de 833 testes passou de 11→16 verdes ao substituir a estrutura de moc
 - Implementado em `src/integrations/repository.test.ts` via `makeChain(queue)` + `mockClient(results)`.
 - `src/test/supabase-stub.ts` foi deletado (código morto + 5 erros de tsc que quebravam `tsc --noEmit`).
 - 3 casts `as any` adicionados em `capabilities.test.ts` para probes de feature/canal inválido (a union fechada `Feature` rejeitava strings em tempo de compilação).
+## 4. Rota canonica de integracoes (T52 - Fase A)
+- Decisao: /integracoes e a rota canonica. /integrations e /hub-integracoes respondem 308 (permanentRedirect do Next 14) preservando querystring (?mode=).
+- Evidencia (passo 1.1): app/integracoes/page.tsx importa IntegrationCard (AccountRow/IntegrationStatus), tem seletor de modo OFFICIAL|MANUAL e multi-conta com Remover Conta; app/integrations/page.tsx (antiga) nao importa IntegrationCard nem tem seletor de modo - e a versao legada com ApiBadge/RiskBanner.
+- Links internos atualizados para /integracoes: AppShell, AppNav, tiktok, instagram, facebook, testCenter. grep final sem referencia orfa de navegacao.

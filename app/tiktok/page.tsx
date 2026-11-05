@@ -124,11 +124,11 @@ function ConnectionStatusCard() {
         </div>
       ) : (
         <div className="text-xs text-gray-400">
-          Provedor TikTok ainda não conectado. Conecte via OAuth (botão “Conectar via OAuth” em /integrations) ou
+          Provedor TikTok ainda não conectado. Conecte via OAuth (botão “Conectar via OAuth” em /integracoes) ou
           preencha client key/secret + access token manualmente.
           <div className="mt-2">
             <a
-              href="/integrations"
+              href="/integracoes"
               className="inline-block px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700"
             >
               Conectar →

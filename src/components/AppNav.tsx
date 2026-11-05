@@ -58,7 +58,6 @@ const EXTRACTION_TOOLS: NavItem[] = [
 // Integrações adicionais no grupo admin
 const ADMIN_INTEGRATIONS: NavItem[] = [
   { label: 'Integrações', href: '/integracoes' },
-  { label: 'Hub', href: '/integrations' },
 ];
 
 const ADMIN: NavItem[] = [

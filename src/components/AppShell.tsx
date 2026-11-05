@@ -71,7 +71,6 @@ const GROUPS: NavGroup[] = [
       { label: 'Facebook', href: '/facebook' },
       { label: 'TikTok', href: '/tiktok' },
       { label: 'Integrações', href: '/integracoes' },
-      { label: 'Hub de integrações', href: '/integrations' },
     ],
   },
   {

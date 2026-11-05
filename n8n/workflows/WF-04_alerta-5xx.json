@@ -36,7 +36,7 @@
     },
     {
       "parameters": {
-        "functionCode": "/* Parse and enrich alert payload */\nconst alert = $json;\nconst now = new Date().toISOString();\n\nconst enriched = {\n  ...alert,\n  receivedAt: now,\n  severity: alert.severity || (alert.statusCode >= 500 ? 'critical' : 'warning'),\n  source: alert.source || (alert.trigger?.error ? 'errorWorkflow' : 'app'),\n  environment: 'production',\n  message: alert.message || alert.trigger?.error?.message || null,\n  // Generate a unique alert ID for deduplication\n  alertId: alert.alertId || require('crypto').randomUUID()\n};\n\nreturn enriched;"
+        "functionCode": "/* Parse and enrich alert payload */\n/* webhook v2 entrega o corpo em $json.body; error trigger entrega direto em $json */\nconst alert = $json.body || $json;\nconst now = new Date().toISOString();\n\nconst enriched = {\n  ...alert,\n  receivedAt: now,\n  severity: alert.severity || (alert.statusCode >= 500 ? 'critical' : 'warning'),\n  source: alert.source || (alert.trigger?.error ? 'errorWorkflow' : 'app'),\n  environment: 'production',\n  message: alert.message || alert.trigger?.error?.message || null,\n  // Generate a unique alert ID for deduplication\n  alertId: alert.alertId || require('crypto').randomUUID()\n};\n\nreturn enriched;"
       },
       "id": "enrich_alert",
       "name": "Enrich Alert",
@@ -90,7 +90,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"to\": \"{{ $env.ALERT_WHATSAPP_NUMBER }}\",\n  \"severity\": \"={{ $json.severity }}\",\n  \"message\": \"🚨 *{{ $json.severity | uppercase }} ALERT*\\n\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
+        "jsonBody": "={\n  \"to\": \"{{ $env.ALERT_WHATSAPP_NUMBER }}\",\n  \"severity\": \"{{ $json.severity || 'warning' }}\",\n  \"message\": \"🚨 *{{ ($json.severity || 'warning').toUpperCase() }} ALERT*\\n\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
       },
       "id": "send_whatsapp_critical",
       "name": "Send WhatsApp Critical",
@@ -126,7 +126,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"channel\": \"{{ $env.SLACK_ALERT_CHANNEL }}\",\n  \"text\": \"*{{ $json.severity | uppercase }} ALERT*\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
+        "jsonBody": "={\n  \"channel\": \"{{ $env.SLACK_ALERT_CHANNEL }}\",\n  \"severity\": \"{{ $json.severity || 'warning' }}\",\n  \"text\": \"*{{ ($json.severity || 'warning').toUpperCase() }} ALERT*\\n*Type:* {{ $json.type || '5xx_error' }}\\n*Message:* {{ $json.message || $json.error || 'Unknown error' }}\\n*Route:* {{ $json.route || 'unknown' }}\\n*Time:* {{ $json.receivedAt }}\\n*Alert ID:* {{ $json.alertId }}\"\n}"
       },
       "id": "send_slack",
       "name": "Send Slack Alert",

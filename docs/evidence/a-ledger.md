@@ -26,6 +26,19 @@ Data: 2026-11-05. Branch: `fix/fase-a-saneamento`.
 - `integrations.external_account_id uuid → text` (produção tinha uuid; local/código `repository.ts` usam text — ids Meta não são UUID). Tabela vazia (count=0) → conversão sem perda.
 - Aplicada à produção; registrada no ledger (`schema_migrations` version 026).
 
+## 027_integration_events_cols (T58)
+- `integration_events` em produção não tinha `user_id`, `workspace_id`, `payload`, `created_at` — colunas que `src/integrations/repository.ts::logEvent` insere. Migration adiciona as 4 colunas (`ADD COLUMN IF NOT EXISTS` condicional, sem remover as existentes: `event_id`, `meta_event_id`, `integration_id`, `event_type`, `payload_hash`, `processed_at`).
+- Aplicada à produção via MCP; ledger: versões `027` e `20261105092709` registradas.
+- Método T58: comparação `pg_dump --schema-only --no-owner --no-privileges` produção vs local com o MESMO binário pg_dump 17.6 (containers docker), pois `supabase db diff` segue bloqueado pela porta 54320. Diferenças restantes em `whatsapp_channels`/`whatsapp_templates`: `text` vs `varchar(255)` + check constraints — compatíveis com o código (sem impacto em insert/select).
+
+## Ledger em produção (pós-027)
+```
+select version, name from supabase_migrations.schema_migrations
+ where version in ('025','026','027');
+→ 025 schema_parity, 026 external_account_id_text, 027 integration_events_cols
+```
+(025 registrada também como `20261105032345` pelo apply via MCP; 026 como `20261105040310`; 027 como `20261105092709`.)
+
 ## 024a_fix_backfill (repo, preexistente nesta branch)
 - Ajuste de `MIN(id)` em uuid + colunas `connected_at`/`disconnected_at`. Não re-executado aqui (já estava no repo).
 
@@ -46,6 +59,7 @@ supabase start
 ```
 (mas a introspeção acima já comprova a paridade).
 
-## Pendências
-- curl -sI dos 3 caminhos (`/integracoes`, `/integrations`, `/hub-integracoes`) em produção.
-- Commit/squash na main; `execution-state.json` fase A done.
+## Pendências — TODAS FECHADAS (2026-11-05)
+- ✅ curl dos 3 caminhos em produção: 308/308+querystring/200 (docs/evidence/a-redirects-prod.md).
+- ✅ Merge fast-forward na main (`967e36a`), push, build Hostinger `01a1ab0d` verde (2m15s).
+- ✅ `execution-state.json` fase A `concluida`.

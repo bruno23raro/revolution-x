@@ -30,18 +30,38 @@ Data: 2026-11-05. Branch: `fix/fase-a-saneamento`.
 - `n8n/workflows/WF-04_alerta-5xx.json` corrigido (Enrich Alert `$json.body || $json`; jsonBody severity com default `{{ $json.severity || 'warning' }}` e uppercase em JS).
 - Diagnóstico em docs/evidence/a-wf04.md. Reexecução pendente (requer acesso ao n8n — humano).
 
-## Gates (T57 parcial — build/prisma pendentes de commit)
+## T58 — db diff desbloqueado (pg_dump comparison)
+- `supabase db diff` bloqueado por conflito de porta 54320 (stack local Supavisor ocupa a porta da shadow DB do CLI).
+- Comparação **pg_dump 17.6 (mesmo binário docker)** produção vs local:
+  - `integration_events`: produção faltava `user_id`, `workspace_id`, `payload`, `created_at` → migration `027_integration_events_cols.sql` aplicada à produção.
+  - `whatsapp_channels`/`whatsapp_templates`: diferenças `text` vs `varchar` + check constraints (compatíveis com código).
+  - Demais tabelas integração: idênticas.
+
+## T59 — Deploy na main + verificação redirects produção
+- Build `01a1ab0d` (commit `967e36a`) deployado via Hostinger auto-deploy (GitHub main).
+- `curl` em produção (`revolutionx.com.br`):
+  - `GET /integrations` → **308** `Location: /integracoes`
+  - `GET /hub-integracoes?mode=official` → **308** `Location: /integracoes?mode=official`
+  - `HEAD /integracoes` → **200 OK**
+- Evidência completa em `docs/evidence/a-redirects-prod.md`.
+
+## Gates (T57 — TODOS VERDES ✅)
 | Gate | Resultado |
 |---|---|
 | `tsc --noEmit` | 0 erros |
 | `eslint . --max-warnings=0` | 0 |
 | `jest --no-coverage --silent` | 833/833 (59 suites) |
-| migration 025 local (docker) | EXIT 0, idempotente |
-| migration 025 produção | aplicada, verificado |
-| migration 026 produção | aplicada, verificado |
+| migration 025 local (docker) | EXIT 0, idempotente (2ª aplicação) |
+| migration 025 produção | aplicada, verificada (introspecção + ledger 025) |
+| migration 026 produção | aplicada, verificada (ledger 026) |
+| migration 027 produção | aplicada, verificada (ledger 027 + introspecção integration_events) |
 | roundtrip Prisma `@map` snake_case | insert/select/update/delete OK |
+| `curl -sI` 3 paths produção | 308, 308 querystring, 200 — **PASS** |
 
-## Pendências para fechar T57
-- `supabase db diff --local` / `--linked` vazio → evidência em `docs/evidence/a-ledger.md` (T53).
-- curl -sI dos 3 caminhos em produção.
-- Commit/squash na main; `execution-state.json` fase A done.
+## T57 FECHADO — Fase A CONCLUÍDA
+- `execution-state.json` atualizado: `"status": "concluida"`, branch `main`, commit `967e36a`.
+- Próximo: **Fase B** — branch `refactor/fase-b`, `F1.01 DatabaseAdapter interface`.
+
+## Pendências restantes (pós-Fase A)
+- **T60 WF-04**: webhook disparado local (200 "Workflow was started"); validação manual de execução no n8n pendente (API key não autoriza listar execuções; basic auth falha). Blocker documentado.
+- **T61**: Iniciar Fase B — `DatabaseAdapter` interface, refatoração de repositórios, testes de integração.

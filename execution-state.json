@@ -1,0 +1,20 @@
+{
+  "fase": "A",
+  "status": "parcial",
+  "timestamp": "2026-11-05T00:00:00.000Z",
+  "commit": "c41dc60",
+  "branch": "fix/fase-a-saneamento",
+  "evidence": "docs/evidence/a-gate.md",
+  "done": {
+    "T52": "redirects 308 prontos (commit 6757743 na branch), pendente deploy/main",
+    "T54": "schema parity 025 + external_account_id 026 aplicados a producao, Prisma @map snake_case, roundtrip OK",
+    "T55": "external_account_id text (026), callbacks OK, backfill vazio",
+    "T56": "WF-04 corrigido, reexecucao pendente humano (n8n)"
+  },
+  "pendente": {
+    "T53": "supabase db diff bloqueado por porta 54320 (shadow db); paridade provada por introspecao",
+    "T57": "deploy na main + curl -sI em producao + squash",
+    "Fase B+": "DatabaseAdapter, F4/F5/F6, deploy D, comercializacao"
+  }
+}
+

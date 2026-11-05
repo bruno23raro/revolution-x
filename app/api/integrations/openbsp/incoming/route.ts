@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
   }
   try {
     const dup = await prisma.webhookEvent.findFirst({
-      where: { organizationId: org, payloadHash },
-      select: { id: true },
+      where: { openbspEventId: wamid || null },
+      select: { eventId: true },
     });
     if (dup) return NextResponse.json({ ok: true, duplicated: true });
   } catch {
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await prisma.webhookEvent.create({
-      data: { organizationId: org, metaEventId: wamid || null, eventType: 'whatsapp_api_inbound', payloadHash, processedAt: new Date() },
+      data: { metaEventId: wamid || payloadHash, openbspEventId: wamid || null, eventType: 'whatsapp_api_inbound', payloadHash, processedAt: new Date() },
     });
   } catch {
     /* ack mesmo se o log de idempotÃªncia nÃ£o gravar */

@@ -547,14 +547,14 @@ describe('POST /api/webhooks/inbound', () => {
 
   it('200 secret confere → grava evento (recorded=true)', async () => {
     prisma.agentMemory.findFirst.mockResolvedValue({ valueJson: { secret: 'acertado' } });
-    prisma.webhookEvent.create.mockResolvedValue({ id: 'ev-9' });
+    prisma.webhookEvent.create.mockResolvedValue({ eventId: 'ev-9' });
     const res = await inbound({ event: 'lead', name: 'x' }, { 'x-organization-id': ORG, 'x-webhook-secret': 'acertado' });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.recorded).toBe(true);
     expect(json.eventType).toBe('lead');
     expect(prisma.webhookEvent.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ organizationId: ORG, eventType: 'lead' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ eventType: 'lead' }) }),
     );
   });
 

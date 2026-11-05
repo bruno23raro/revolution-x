@@ -76,10 +76,11 @@ export async function POST(req: NextRequest) {
   let recorded = false;
   let eventId: string | undefined;
   try {
+    // webhook_events NÃO tem organization_id (schema de produção, migration 025).
     const ev = await prisma.webhookEvent.create({
-      data: { organizationId: orgId, eventType, payloadHash, processedAt: new Date() },
+      data: { metaEventId: String(body.event ?? body.id ?? 'generic').slice(0, 255), eventType, payloadHash, processedAt: new Date() },
     });
-    eventId = ev.id;
+    eventId = ev.eventId;
     recorded = true;
   } catch {
     recorded = false; // degrade: ack (200) mesmo sem gravar

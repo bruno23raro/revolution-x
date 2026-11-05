@@ -389,34 +389,42 @@ model Report {
 // FASE META — Meta Integration (managed via Supabase RLS)
 // Tabela: meta_integrations
 // ============================================================
+// Tabela: meta_integrations (canônica snake_case = PRODUÇÃO, migration 025).
+// Shape legado camelCase (accessToken/expiresIn/pageAccessToken/...) FOI removido:
+// produção e local agora compartilham 16 colunas snake_case idênticas.
 model MetaIntegration {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  accessToken    String    @db.Text
-  refreshToken   String?   @db.Text
-  expiresIn      Int?
-  pageAccessToken String?  @db.Text
-  phoneNumberId  String?   @db.VarChar(50)
-  accountId      String?   @db.VarChar(50)
-  status         String    @default("connected") @db.VarChar(50)
-  createdAt      DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime  @updatedAt
-  webhookEvents  WebhookEvent[]
+  id                        String    @id @default(uuid()) @map("id") @db.Uuid
+  organizationId            String    @map("organization_id") @db.Uuid
+  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider                  String    @map("provider") @db.Text
+  metaPageId                String?   @map("meta_page_id") @db.Text
+  instagramAccountId        String?   @map("instagram_account_id") @db.Text
+  whatsappBusinessAccountId String?   @map("whatsapp_business_account_id") @db.Text
+  phoneNumberId             String?   @map("phone_number_id") @db.Text
+  metaAppId                 String?   @map("meta_app_id") @db.Text
+  encryptedAccessToken      String    @map("encrypted_access_token") @db.Text
+  tokenExpiresAt            DateTime? @map("token_expires_at") @db.Timestamptz(6)
+  connectedAt               DateTime  @default(now()) @map("connected_at") @db.Timestamptz(6)
+  disconnectedAt            DateTime? @map("disconnected_at") @db.Timestamptz(6)
+  status                    String    @default("PENDING") @map("status") @db.Text
+  lastError                 String?   @map("last_error") @db.Text
+  webhookSecret             String?   @map("webhook_secret") @db.Text
+  displayName               String?   @map("display_name") @db.Text
+  webhookEvents             WebhookEvent[]
   @@map("meta_integrations")
 }
 
-// Tabela: webhook_events
+// Tabela: webhook_events (canônica snake_case + openbsp_event_id, migration 025)
 model WebhookEvent {
-  id               String        @id @default(uuid()) @db.Uuid
-  organizationId   String?       @db.Uuid
-  metaEventId      String?       @db.VarChar(255)
-  integrationId    String?       @db.Uuid
-  eventType        String?       @db.VarChar(50)
-  payloadHash      String?       @db.VarChar(64)
-  processedAt      DateTime?
-  createdAt        DateTime      @default(now()) @db.Timestamp(6)
-  metaIntegration  MetaIntegration? @relation(fields: [integrationId], references: [id])
+  eventId       String        @id @default(uuid()) @map("event_id") @db.Uuid
+  metaEventId   String        @map("meta_event_id") @db.Text
+  integrationId String?       @map("integration_id") @db.Uuid
+  eventType     String        @map("event_type") @db.Text
+  payloadHash   String        @map("payload_hash") @db.Text
+  processedAt   DateTime      @default(now()) @map("processed_at") @db.Timestamptz(6)
+  openbspEventId String?      @map("openbsp_event_id") @db.Text
+  metaIntegration MetaIntegration? @relation(fields: [integrationId], references: [id])
+  @@unique([metaEventId, integrationId])
   @@map("webhook_events")
 }
 

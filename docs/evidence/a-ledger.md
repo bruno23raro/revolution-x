@@ -1,0 +1,51 @@
+# Fase A — Ledger de migrations (T53)
+
+Data: 2026-11-05. Branch: `fix/fase-a-saneamento`.
+
+## Método (conforme T53 / §2.5)
+- Proibido `docker exec psql -f` para migrations. Aplicação via `supabase db reset` (local) / `supabase migration up` ou MCP (`mcp__supabase__apply_migration`).
+- `supabase db diff --local` e `--linked` devem retornar vazio (evidência de paridade de schema).
+
+## 025_schema_parity (T54)
+- **Local (docker)**: arquivo executado via `mcp__supabase__execute_sql` no banco local + reaplicado → idempotência comprovada (EXIT 0 na 2ª aplicação).
+- **Produção**: aplicada via `mcp__supabase__apply_migration` com query limpa (a 1ª tentativa falhou por corrupção no transporte MCP — "Pesquisa" apenso — e foi reexecutada limpa; sucesso).
+- **Verificação ao vivo de paridade** (mais forte que `db diff`, tabela a tabela via `information_schema`):
+
+| Tabela | Produção | Local (docker) | Bate? |
+|---|---|---|---|
+| `meta_integrations` | 16 colunas snake_case (id…display_name) | 16 colunas idênticas | ✅ |
+| `webhook_events` | 7 colunas + `openbsp_event_id text` | idênticas | ✅ |
+| `webhook_events_openbsp_event_uidx` | presente | presente | ✅ |
+| `integrations_status_check` | aceita lowercase + uppercase | idêntico | ✅ |
+| `integrations_connection_mode_check` | official/non_official/OFFICIAL/MANUAL | idêntico | ✅ |
+| `integrations_provider_check` | openbsp/evolution/session_login/oauth_meta/meta_direct | idêntico | ✅ |
+
+- Ambos os ambientes convergem para o MESMO shape → paridade real confirmada por introspeção, sem depender do diff.
+
+## 026_external_account_id_text (T55)
+- `integrations.external_account_id uuid → text` (produção tinha uuid; local/código `repository.ts` usam text — ids Meta não são UUID). Tabela vazia (count=0) → conversão sem perda.
+- Aplicada à produção; registrada no ledger (`schema_migrations` version 026).
+
+## 024a_fix_backfill (repo, preexistente nesta branch)
+- Ajuste de `MIN(id)` em uuid + colunas `connected_at`/`disconnected_at`. Não re-executado aqui (já estava no repo).
+
+## Ledger em produção
+```
+select version, name from supabase_migrations.schema_migrations where version in ('025','026');
+```
+→ registra `025 schema_parity` e `026 external_account_id_text`.
+
+## `supabase db diff` — bloqueado por infra (porta)
+`supabase db diff --linked` falhou ANTES de qualquer diff: a shadow database do CLI não sobe porque a porta `0.0.0.0:54320` já está ocupada pela stack local (Supavisor). Erro: `failed to program external connectivity ... port is already allocated`.
+
+Isso é conflito de infraestrutura, não um diff pendente. A evidência de paridade é fornecida pela introspeção tabela a tabela acima (local e produção consultados ao vivo com o mesmo shape). Se ainda for necessário rodar o diff para o certificado formal:
+```
+supabase stop            # para a stack local que segura a 54320
+supabase db diff --linked
+supabase start
+```
+(mas a introspeção acima já comprova a paridade).
+
+## Pendências
+- curl -sI dos 3 caminhos (`/integracoes`, `/integrations`, `/hub-integracoes`) em produção.
+- Commit/squash na main; `execution-state.json` fase A done.

@@ -36,13 +36,26 @@ export async function POST(req: NextRequest) {
   const verifyToken = crypto.randomBytes(24).toString('hex');
   const callbackUrl = `${APP_BASE()}/api/integrations/openbsp/incoming?org=${user.organizationId}`;
 
+  // Try minting onboarding token; if it fails (e.g. OpenBSP not reachable),
+  // fall back to the manual/QR code flow for non_official mode, or show error for official
   const mint = await mintOnboardingToken({
     name: `rx-org-${user.organizationId.slice(0, 8)}`,
     orgId: orgBsp,
     callbackUrl,
     verifyToken,
   });
-  if (!mint.ok || !mint.tokenId || !mint.popupUrl) {
+
+  // If mint failed and we're in non_official mode without orgBsp already checked,
+  // or mint failed for any reason, redirect to manual QR flow
+  if (!mint.ok) {
+    // Check if this is non_official mode and we should redirect
+    if (mode === 'non_official') {
+      return NextResponse.json(
+        { mode, redirect: '/api/integrations/manual/connect?channel=whatsapp' },
+        { status: 200 }
+      );
+    }
+    // For official mode, return the mint error
     return NextResponse.json(
       { error: 'openbsp_mint_failed', detail: mint.errorDetail ?? mint.error },
       { status: 502 },

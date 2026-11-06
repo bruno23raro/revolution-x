@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-06T00:46:10.695Z",
+  "timestamp": "2026-11-06T02:31:10.858Z",
   "projectRoot": "c:\\Users\\Bruno\\.claude\\Revolution\\X",
   "structure": {
     "hasPackageJson": true,
@@ -7,5 +7,5 @@
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1793925970695
+  "scannedAt": 1793932270858
 }

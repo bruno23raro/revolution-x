@@ -109,6 +109,9 @@ export default function IntegracoesPage() {
         toast('Gerando QR Code Evolution...', 'info');
         void window.open('/api/integrations/manual/connect?channel=whatsapp&mode=non_official', '_blank');
       }
+    } else if (r.ok && d.redirect) {
+      // Modo non_official sem OpenBSP configurado — redirecionar para QR Code
+      window.open(d.redirect, '_blank');
     } else {
       toast(d.error ?? 'Falha ao iniciar conexao', 'error');
     }

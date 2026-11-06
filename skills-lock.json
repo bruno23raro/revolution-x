@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-desktop": {
+      "source": "vercel-labs/agent-desktop",
+      "sourceType": "github",
+      "skillPath": "skills/agent-desktop/SKILL.md",
+      "computedHash": "2c448f01c9eed390e9d6226a3e1998cc60504c4c038fed36d1e1eb0fe7ce408e"
+    }
+  }
+}

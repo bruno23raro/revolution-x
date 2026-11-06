@@ -45,9 +45,7 @@ export async function POST(req: NextRequest) {
     verifyToken,
   });
 
-  // If mint failed and we're in non_official mode without orgBsp already checked,
-  // or mint failed for any reason, redirect to manual QR flow
-  if (!mint.ok) {
+  if (!mint.ok || !mint.tokenId) {
     // Check if this is non_official mode and we should redirect
     if (mode === 'non_official') {
       return NextResponse.json(

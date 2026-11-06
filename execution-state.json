@@ -13,11 +13,19 @@
     "T56": "WF-04 corrigido (Enrich Alert $json.body||$json, severity default/uppercase em JS), diff salvo em n8n/workflows/WF-04_alerta-5xx.json",
     "T58": "db diff desbloqueado via pg_dump comparacao (mesmo binario 17.6 docker); migration 027_integration_events_cols.sql aplicada a producao adicionando user_id, workspace_id, payload, created_at; local ja compativel",
     "T59": "deploy na main (build 01a1ab0d), curl em producao: /integrations 308->/integracoes, /hub-integracoes?mode=official 308->/integracoes?mode=official, /integracoes 200 OK; evidencia em docs/evidence/a-redirects-prod.md",
-    "T57": "tsc 0, eslint 0, jest 833/833, migration 025 local idempotente EXIT 0, 025/026/027 aplicados em producao, roundtrip Prisma OK"
+    "T57": "tsc 0, eslint 0, jest 833/833, migration 025 local idempotente EXIT 0, 025/026/027 aplicados em producao, roundtrip Prisma OK",
+    "F1.01": "DatabaseAdapter interface + PrismaDatabaseAdapter implementacao + factory + testes; tsc 0, jest 845/845, eslint 0"
   },
   "pendente": {
-    "T60": "WF-04 reexecucao: webhook disparado local (200 Workflow was started); validacao manual de execucao no n8n pendente (sem API key para listar execucoes via API)",
-    "T61": "execution-state.json fase A done (este arquivo), iniciar Fase B (branch refactor/fase-b, F1.01 DatabaseAdapter interface)",
-    "Blocador WF-04": "n8n local roda (healthz 200) mas API key nao autoriza listar workflows/execucoes; basic auth admin tambem falha. Requer humano validar execucao no n8n (container rx-n8n ou cloud) apos disparo webhook"
+    "F1.07": "Testes de integração validando set_config e RLS no PrismaAdapter (após deploy)",
+    "F1.08": "Atualização de documentação em docs/db-adapter.md"
+  },
+  "deploy": {
+    "branch": "refactor/db-adapter-f1",
+    "commit": "b211455",
+    "status": "building",
+    "buildUuid": "01a1ae2d-639d-70fe-a6b3-d8c76cf67410",
+    "domain": "revolutionx.com.br",
+    "timestamp": "2026-11-05T10:30:00.000Z"
   }
 }

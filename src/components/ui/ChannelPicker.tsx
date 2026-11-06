@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useState } from 'react';
 import { useIntegrationAccounts } from '@/hooks/useIntegrationAccounts';
@@ -76,8 +76,8 @@ export function ChannelPicker({ onChannelSelect, disabled }: ChannelPickerProps)
                     if (channel) handleSelect(channel, a.metaAccountId ?? a.label ?? 'sem-ref');
                   }}
                 >
-                  {a.label ?? a.metaAccountName} {a.metaAccountId && `â€¢â€¢â€¢â€¢${a.metaAccountId.slice(-4)}`}
-                  {a.status && ` Â· ${a.status}`}
+                  {a.label ?? a.metaAccountName} {a.metaAccountId && `••••${a.metaAccountId.slice(-4)}`}
+                  {a.status && ` · ${a.status}`}
                 </div>
               ))}
             </div>

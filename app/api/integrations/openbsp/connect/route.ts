@@ -21,9 +21,16 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const body = await req.json();
+  const mode = (body.mode || 'official') as 'official' | 'non_official';
+
   const orgBsp = process.env.OPENBSP_ORG_ID;
   if (!orgBsp) {
-    return NextResponse.json({ error: 'openbsp_not_configured' }, { status: 503 });
+    if (mode === 'official') {
+      return NextResponse.json({ error: 'openbsp_not_configured' }, { status: 503 });
+    }
+    // modo non_official não precisa OpenBSP — delegado para QR/Evolution
+    return NextResponse.json({ mode, redirect: '/api/integrations/manual/connect?channel=whatsapp' }, { status: 200 });
   }
 
   const verifyToken = crypto.randomBytes(24).toString('hex');
@@ -53,6 +60,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 
-  console.info('[openbsp] onboarding iniciado', { org: user.organizationId, tokenId: mint.tokenId });
-  return NextResponse.json({ popupUrl: mint.popupUrl, tokenId: mint.tokenId });
+  console.info('[openbsp] onboarding iniciado', { org: user.organizationId, tokenId: mint.tokenId, mode });
+  return NextResponse.json({ popupUrl: mint.popupUrl, tokenId: mint.tokenId, mode });
 }

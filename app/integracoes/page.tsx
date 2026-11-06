@@ -87,9 +87,31 @@ export default function IntegracoesPage() {
     }
   };
 
-  const handleConnected = (channel: string) => {
-    toast(`${channel} conectado com sucesso!`, 'success');
+  const handleConnected = async (channel: string) => {
+    const mode = view === 'OFFICIAL' ? 'official' : 'non_official';
+    toast(`${channel} conectando (modo ${mode})..`, 'info');
     void reload();
+
+    // Chama a API com o modo especificado
+    const r = await fetch('/api/integrations/openbsp/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, mode }),
+    });
+    const d = await r.json().catch(() => ({}));
+
+    if (r.ok && d.popupUrl) {
+      // Se for modo oficial, abre o popup OpenBSP
+      if (mode === 'official') {
+        window.open(d.popupUrl, 'openbsp_onboard', 'width=600,height=700');
+      } else {
+        // Modo non_official → QR Code Evolution
+        toast('Gerando QR Code Evolution...', 'info');
+        void window.open('/api/integrations/manual/connect?channel=whatsapp&mode=non_official', '_blank');
+      }
+    } else {
+      toast(d.error ?? 'Falha ao iniciar conexao', 'error');
+    }
   };
 
   const askRemove = (a: AccountRow) =>

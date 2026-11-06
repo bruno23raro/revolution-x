@@ -7,14 +7,13 @@ import AppShell from '@/components/AppShell';
 import WhatsAppApiCard from '@/components/integrations/WhatsAppApiCard';
 import WhatsAppQrCard from '@/components/integrations/WhatsAppQrCard';
 import WhatsAppOfficialCard from '@/components/integrations/WhatsAppOfficialCard';
-import InstagramCard from '@/components/integrations/InstagramCard';
-import FacebookPagesCard from '@/components/integrations/FacebookPagesCard';
 import ManualAccountsCard from '@/components/integrations/ManualAccountsCard';
 import type { AccountRow as CardAccountRow, IntegrationStatus } from '@/components/integrations/IntegrationCard';
 import { useIntegrationAccounts, type AccountRow } from '@/hooks/useIntegrationAccounts';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
 
 type Mode = 'OFFICIAL' | 'MANUAL';
-type Channel = 'whatsapp' | 'instagram' | 'facebook';
+type Channel = 'whatsapp';
 
 // shortcut: espelha MANUAL_WHATSAPP_MAX do servidor (src/integrations/manual.ts);
 // upgrade quando /api/integrations/status expuser o limite no payload.
@@ -158,7 +157,7 @@ export default function IntegracoesPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Integrações</h1>
             <p className="text-sm text-gray-400 mt-1">
-              Conecte suas contas Meta, Instagram e Facebook para automação de marketing.
+              Conecte sua conta WhatsApp para automação de marketing.
             </p>
           </div>
 
@@ -235,12 +234,17 @@ export default function IntegracoesPage() {
             </div>
           ) : view === 'OFFICIAL' ? (
             <section>
+              <div className="mb-4">
+                <ChannelPicker
+                  onChannelSelect={(channel) => toast(`Canal: ${channel}`, 'info')}
+                />
+              </div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-purple-400" />
                 <h2 className="text-sm font-bold uppercase tracking-wide text-purple-400">
                   API Oficial
                 </h2>
-                <span className="text-[10px] text-gray-500">OAuth · API oficial · Sem risco · Multi-conta</span>
+                <span className="text-[10px] text-gray-500">OpenBSP · API oficial · Sem risco</span>
               </div>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 auto-rows-fr">
                 <WhatsAppApiCard
@@ -249,24 +253,6 @@ export default function IntegracoesPage() {
                   accounts={cardAccounts('whatsapp')}
                   onRemoveAccount={(id) => {
                     const a = forChannel('whatsapp').find((x) => x.id === id);
-                    if (a) askRemove(a);
-                  }}
-                />
-                <InstagramCard
-                  status={statusFor('instagram')}
-                  onConnected={() => handleConnected('instagram')}
-                  accounts={cardAccounts('instagram')}
-                  onRemoveAccount={(id) => {
-                    const a = forChannel('instagram').find((x) => x.id === id);
-                    if (a) askRemove(a);
-                  }}
-                />
-                <FacebookPagesCard
-                  status={statusFor('facebook')}
-                  onConnected={() => handleConnected('facebook')}
-                  accounts={cardAccounts('facebook')}
-                  onRemoveAccount={(id) => {
-                    const a = forChannel('facebook').find((x) => x.id === id);
                     if (a) askRemove(a);
                   }}
                 />
@@ -295,11 +281,7 @@ export default function IntegracoesPage() {
               </div>
 
               {(
-                [
-                  ['instagram', 'Instagram'],
-                  ['facebook', 'Facebook'],
-                  ['whatsapp', 'WhatsApp'],
-                ] as Array<[Channel, string]>
+                [['whatsapp', 'WhatsApp']] as Array<[Channel, string]>
               ).map(([channel, label]) => {
                 const rows = manualByChannel(channel);
                 if (rows.length === 0) return null;
@@ -324,3 +306,4 @@ export default function IntegracoesPage() {
     </AppShell>
   );
 }
+

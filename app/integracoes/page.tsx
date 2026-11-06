@@ -4,7 +4,6 @@
 // multi-conta por canal com "Remover Conta" em cada linha.
 import { useCallback, useState } from 'react';
 import AppShell from '@/components/AppShell';
-import WhatsAppApiCard from '@/components/integrations/WhatsAppApiCard';
 import WhatsAppQrCard from '@/components/integrations/WhatsAppQrCard';
 import WhatsAppOfficialCard from '@/components/integrations/WhatsAppOfficialCard';
 import ManualAccountsCard from '@/components/integrations/ManualAccountsCard';
@@ -235,9 +234,7 @@ export default function IntegracoesPage() {
           ) : view === 'OFFICIAL' ? (
             <section>
               <div className="mb-4">
-                <ChannelPicker
-                  onChannelSelect={(channel) => toast(`Canal: ${channel}`, 'info')}
-                />
+                <ChannelPicker onChannelSelect={(channel) => toast(`Canal: ${channel}`, 'info')} />
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-purple-400" />
@@ -247,8 +244,7 @@ export default function IntegracoesPage() {
                 <span className="text-[10px] text-gray-500">OpenBSP · API oficial · Sem risco</span>
               </div>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 auto-rows-fr">
-                <WhatsAppApiCard
-                  status={statusFor('whatsapp')}
+                <WhatsAppOfficialCard
                   onConnected={() => handleConnected('whatsapp')}
                   accounts={cardAccounts('whatsapp')}
                   onRemoveAccount={(id) => {
@@ -256,7 +252,6 @@ export default function IntegracoesPage() {
                     if (a) askRemove(a);
                   }}
                 />
-                <WhatsAppOfficialCard onConnected={() => handleConnected('WhatsApp Oficial')} />
               </div>
             </section>
           ) : (

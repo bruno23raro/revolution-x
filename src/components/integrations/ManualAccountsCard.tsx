@@ -4,19 +4,13 @@
 // Suporta múltiplas contas por usuário; WhatsApp manual limitado a 5 canais.
 import { useState } from 'react';
 
-type Channel = 'instagram' | 'facebook' | 'whatsapp';
+type Channel = 'whatsapp';
 
 const CHANNELS: Array<{ id: Channel; label: string }> = [
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'facebook', label: 'Facebook' },
   { id: 'whatsapp', label: 'WhatsApp' },
 ];
 
 const RISK_NOTE: Record<Channel, string> = {
-  instagram:
-    'Método não-oficial: viola os ToS do Instagram e pode bloquear a conta. Use conta de sacrifício, sob sua responsabilidade.',
-  facebook:
-    'Método não-oficial: viola os ToS do Facebook e pode bloquear a conta. Use conta de sacrifício, sob sua responsabilidade.',
   whatsapp:
     'Cookie de sessão do WhatsApp Web — método não-oficial com risco de banimento do número. Máx. 5 canais.',
 };
@@ -30,7 +24,7 @@ export default function ManualAccountsCard({
   whatsappMax: number;
   onConnected: (msg: string) => void;
 }) {
-  const [channel, setChannel] = useState<Channel>('instagram');
+  const [channel, setChannel] = useState<Channel>('whatsapp');
   const [method, setMethod] = useState<'password' | 'credential'>('password');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');

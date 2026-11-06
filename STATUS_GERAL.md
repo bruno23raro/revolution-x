@@ -12,7 +12,7 @@
 | Testes | **834/834 · 60/60 suítes** ✅ | `npx jest` (pós-FASE 2) |
 | Lint | verde (baseline histórico; revalidar após corrigir tsc) | docs + pendência |
 | Build/produção | **NO AR** — revolutionx.com.br 200; /integrations 308 ok | HTTP vivo |
-| Banco produção | 41 tabelas; **RLS forçado em 5**; 6 policies; _prisma_migrations=2 | introspecção somente-leitura |
+| Banco produção | 49 tabelas; **37 com FORCE RLS; 40 policies** ✅; meta_integrations=0 | Management API Supabase (retificado à noite — medição anterior era docker local) |
 | Tenants ativos | **0 integrações conectadas** (meta_integrations vazio) | `select count(*)` |
 | Repo GitHub | **PÚBLICO com segredos versionados** (correção urgente) | API GitHub + git ls-files |
 | OAuth Meta | **restaurado** (callback de 288dd66 + callbacks órfãos removidos; flag off até D-10) | git + jest 12/12 rota |
@@ -22,8 +22,8 @@
 - ✅ Deploy/CI/domínio · Auth (código) · E-mail transacional · CRM (unidades) · IA dev
 - 🟡 WhatsApp oficial OpenBSP (código pronto, zero piloto real) · Scrapers (UI simula)
   · Planos/cobrança (sem lógica) · Fila (escala limitada)
-- 🔴 Segurança de segredos (C-1) · Isolamento RLS produção (C-2) · OAuth Meta (C-3)
-  · Trunk de desenvolvimento (C-4) · n8n em produção (A-6)
+- 🔴 Segurança de segredos (C-1) · OAuth Meta (C-3)
+  · Trunk de desenvolvimento (C-4, RESOLVIDA 2.5) · n8n em produção (A-6) · 🟡 RLS fraco só no docker local (C-2 retificado)
 
 ## Os 5 próximos passos imediatos (após aprovação do plano)
 
@@ -50,4 +50,5 @@ D-1 repo privado · D-2 giro de credenciais · D-3 geração OAuth · D-4 scrape
 docs/auditoria/VISAO_GERAL_PROJETO.md · ARQUITETURA_ATUAL.md · FUNCIONALIDADES_E_STATUS.md ·
 AUDITORIA_INTEGRACOES.md · PROBLEMAS_E_BLOQUEIOS.md · DECISOES_PENDENTES.md ·
 PLANO_DE_EXECUCAO.md · HISTORICO_DE_IMPLEMENTACAO.md · TESTES_E_VALIDACOES.md
+
 

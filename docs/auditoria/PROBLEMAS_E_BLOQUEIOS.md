@@ -1,4 +1,17 @@
-﻿# PROBLEMAS E BLOQUEIOS — Revolution X
+﻿## >>> CORREÇÃO PÓS-AUDIÊNCIA (2026-11-06, noite): C-2 RETIFICADO
+
+**A medição de C-2 foi feita no banco ERRADO.** A DATABASE_URL do .env.local aponta para
+localhost:54321 (docker local), e a introspecção registrada como 'produção' rodou contra
+ele. Via Management API do Supabase (projeto ardpabjoepzhkpmkgwgu, produção real):
+**49 tabelas, 37 com FORCE RLS, 40 policies, meta_integrations=0, colunas 016 presentes**
+→ isolamento RLS em PRODUÇÃO está íntegro (docs antigos estavam certos); o RLS fraco (5/41) é
+o estado do docker LOCAL (é o banco que precisa da cadeia 028/teset). C-2 rebaixado de
+CRÍTICO-PRODUÇÃO para MÉDIO-DEV. A auditoria de produção real passa a exigir a Management
+API/pooler com sslmode=require, nunca a DATABASE_URL do .env.local.
+
+---
+
+# PROBLEMAS E BLOQUEIOS — Revolution X
 
 > Classificados por gravidade. Cada item tem evidência e solução concreta.
 > (C)rítico = impede funcionamento/continuidade · (A)lto · (M)édio · (B)aixo
@@ -164,3 +177,4 @@ credenciais META_*/OMNIROUTER_* confirmadas no hPanel · SITE_URL GoTrue · cron
 favicon 404; `Novo(a) Documento de Texto.txt` vazio; backups/sufixos `.bak-*` de CLAUDE.md;
 5 CLAUDE.md diferentes; worktrees esquecidos (9); `execution-state.json` na raiz fora do
 padrão de `docs/`.
+

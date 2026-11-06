@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
-  const mode = (body.mode || 'official') as 'official' | 'non_official';
+  const body = await req.json().catch(() => ({}));
+  const mode: 'official' | 'non_official' = body.mode === 'non_official' ? 'non_official' : 'official';
 
   const orgBsp = process.env.OPENBSP_ORG_ID;
   if (!orgBsp) {

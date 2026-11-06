@@ -3,6 +3,14 @@
 > Registro contínuo do que foi feito no projeto, na cronologia. Entrada nova no topo.
 > Regra: toda linha tem evidência (commit/arquivo/medição).
 
+## 2026-11-06 (noite) — FASE 2.5: commits atômicos + fusão main + limpeza
+- Commits: f1ff32d (OAuth Meta unificado), b3a2487 (OpenBSP connect), 2cb7627 (ChannelPicker), 76dfc91 (deps: -puppeteer/-puppeteer-core/-qoder-sdk), 2cf7f10 (docs auditoria).
+- page.tsx: correção foi git checkout (restauração) — sem diff, sem commit necessário.
+- main = fast-forward de refactor/db-adapter-f1 + docs; 13 commits à frente de origin/main (deploy pendente por sua ordem).
+- 10 worktrees removidas; todas as branches locais temporárias deletadas (sobrou só main). refactor/integrations-f2 descartada (1 linha de docs que corrompia execution-state.json).
+- Anomalia Playwright (e2e/example.spec.ts, workflow playwright.yml, bloco no .gitignore): template default do playwright init de processo externo — LIXO, removido (workflow derrubaria CI ao rodar teste do playwright.dev). Bump @playwright/test revertido.
+- Medição pós-2.5 na main: tsc 0 · jest 834/834 (60 suítes) · lint 0 · build OK.
+- FASE 3 mapeada, NADA executado: docs/auditoria/FASE3_PLANO_CREDENCIAIS_E_RLS.md + 028_tenant_rls_DRAFT.sql.
 ## 2026-11-06 (tarde) — FASE 2 executada: trunk verde
 - page.tsx restaurado p/ estado commitado íntegro (288dd66); WIP corrompido revertido.
 - Callback Meta restaurado de 288dd66 byte-a-byte; oauth/callback/{facebook,instagram,whatsapp} deletados (persistiam na tabela errada, sem callers). whatsapp-qr preservado.
@@ -45,5 +53,6 @@
 - H-1 System User Token, H-2 App Review (humanos; estado: aguardando Meta).
 - Cron Hostinger + credenciais no hPanel (confirmar estado atual).
 - GoTrue SITE_URL localhost em produção (M-3).
+
 
 

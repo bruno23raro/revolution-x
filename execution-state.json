@@ -2,7 +2,7 @@
   "fase": "A",
   "status": "concluida",
   "timestamp": "2026-11-06T00:16:00.000Z",
-  "commit": "59d9220",
+  "commit": "288dd66",
   "branch": "main",
   "evidence": "docs/evidence/a-gate.md",
   "done": {
@@ -23,10 +23,10 @@
   },
   "deploy": {
     "branch": "refactor/db-adapter-f1",
-    "commit": "59d9220",
+    "commit": "288dd66",
     "status": "completed",
-    "buildUuid": "01a1ae32-41c5-708a-a219-d7d8f46024d0",
+    "buildUuid": "01a1ae37-c666-730d-9095-bf99e51567a9",
     "domain": "revolutionx.com.br",
-    "timestamp": "2026-11-06T00:16:00.000Z"
+    "timestamp": "2026-11-06T00:22:31.000Z"
   }
 }

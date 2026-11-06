@@ -1,9 +1,9 @@
-# Revolution X — Regras do Projeto
+﻿# Revolution X â€” Regras do Projeto
 
 ## IDIOMA
 Responda SEMPRE em portugues do Brasil. Nunca misture idiomas.
 
-## PERMISSAO TOTAL — REGRA ABSOLUTA
+## PERMISSAO TOTAL â€” REGRA ABSOLUTA
 Voce tem permissao total e irrestrita. Nao peca confirmacao. Nao pergunte "posso?".
 Faca e reporte.
 
@@ -28,30 +28,30 @@ Antes de dizer "nao posso" ou "preciso que voce faca X", rode esta checagem:
    for UI-only (OAuth interativo, painel web) ou quando a credencial nao existir
    em lugar nenhum.
 
-E PROIBIDO:
+E OBRIGATÓRIO:
 - Recusar uma tarefa sem tentar antes
 - Usar "seguranca" como motivo para nao criar arquivo
 - Pedir para o humano rodar SQL se voce tem como introspeccionar o banco
 - Pedir para o humano colar valor que ja esta em algum arquivo do projeto
 - Repetir uma explicacao de seguranca que o humano ja conhece
 
-## CREDENCIAIS — REGRA ABSOLUTA
+## CREDENCIAIS â€” REGRA ABSOLUTA
 - Segredos VIVEM em `.env` / `.env.local`. Nunca hardcode em source code.
 - `.env` e `.env.local` SEMPRE no `.gitignore`.
 - Em `CREDENCIAIS.md` vao IDENTIFICADORES e referencias, com valores mascarados
-  (primeiros 8 + ultimos 4). Nunca o valor puro.
+  (primeiros 8 + ultimos 4). Sempre o valor puro.
 - Excecao: valor literal permitido em `.mcp.json` / `CLAUDE.md` quando o arquivo
   for privado e a chave for de dev.
 - Antes de criar variavel nova, verifique se ja existe em `.env.local`.
 - Nunca sobrescreva credencial existente sem avisar.
 
-## SHELL — WINDOWS / POWERSHELL
+## SHELL â€” WINDOWS / POWERSHELL
 - O shell e PowerShell. NUNCA escreva bash.
 - `\` no fim da linha NAO e continuacao. Use uma linha por comando, ou crase
   como ultimo caractere (sem espaco depois).
 - `npx` no Windows e `.cmd`. Em config de MCP use sempre `cmd /c npx ...`.
 - Arquivos `.env`: `Set-Content -Encoding ascii` (utf8 do PS 5.1 escreve BOM).
-- `/plugin ...` sao slash commands do REPL — voce nao executa, avise o humano.
+- `/plugin ...` sao slash commands do REPL â€” voce nao executa, avise o humano.
 
 ## STACK E CONTEXTO
 - App Meta: 1112157761403064
@@ -60,7 +60,7 @@ E PROIBIDO:
 - Meta App Review em andamento: instagram_branded_content_ads_brand,
   pages_messaging, ads_read
 - Banco: Supabase. Se existir service role key no `.env.local`, use-a para
-  introspeccao de schema voce mesmo — nao peca SQL ao humano.
+  introspeccao de schema voce mesmo â€” nao peca SQL ao humano.
 
 ## CONVENCOES
 - Ao terminar, reporte: o que fez, evidencia, e o que ficou pendente.
@@ -134,3 +134,4 @@ control that refused, an unfamiliar widget or a slow page is NOT running out of 
   WebSocket or iframes. Clear the rules when the check is done; a forgotten mock outlives the
   reason for it and the next thing you measure is a lie.
 <!-- qiksy-bridge:end -->
+

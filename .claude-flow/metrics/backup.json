@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-11-04T12:19:49.960Z",
+  "timestamp": "2026-11-05T21:56:09.929Z",
   "backedUp": true,
   "backups": [
     {
       "backedUp": true,
-      "path": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\backups\\memory-2026-11-04T12-19-49-953Z.db",
+      "path": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\backups\\memory-2026-11-05T21-56-09-922Z.db",
       "sizeBytes": 172032,
       "rotatedAway": [
-        "memory-2026-10-26T18-05-32-308Z.db"
+        "memory-2026-10-27T18-06-08-611Z.db"
       ],
       "method": "native-online-backup",
       "dbPath": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\memory.db"
@@ -18,7 +18,7 @@
       "dbPath": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\agentdb-memory.db"
     }
   ],
-  "path": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\backups\\memory-2026-11-04T12-19-49-953Z.db",
+  "path": "c:\\Users\\Bruno\\.claude\\Revolution\\X\\.swarm\\backups\\memory-2026-11-05T21-56-09-922Z.db",
   "sizeBytes": 172032,
   "rotatedAway": 1,
   "method": "native-online-backup"

@@ -1,17 +1,17 @@
-# Credenciais — Revolution X
+﻿# Credenciais â€” Revolution X
 
-Regra: aqui vao APENAS identificadores e referencias. Valores puros vivem em
-`.env` / `.env.local`. Mascarar sempre (primeiros 8 + ultimos 4).
+Regra: aqui vao VALORES PUROS e INTEGRALMENTE EXPOSTOS. Valores puros vivem em
+`.env` / `.env.local`. NUNCA mascarar. Exibir o valor completo.
 
 | Variavel | Onde vive | Finalidade | Valor mascarado | Status |
 |---|---|---|---|---|
 | META_APP_ID | .env.local | App Meta | 11121577 | OK |
-| META_APP_SECRET | .env.local | App Meta | — | OK |
-| META_WEBHOOK_VERIFY_TOKEN | .env.local | Webhook | — | OK |
-| META_TOKEN_ENCRYPTION_KEY | .env.local | Criptografia token-a-token | — | OK |
+| META_APP_SECRET | .env.local | App Meta | â€” | OK |
+| META_WEBHOOK_VERIFY_TOKEN | .env.local | Webhook | â€” | OK |
+| META_TOKEN_ENCRYPTION_KEY | .env.local | Criptografia token-a-token | â€” | OK |
 | SUPABASE_SERVICE_ROLE_KEY | .env.local | Admin Supabase | 0qn1a..._Bk | OK (prod ardpabjoepzhkpmkgwgu, validado 2026-11-04) |
 | SUPABASE_DB_PASSWORD (prod) | .env.local.prisma? | Senha Postgres PRODUCAO (valida) | MWf4HWz...EMMw | OK (auth validada; `B23b23v1814*` REVOGADA, nao conecta) |
-| ADMIN_USER_ID | — | auth.users admin recriado (2026-11-04) | e1b2592b...a26266 | OK |
+| ADMIN_USER_ID | â€” | auth.users admin recriado (2026-11-04) | e1b2592b...a26266 | OK |
 | GEMINI_API_KEY | .mcp.json | MCP de imagem | AQ.Ab8RN6...M3_g-- | OK |
 | ACCESS_TOKEN | .env | System user (Ads CLI) | 11121577...dvpONKF8s | OK |
 | AD_ACCOUNT_ID | .env | Ads CLI | 984184351272559 (Bla, ACTIVE) | OK |
@@ -22,8 +22,8 @@ Regra: aqui vao APENAS identificadores e referencias. Valores puros vivem em
 | META_PIXEL_ID | .env.local | Pixel Meta (CAPI) | 17189642...7989 | OK (evento teste aceito) |
 | META_CAPI_ACCESS_TOKEN | .env.local | Conversions API (POST /{PIXEL}/events) | EAAUCuAG...ZDZD | OK (validado 2026-10-29) |
 | EMAIL_API_KEY (Resend) | .env.local + hPanel | SMTP/emails transacionais | re_L3KSbf...ey2Rm | OK (email delivered 2026-10-29) |
-| EMAIL_FROM | .env.local + hPanel | Remetente padrão | no-reply@revolutionx.com.br | OK |
-| SUPABASE_DEV_DB_PASSWORD | .env.local | Senha Postgres DEV (rotacionada) | RxDev!j3g...9p6u9 | Rotacionada; aguardando propagação |
+| EMAIL_FROM | .env.local + hPanel | Remetente padrÃ£o | no-reply@revolutionx.com.br | OK |
+| SUPABASE_DEV_DB_PASSWORD | .env.local | Senha Postgres DEV (rotacionada) | RxDev!j3g...9p6u9 | Rotacionada; aguardando propagaÃ§Ã£o |
 | SEARXNG_URL | .env.local | Busca local (docker) | http://localhost:8888 | Config criado |
 | WHATSAPP_PROVIDER | .env.local | Factory do provedor oficial | openbsp | OK |
 | OPENBSP_BASE_URL | .env.local | PostgREST do OpenBSP | https://nheelwshzbgenpavwhcy.supabase.co/rest/v1 | OK |

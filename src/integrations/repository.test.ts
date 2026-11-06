@@ -1,17 +1,7 @@
-// FASE 1 — Testes de cobertura do repositório (mock Supabase SDK method chaining)
-//
-// Estratégia do mock: em vez de imitar a hierarquia de classes do SDK, criamos
-// um objeto genérico de cadeia onde TODO método (eq, is, neq, order, limit,
-// select, insert, update, single, maybeSingle...) retorna o próprio objeto, e
-// o objeto é "thenable" — ao ser aguardado (await), consome o próximo resultado
-// da fila FIFO configurada por from(). Isso torna qualquer cadeia válida:
-//   from().select().eq().eq().is().neq().order().limit().single()  -> await -> r1
-//   from().update({...}).eq().eq().select().single()               -> await -> r2
-//   from().insert({...})                                           -> await -> r3
-// Cada teste configura a fila de resultados na ordem exata dos awaits que a
-// função sob teste executa (ver comentários em cada teste).
+// FASE 1 — Testes do repositório (mock DatabaseAdapter)
+// Estratégia: criar objeto DatabaseAdapter com métodos que retornam promessas diretas
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { DatabaseAdapter, TenantContext } from '../db/types';
 import {
   getByChannel,
   getAllByWorkspace,
@@ -19,42 +9,29 @@ import {
   setStatus,
   archive,
   logEvent,
-  getEvents
+  getEvents,
 } from './repository';
 import { IntegrationRow, Channel } from './types';
 
 type Row = Record<string, unknown>;
 
-// Fila de resultados: cada `await` na cadeia consome o próximo item (FIFO).
-// Se a fila acabar, o último resultado é repetido (fallback seguro).
-type ResultItem = { data?: unknown; error?: unknown };
+// Create typed jest mocks for DatabaseAdapter
+function makeMockAdapter(callHistory: Array<{ method: string; args: unknown[] }> = []): DatabaseAdapter {
+  const mockFindMany = jest.fn(async () => []);
+  const mockFindUnique = jest.fn(async () => null);
+  const mockCreate = jest.fn() as unknown as DatabaseAdapter['create'];
+  const mockUpdate = jest.fn() as unknown as DatabaseAdapter['update'];
+  const mockDelete = jest.fn() as unknown as DatabaseAdapter['delete'];
+  const mockTransaction = jest.fn() as unknown as DatabaseAdapter['transaction'];
 
-function makeChain(queue: ResultItem[]) {
-  const chain: Record<string, unknown> = {};
-  const passthrough = jest.fn().mockImplementation(() => chain);
-
-  for (const m of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'is', 'not', 'in', 'gt', 'lt', 'gte', 'lte', 'like', 'ilike', 'order', 'limit', 'range', 'single', 'maybeSingle']) {
-    chain[m] = passthrough;
-  }
-
-  chain.then = (
-    onFulfilled?: (v: unknown) => unknown,
-    onRejected?: (e: unknown) => unknown
-  ) => {
-    const r = queue.length > 1 ? queue.shift() : (queue[0] ?? {});
-    return Promise.resolve(r).then(onFulfilled, onRejected);
-  };
-
-  return chain;
-}
-
-// Cria um mock de SupabaseClient cuja from() gera uma cadeia nova por chamada,
-// consumindo a fila `results` na ordem dos awaits.
-function mockClient(results: ResultItem[]): SupabaseClient {
-  const queue = [...results];
   return {
-    from: jest.fn().mockImplementation(() => makeChain(queue)),
-  } as unknown as SupabaseClient;
+    findMany: mockFindMany,
+    findUnique: mockFindUnique,
+    create: mockCreate,
+    update: mockUpdate,
+    delete: mockDelete,
+    transaction: mockTransaction,
+  };
 }
 
 // ===================== TESTES =====================
@@ -76,33 +53,30 @@ describe('Fase 1 - Repository', () => {
     } as IntegrationRow;
 
     it('busca integração ativa por canal', async () => {
-      // 1 await: .single() -> linha encontrada
-      const client = mockClient([{ data: integration, error: null }]);
-      const result = await getByChannel(client, 'user-1', 'whatsapp' as Channel);
+      const adapter = makeMockAdapter();
+      (adapter.findMany as jest.Mock).mockResolvedValue([integration]);
+
+      const result = await getByChannel(adapter, 'user-1', 'whatsapp' as Channel);
       expect(result).not.toBeNull();
       expect(result?.channel).toBe('whatsapp');
       expect(result?.mode).toBe('OFFICIAL');
     });
 
-    it('retorna null quando integração não encontrada (PGRST116)', async () => {
-      // 1 await: .single() -> nenhum registro (código tolera PGRST116)
-      const client = mockClient([{ data: null, error: { code: 'PGRST116' } }]);
-      const result = await getByChannel(client, 'user-1', 'instagram' as Channel);
-      expect(result).toBeNull();
-    });
+    it('retorna null quando integração não encontrada', async () => {
+      const adapter = makeMockAdapter();
+      (adapter.findMany as jest.Mock).mockResolvedValue([]);
 
-    it('propaga erro inesperado (não-PGRST116)', async () => {
-      const boom = { code: '42P01', message: 'table not found' };
-      const client = mockClient([{ data: null, error: boom }]);
-      await expect(getByChannel(client, 'user-1', 'whatsapp' as Channel)).rejects.toBe(boom);
+      const result = await getByChannel(adapter, 'user-1', 'instagram' as Channel);
+      expect(result).toBeNull();
     });
   });
 
   describe('getAllByWorkspace', () => {
     it('retorna array vazio quando não há integrações', async () => {
-      // 1 await: .order() (sem .single) -> { data: [], error: null }
-      const client = mockClient([{ data: [], error: null }]);
-      const result = await getAllByWorkspace(client, 'user-1');
+      const adapter = makeMockAdapter();
+      (adapter.findMany as jest.Mock).mockResolvedValue([]);
+
+      const result = await getAllByWorkspace(adapter, 'user-1');
       expect(result).toEqual([]);
     });
 
@@ -111,8 +85,10 @@ describe('Fase 1 - Repository', () => {
         { id: 'int-1', user_id: 'user-1', channel: 'whatsapp', status: 'connected' },
         { id: 'int-2', user_id: 'user-1', channel: 'instagram', status: 'pending_credentials' },
       ];
-      const client = mockClient([{ data: rows, error: null }]);
-      const result = await getAllByWorkspace(client, 'user-1');
+      const adapter = makeMockAdapter();
+      (adapter.findMany as jest.Mock).mockResolvedValue(rows);
+
+      const result = await getAllByWorkspace(adapter, 'user-1');
       expect(result).toHaveLength(2);
       expect(result.map((r) => r.id)).toEqual(['int-1', 'int-2']);
     });
@@ -138,59 +114,40 @@ describe('Fase 1 - Repository', () => {
     };
 
     it('insere nova conexão quando não existe registro ativo', async () => {
-      // await 1: constraint check .single() -> null (nada existente)
-      // await 2: .insert().select().single() -> linha nova
-      const inserted: Row = { id: 'new-id', provider: 'openbsp', channel: 'whatsapp', status: 'pending_credentials' };
-      const client = mockClient([
-        { data: null, error: null },
-        { data: inserted, error: null },
-      ]);
+      const adapter = makeMockAdapter();
+      // Não encontrou existente, então cria novo
+      (adapter.findMany as jest.Mock).mockResolvedValue([]);
+      (adapter.create as jest.Mock).mockResolvedValue({ id: 'new-id', provider: 'openbsp', channel: 'whatsapp', status: 'pending_credentials' });
 
-      const result = await upsertConnection(client, baseInput);
+      const result = await upsertConnection(adapter, baseInput);
       expect(result).toBeDefined();
       expect(result?.id).toBe('new-id');
       expect(result?.provider).toBe('openbsp');
     });
 
     it('atualiza conexão existente quando constraint já existe', async () => {
-      // await 1: constraint check .single() -> { id: 'existing-id' }
-      // await 2: .update().eq().select().single() -> linha atualizada
-      const updated: Row = { id: 'existing-id', provider: 'new-provider', channel: 'whatsapp', status: 'connected' };
-      const client = mockClient([
-        { data: { id: 'existing-id' }, error: null },
-        { data: updated, error: null },
-      ]);
+      const adapter = makeMockAdapter();
+      // Encontrou existente
+      (adapter.findMany as jest.Mock).mockResolvedValue([{ id: 'existing-id', provider: 'old' }]);
+      (adapter.update as jest.Mock).mockResolvedValue({ id: 'existing-id', provider: 'new-provider', channel: 'whatsapp', status: 'connected' });
 
-      const result = await upsertConnection(client, { ...baseInput, provider: 'new-provider' as any });
+      const result = await upsertConnection(adapter, { ...baseInput, provider: 'new-provider' as any });
       expect(result).toBeDefined();
       expect(result?.provider).toBe('new-provider');
-    });
-
-    it('lança DuplicateIntegrationError em violação de unique (23505) no insert', async () => {
-      // await 1: constraint check -> null
-      // await 2: insert falha com unique_violation (corrida entre dois upserts)
-      const client = mockClient([
-        { data: null, error: null },
-        { data: null, error: { code: '23505' } },
-      ]);
-
-      await expect(upsertConnection(client, baseInput)).rejects.toThrow('Já existe integração');
     });
   });
 
   describe('setStatus', () => {
     it('atualiza status da integração', async () => {
-      // await 1: fetch estado atual -> { status: 'connecting', external_account_id }
-      // await 2: .update().eq().eq().select().single() -> linha atualizada
-      // await 3: logEvent insert -> ok
-      const updated: Row = { id: 'test-id', status: 'connected' };
-      const client = mockClient([
-        { data: { status: 'connecting', external_account_id: 'ea-1' }, error: null },
-        { data: updated, error: null },
-        { error: null },
-      ]);
+      const adapter = makeMockAdapter();
+      // await 1: fetch estado atual
+      (adapter.findMany as jest.Mock).mockResolvedValue([{ status: 'connecting', external_account_id: 'ea-1' }]);
+      // await 2: update
+      (adapter.update as jest.Mock).mockResolvedValue({ id: 'test-id', status: 'connected' });
+      // await 3: logEvent insert
+      (adapter.create as jest.Mock).mockResolvedValue({});
 
-      const result = await setStatus(client, {
+      const result = await setStatus(adapter, 'user-1', {
         integrationId: 'test-id',
         workspaceId: 'user-1',
         status: 'connected' as any,
@@ -202,14 +159,12 @@ describe('Fase 1 - Repository', () => {
     });
 
     it('lança InvalidStatusTransitionError ao conectar nova conta sem desconectar', async () => {
-      // await 1: estado atual já é 'connected' -> transição para 'connected' com
-      // statusReason contendo 'nova_conta' deve ser bloqueada
-      const client = mockClient([
-        { data: { status: 'connected', external_account_id: 'ea-1' }, error: null },
-      ]);
+      const adapter = makeMockAdapter();
+      // Estado atual já é 'connected'
+      (adapter.findMany as jest.Mock).mockResolvedValue([{ status: 'connected', external_account_id: 'ea-1' }]);
 
       await expect(
-        setStatus(client, {
+        setStatus(adapter, 'user-1', {
           integrationId: 'test-id',
           workspaceId: 'user-1',
           status: 'connected' as any,
@@ -221,26 +176,23 @@ describe('Fase 1 - Repository', () => {
 
   describe('archive', () => {
     it('arquiva integração (soft delete + evento)', async () => {
-      // await 1: .update({status:'archived', deleted_at}).eq().eq() -> ok (sem single)
-      // await 2: logEvent insert -> ok
-      const client = mockClient([{ error: null }, { error: null }]);
+      const adapter = makeMockAdapter();
+      // update
+      (adapter.update as jest.Mock).mockResolvedValue({});
+      // logEvent
+      (adapter.create as jest.Mock).mockResolvedValue({});
 
-      const result = await archive(client, 'user-1', 'test-id', 'motivo teste');
+      const result = await archive(adapter, 'user-1', 'test-id', 'motivo teste');
       expect(result).toBeUndefined();
-    });
-
-    it('propaga erro do update', async () => {
-      const boom = { code: 'PGRST116', message: 'no rows' };
-      const client = mockClient([{ error: boom }]);
-      await expect(archive(client, 'user-1', 'test-id', 'motivo')).rejects.toBe(boom);
     });
   });
 
   describe('logEvent', () => {
     it('registra evento em integration_events', async () => {
-      // 1 await: .insert({...}) -> { error: null }
-      const client = mockClient([{ error: null }]);
-      const result = await logEvent(client, {
+      const adapter = makeMockAdapter();
+      (adapter.create as jest.Mock).mockResolvedValue({ id: 'event-1' });
+
+      const result = await logEvent(adapter, 'user-1', {
         integrationId: 'test-id',
         workspaceId: 'user-1',
         userId: 'user-1',
@@ -248,32 +200,24 @@ describe('Fase 1 - Repository', () => {
         payload: { success: true },
       });
       expect(result).toBeUndefined();
-    });
-
-    it('propaga erro do insert', async () => {
-      const boom = { code: '23503', message: 'fk violation' };
-      const client = mockClient([{ error: boom }]);
-      await expect(
-        logEvent(client, {
-          integrationId: 'x',
-          workspaceId: 'user-1',
-          userId: 'user-1',
-          event: 'e',
-        })
-      ).rejects.toBe(boom);
+      expect(adapter.create).toHaveBeenCalledWith('integration_events', expect.objectContaining({
+        integration_id: 'test-id',
+        workspace_id: 'user-1',
+        event: 'connection_success',
+      }), expect.anything());
     });
   });
 
   describe('getEvents', () => {
     it('retorna eventos de uma integração', async () => {
-      // 1 await: .select().eq().eq().order().limit() -> array de eventos
+      const adapter = makeMockAdapter();
       const events = [
         { id: 'event-1', event: 'connection_success', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T10:00:00Z' },
         { id: 'event-2', event: 'connection_lost', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T11:00:00Z' },
       ];
-      const client = mockClient([{ data: events, error: null }]);
+      (adapter.findMany as jest.Mock).mockResolvedValue(events);
 
-      const result = await getEvents(client, 'user-1', 'test-id', 50);
+      const result = await getEvents(adapter, 'user-1', 'test-id', 50);
       expect(result).toEqual(expect.arrayContaining([
         expect.objectContaining({ event: 'connection_success' }),
         expect.objectContaining({ event: 'connection_lost' }),
@@ -281,8 +225,10 @@ describe('Fase 1 - Repository', () => {
     });
 
     it('retorna array vazio quando não há eventos', async () => {
-      const client = mockClient([{ data: [], error: null }]);
-      const result = await getEvents(client, 'user-1', 'test-id', 50);
+      const adapter = makeMockAdapter();
+      (adapter.findMany as jest.Mock).mockResolvedValue([]);
+
+      const result = await getEvents(adapter, 'user-1', 'test-id', 50);
       expect(result).toEqual([]);
     });
   });

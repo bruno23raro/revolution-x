@@ -1,8 +1,10 @@
 // FASE 1 — Camada de acesso a dados (Repository)
 // Todas as funções recebem workspace_id explícito
+// Integração com DatabaseAdapter para injeção de contexto de tenant
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { DatabaseAdapter, TenantContext, QueryOptions } from '../db/types';
 import type { IntegrationRow, Channel, ConnectionMode, Provider } from './types';
+import { DatabaseContextError } from '../db/types';
 
 /** Erro tipado para transição de status inválida */
 export class InvalidStatusTransitionError extends Error {
@@ -66,45 +68,39 @@ interface LogEventInput {
  * Busca integração por canal (retorna a primeira ativa, não arquivada)
  */
 export async function getByChannel(
-  client: SupabaseClient,
+  adapter: DatabaseAdapter,
   workspaceId: string,
-  channel: Channel
+  channel: Channel,
+  tenant?: TenantContext
 ): Promise<IntegrationRow | null> {
-  const { data, error } = await client
-    .from('integrations')
-    .select('*')
-    .eq('user_id', workspaceId)
-    .eq('channel', channel)
-    .is('deleted_at', null)
-    .neq('status', 'archived')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    throw error;
+  const resolvedTenant = tenant ?? { type: 'org', id: workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
   }
-
-  return data as IntegrationRow | null;
+  const data = await adapter.findMany<IntegrationRow>('integration', {
+    channel,
+    user_id: workspaceId,
+  }, { orderBy: 'created_at', orderDirection: 'desc', limit: 1 });
+  return data?.[0] ?? null;
 }
 
 /**
  * Busca todas as integrações de um workspace
  */
 export async function getAllByWorkspace(
-  client: SupabaseClient,
-  workspaceId: string
+  adapter: DatabaseAdapter,
+  workspaceId: string,
+  tenant?: TenantContext
 ): Promise<IntegrationRow[]> {
-  const { data, error } = await client
-    .from('integrations')
-    .select('*')
-    .eq('user_id', workspaceId)
-    .is('deleted_at', null)
-    .neq('status', 'archived')
-    .order('channel', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as IntegrationRow[];
+  const resolvedTenant = tenant ?? { type: 'org', id: workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
+  }
+  const rows = await adapter.findMany<IntegrationRow>('integration', {
+    user_id: workspaceId,
+    is_archived: false,
+  });
+  return rows ?? [];
 }
 
 /**
@@ -112,56 +108,31 @@ export async function getAllByWorkspace(
  * Valida constraint única antes de inserir
  */
 export async function upsertConnection(
-  client: SupabaseClient,
-  input: UpsertConnectionInput
+  adapter: DatabaseAdapter,
+  input: UpsertConnectionInput,
+  tenant?: TenantContext
 ): Promise<IntegrationRow> {
-  // Verificar constraint única antes
-  const { data: existing } = await client
-    .from('integrations')
-    .select('id')
-    .eq('user_id', input.workspaceId)
-    .eq('channel', input.channel)
-    .eq('connection_mode', input.connectionMode)
-    .is('deleted_at', null)
-    .neq('status', 'archived')
-    .single();
-
-  if (existing) {
-    // Atualizar registro existente
-    const { data, error } = await client
-      .from('integrations')
-      .update({
-        provider: input.provider,
-        external_account_id: input.externalAccountId,
-        external_account_label: input.externalAccountLabel,
-        credentials_ref: input.credentialsRef,
-        access_token: input.accessToken,
-        refresh_token: input.refreshToken,
-        expires_at: input.expiresAt,
-        meta_account_id: input.metaAccountId,
-        meta_account_name: input.metaAccountName,
-        phone_number: input.phoneNumber,
-        waba_id: input.wabaId,
-        meta: input.meta ?? {},
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id)
-      .select('*')
-      .single();
-
-    if (error) throw error;
-    return data as IntegrationRow;
+  const resolvedTenant = tenant ?? { type: 'org', id: input.workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
   }
 
-  // Inserir novo
-  const { data, error } = await client
-    .from('integrations')
-    .insert({
+  // Verificar constraint única antes
+  const existing = await adapter.findMany<IntegrationRow>('integration', {
+    where: {
       user_id: input.workspaceId,
       channel: input.channel,
-      provider: input.provider,
       connection_mode: input.connectionMode,
-      status: 'pending_credentials',
+    },
+    limit: 1,
+  });
+
+  if (existing?.[0]) {
+    // Atualizar registro existente
+    const updated = await adapter.update<IntegrationRow>('integration', {
+      id: existing[0].id,
+    }, {
+      provider: input.provider,
       external_account_id: input.externalAccountId,
       external_account_label: input.externalAccountLabel,
       credentials_ref: input.credentialsRef,
@@ -173,18 +144,40 @@ export async function upsertConnection(
       phone_number: input.phoneNumber,
       waba_id: input.wabaId,
       meta: input.meta ?? {},
-    })
-    .select('*')
-    .single();
+      updated_at: new Date().toISOString(),
+    }, resolvedTenant);
 
-  if (error) {
-    if (error.code === '23505') { // unique_violation
-      throw new DuplicateIntegrationError(input.workspaceId, input.channel, input.connectionMode);
+    if (!updated) {
+      throw new Error('Update failed');
     }
-    throw error;
+    return updated as IntegrationRow;
   }
 
-  return data as IntegrationRow;
+  // Inserir novo
+  const created = await adapter.create<IntegrationRow>('integration', {
+    user_id: input.workspaceId,
+    channel: input.channel,
+    provider: input.provider,
+    connection_mode: input.connectionMode,
+    status: 'pending_credentials',
+    external_account_id: input.externalAccountId,
+    external_account_label: input.externalAccountLabel,
+    credentials_ref: input.credentialsRef,
+    access_token: input.accessToken,
+    refresh_token: input.refreshToken,
+    expires_at: input.expiresAt,
+    meta_account_id: input.metaAccountId,
+    meta_account_name: input.metaAccountName,
+    phone_number: input.phoneNumber,
+    waba_id: input.wabaId,
+    meta: input.meta ?? {},
+  }, resolvedTenant);
+
+  if (!created) {
+    throw new Error('Create failed');
+  }
+
+  return created as IntegrationRow;
 }
 
 /**
@@ -192,21 +185,25 @@ export async function upsertConnection(
  * Sempre grava last_checked_at/last_error_at e emite evento
  */
 export async function setStatus(
-  client: SupabaseClient,
-  input: SetStatusInput
+  adapter: DatabaseAdapter,
+  workspaceId: string,
+  input: SetStatusInput,
+  tenant?: TenantContext
 ): Promise<IntegrationRow> {
-  // Buscar estado atual
-  const { data: current, error: fetchError } = await client
-    .from('integrations')
-    .select('status, external_account_id')
-    .eq('id', input.integrationId)
-    .eq('user_id', input.workspaceId)
-    .single();
+  const resolvedTenant = tenant ?? { type: 'org', id: workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
+  }
 
-  if (fetchError) throw fetchError;
-  if (!current) {
+  // Buscar estado atual usando adapter
+  const currentRows = await adapter.findMany<IntegrationRow>('integration', {
+    where: { id: input.integrationId, user_id: workspaceId },
+    limit: 1,
+  });
+  if (!currentRows?.[0]) {
     throw new Error(`Integração ${input.integrationId} não encontrada`);
   }
+  const current = currentRows[0];
 
   // Validar transição inválida: connected → connected de outra conta sem desconectar
   if (
@@ -240,22 +237,20 @@ export async function setStatus(
   // last_checked_at sempre atualizado em mudança de status
   updateData.last_checked_at = now;
 
-  // Aplicar update
-  const { data, error } = await client
-    .from('integrations')
-    .update(updateData)
-    .eq('id', input.integrationId)
-    .eq('user_id', input.workspaceId)
-    .select('*')
-    .single();
+  // Aplicar update via adapter
+  const updated = await adapter.update<IntegrationRow>('integration', {
+    id: input.integrationId,
+  }, updateData, resolvedTenant);
 
-  if (error) throw error;
+  if (!updated) {
+    throw new Error('Update failed');
+  }
 
   // Emitir evento de auditoria
-  await logEvent(client, {
+  await logEvent(adapter, workspaceId, {
     integrationId: input.integrationId,
-    userId: input.workspaceId,
-    workspaceId: input.workspaceId,
+    workspaceId,
+    userId: workspaceId,
     event: `status_changed_to_${input.status}`,
     payload: {
       from_status: current.status,
@@ -265,37 +260,38 @@ export async function setStatus(
     },
   });
 
-  return data as IntegrationRow;
+  return updated as IntegrationRow;
 }
 
 /**
  * Arquiva integração (soft delete)
  */
 export async function archive(
-  client: SupabaseClient,
+  adapter: DatabaseAdapter,
   workspaceId: string,
   integrationId: string,
-  reason: string
+  reason: string,
+  tenant?: TenantContext
 ): Promise<void> {
+  const resolvedTenant = tenant ?? { type: 'org', id: workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
+  }
   const now = new Date().toISOString();
 
-  const { error } = await client
-    .from('integrations')
-    .update({
-      status: 'archived',
-      status_reason: reason,
-      deleted_at: now,
-      updated_at: now,
-    })
-    .eq('id', integrationId)
-    .eq('user_id', workspaceId);
+  await adapter.update<IntegrationRow>('integration', {
+    id: integrationId,
+  }, {
+    status: 'archived',
+    status_reason: reason,
+    deleted_at: now,
+    updated_at: now,
+  }, resolvedTenant);
 
-  if (error) throw error;
-
-  await logEvent(client, {
+  await logEvent(adapter, workspaceId, {
     integrationId,
-    userId: workspaceId,
     workspaceId,
+    userId: workspaceId,
     event: 'disconnection',
     payload: { reason, archived: true },
   });
@@ -305,27 +301,29 @@ export async function archive(
  * Registra evento em integration_events
  */
 export async function logEvent(
-  client: SupabaseClient,
-  input: LogEventInput
+  adapter: DatabaseAdapter,
+  workspaceId: string,
+  input: LogEventInput,
+  tenant?: TenantContext
 ): Promise<void> {
-  const { error } = await client
-    .from('integration_events')
-    .insert({
-      integration_id: input.integrationId,
-      user_id: input.userId,
-      workspace_id: input.workspaceId,
-      event: input.event,
-      payload: input.payload ?? {},
-    });
-
-  if (error) throw error;
+  const resolvedTenant = tenant ?? { type: 'org', id: workspaceId };
+  if (!resolvedTenant?.id) {
+    throw new DatabaseContextError(resolvedTenant);
+  }
+  // Use direct insert pattern for integration_events
+  await adapter.create('integration_events', {
+    integration_id: input.integrationId,
+    workspace_id: workspaceId,
+    event: input.event,
+    payload: input.payload ?? {},
+  }, resolvedTenant);
 }
 
 /**
  * Busca eventos de auditoria de uma integração
  */
 export async function getEvents(
-  client: SupabaseClient,
+  adapter: DatabaseAdapter,
   workspaceId: string,
   integrationId: string,
   limit = 50
@@ -337,16 +335,16 @@ export async function getEvents(
   payload: Record<string, unknown>;
   created_at: string;
 }>> {
-  const { data, error } = await client
-    .from('integration_events')
-    .select('*')
-    .eq('integration_id', integrationId)
-    .eq('workspace_id', workspaceId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return (data ?? []) as Array<{
+  const rows = await adapter.findMany('integration_events', {
+    where: {
+      integration_id: integrationId,
+      workspace_id: workspaceId,
+    },
+    orderBy: 'created_at',
+    orderDirection: 'desc',
+    limit,
+  });
+  return (rows ?? []) as Array<{
     id: string;
     integration_id: string;
     workspace_id: string;

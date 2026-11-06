@@ -32,3 +32,10 @@
 - Evolution API, instância n8n em produção (não existe), OpenBSP popup de signup.
 - RLS policies com sessões de tenant (banco local docker não estava de pé nesta sessão).
 - Carga/latência.
+
+## RETIFICAÇÃO (noite 2026-11-06)
+Itens 10-14 foram medidos contra o docker LOCAL (DATABASE_URL=localhost:54321), não a
+produção. Produção real (Management API): 49 tabelas / 37 FORCE RLS / 40 policies /
+meta_integrations=0 / 016 aplicada. Itens 5-9 (HTTP/GitHub) permanecem válidos (foram
+feitos por rede contra revolutionx.com.br e api.github.com).
+

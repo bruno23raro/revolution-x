@@ -6,6 +6,12 @@
 //
 // Criptografia do access_token: META_TOKEN_ENCRYPTION_KEY (AES-GCM,
 // src/lib/encryption.ts) — server-side e decryptável por cron sem usuário.
+//
+// ATENÇÃO (dual-schema, introspecção produção 2026-11-07): estas DUAS tabelas
+// têm colunas PascalCase com aspas (migration 019) — PostgREST expõe
+// `organizationId`, `phoneNumberId`, `access_token_enc` NAO existe aqui.
+// snake_case vale apenas p/ meta_integrations/webhook_events (014/015) e p/ o
+// banco do PROVEDOR OpenBSP (messages/organizations_addresses em send.ts).
 
 import { encryptToken, decryptToken } from '@/lib/encryption';
 
@@ -45,29 +51,10 @@ async function findOrg(client: Query, organizationId: string): Promise<WhatsappC
   const { data, error } = await client
     .from('whatsapp_channels')
     .select('*')
-    .eq('organization_id', organizationId)
+    .eq('organizationId', organizationId)
     .maybeSingle();
   if (error || !data) return null;
-  // PostgREST retorna snake_case, precisamos transformar para a interface camelCase
-  const row = data as Record<string, unknown>;
-  return {
-    id: row.id as string,
-    organizationId: row.organization_id as string,
-    provider: row.provider as string,
-    status: row.status as string,
-    onboardingTokenId: row.onboarding_token_id as string | null,
-    callbackUrl: row.callback_url as string | null,
-    verifyToken: row.verify_token as string,
-    wabaId: row.waba_id as string | null,
-    phoneNumberId: row.phone_number_id as string | null,
-    phoneNumber: row.phone_number as string | null,
-    verifiedName: row.verified_name as string | null,
-    accessTokenEnc: row.access_token_enc as string | null,
-    tierLimitPer24h: row.tier_limit_per_24h as number,
-    sentWindow24h: row.sent_window_24h as number,
-    windowStartedAt: row.window_started_at as string | null,
-    lastError: row.last_error as string | null,
-  } as WhatsappChannelRow;
+  return data as WhatsappChannelRow;
 }
 
 /** Canal do tenant com o access_token decifrado (null se não conectado). */
@@ -97,29 +84,10 @@ export async function getChannelByPhoneNumberId(client: Query, phoneNumberId: st
   const { data, error } = await client
     .from('whatsapp_channels')
     .select('*')
-    .eq('phone_number_id', phoneNumberId)
+    .eq('phoneNumberId', phoneNumberId)
     .maybeSingle();
   if (error || !data) return null;
-  // PostgREST retorna snake_case, precisamos transformar para a interface camelCase
-  const row = data as Record<string, unknown>;
-  return {
-    id: row.id as string,
-    organizationId: row.organization_id as string,
-    provider: row.provider as string,
-    status: row.status as string,
-    onboardingTokenId: row.onboarding_token_id as string | null,
-    callbackUrl: row.callback_url as string | null,
-    verifyToken: row.verify_token as string,
-    wabaId: row.waba_id as string | null,
-    phoneNumberId: row.phone_number_id as string | null,
-    phoneNumber: row.phone_number as string | null,
-    verifiedName: row.verified_name as string | null,
-    accessTokenEnc: row.access_token_enc as string | null,
-    tierLimitPer24h: row.tier_limit_per_24h as number,
-    sentWindow24h: row.sent_window_24h as number,
-    windowStartedAt: row.window_started_at as string | null,
-    lastError: row.last_error as string | null,
-  } as WhatsappChannelRow;
+  return data as WhatsappChannelRow;
 }
 
 /** Pré-provisiona o canal no connect (verify_token único por tenant). */
@@ -131,15 +99,15 @@ export async function upsertChannelPending(
     .from('whatsapp_channels')
     .upsert(
       {
-        organization_id: input.organizationId,
+        organizationId: input.organizationId,
         provider: 'openbsp',
         status: 'PENDING',
-        verify_token: input.verifyToken,
-        callback_url: input.callbackUrl,
-        onboarding_token_id: input.onboardingTokenId,
-        updated_at: new Date().toISOString(),
+        verifyToken: input.verifyToken,
+        callbackUrl: input.callbackUrl,
+        onboardingTokenId: input.onboardingTokenId,
+        updatedAt: new Date().toISOString(),
       },
-      { onConflict: 'organization_id' },
+      { onConflict: 'organizationId' },
     );
 }
 
@@ -153,15 +121,15 @@ export async function markChannelConnected(
     .from('whatsapp_channels')
     .update({
       status: 'CONNECTED',
-      waba_id: creds.wabaId ?? null,
-      phone_number_id: creds.phoneNumberId,
-      phone_number: creds.phoneNumber ?? null,
-      verified_name: creds.verifiedName ?? null,
-      access_token_enc: encryptToken(creds.accessToken),
-      last_error: null,
-      updated_at: new Date().toISOString(),
+      wabaId: creds.wabaId ?? null,
+      phoneNumberId: creds.phoneNumberId,
+      phoneNumber: creds.phoneNumber ?? null,
+      verifiedName: creds.verifiedName ?? null,
+      accessTokenEnc: encryptToken(creds.accessToken),
+      lastError: null,
+      updatedAt: new Date().toISOString(),
     })
-    .eq('organization_id', organizationId);
+    .eq('organizationId', organizationId);
 }
 
 export async function setChannelStatus(
@@ -172,8 +140,8 @@ export async function setChannelStatus(
 ): Promise<void> {
   await client
     .from('whatsapp_channels')
-    .update({ status, last_error: lastError ?? null, updated_at: new Date().toISOString() })
-    .eq('organization_id', organizationId);
+    .update({ status, lastError: lastError ?? null, updatedAt: new Date().toISOString() })
+    .eq('organizationId', organizationId);
 }
 
 /** Contador da janela móvel de 24h do tier (250/24h em número novo). */
@@ -183,11 +151,11 @@ export async function bumpSentWindow(client: Query, channel: WhatsappChannelRow,
   await client
     .from('whatsapp_channels')
     .update({
-      sent_window_24h: fresh ? n : channel.sentWindow24h + n,
-      window_started_at: fresh ? new Date().toISOString() : channel.windowStartedAt,
-      updated_at: new Date().toISOString(),
+      sentWindow24h: fresh ? n : channel.sentWindow24h + n,
+      windowStartedAt: fresh ? new Date().toISOString() : channel.windowStartedAt,
+      updatedAt: new Date().toISOString(),
     })
-    .eq('organization_id', channel.organizationId);
+    .eq('organizationId', channel.organizationId);
 }
 
 // ── whatsapp_templates (espelho local do status Meta) ────────────────────────
@@ -209,22 +177,10 @@ export async function listTemplateRows(client: Query, organizationId: string): P
   const { data, error } = await client
     .from('whatsapp_templates')
     .select('*')
-    .eq('organization_id', organizationId)
+    .eq('organizationId', organizationId)
     .order('name', { ascending: true });
   if (error || !Array.isArray(data)) return [];
-  // PostgREST retorna snake_case, precisamos transformar para a interface camelCase
-  return (data as Record<string, unknown>[]).map(row => ({
-    id: row.id as string,
-    organizationId: row.organization_id as string,
-    metaTemplateId: row.meta_template_id as string | null,
-    name: row.name as string,
-    language: row.language as string,
-    category: row.category as string,
-    status: row.status as string,
-    componentsJson: row.components_json,
-    rejectionReason: row.rejection_reason as string | null,
-    lastCheckedAt: row.last_checked_at as string | null,
-  }));
+  return data as WhatsappTemplateRow[];
 }
 
 export async function upsertTemplateRow(
@@ -234,16 +190,16 @@ export async function upsertTemplateRow(
   await client
     .from('whatsapp_templates')
     .upsert({
-      organization_id: row.organizationId,
+      organizationId: row.organizationId,
       name: row.name,
       language: row.language,
       category: row.category,
       status: row.status,
-      meta_template_id: row.metaTemplateId,
-      components_json: row.componentsJson,
-      rejection_reason: row.rejectionReason,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'organization_id,name,language' });
+      metaTemplateId: row.metaTemplateId,
+      componentsJson: row.componentsJson,
+      rejectionReason: row.rejectionReason,
+      updatedAt: new Date().toISOString(),
+    }, { onConflict: 'organizationId,name,language' });
 }
 
 /** Gate 2: só template local APROVADO libera disparo em massa. */
@@ -256,23 +212,11 @@ export async function getApprovedTemplate(
   const { data, error } = await client
     .from('whatsapp_templates')
     .select('*')
-    .eq('organization_id', organizationId)
+    .eq('organizationId', organizationId)
     .eq('name', name)
     .eq('language', language)
     .eq('status', 'APPROVED')
     .maybeSingle();
   if (error || !data) return null;
-  const row = data as Record<string, unknown>;
-  return {
-    id: row.id as string,
-    organizationId: row.organization_id as string,
-    metaTemplateId: row.meta_template_id as string | null,
-    name: row.name as string,
-    language: row.language as string,
-    category: row.category as string,
-    status: row.status as string,
-    componentsJson: row.components_json,
-    rejectionReason: row.rejection_reason as string | null,
-    lastCheckedAt: row.last_checked_at as string | null,
-  };
+  return data as WhatsappTemplateRow;
 }

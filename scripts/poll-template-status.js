@@ -45,7 +45,7 @@ const sbHeaders = {
 
 async function main() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/whatsapp_channels?status=eq.CONNECTED&select=organizationId,wabaId,accessTokenEnc`,
+    `${SUPABASE_URL}/rest/v1/whatsapp_channels?status=eq.CONNECTED&select=organization_id,waba_id,access_token_enc`,
     { headers: sbHeaders },
   );
   if (!res.ok) throw new Error(`channels list ${res.status}`);
@@ -54,24 +54,24 @@ async function main() {
 
   let updated = 0, failed = 0;
   for (const ch of channels) {
-    if (!ch.wabaId || !ch.accessTokenEnc) continue;
+    if (!ch.waba_id || !ch.access_token_enc) continue;
     let token;
     try {
-      token = decryptToken(ch.accessTokenEnc);
+      token = decryptToken(ch.access_token_enc);
     } catch (e) {
-      console.error(`decrypt falhou org=${ch.organizationId}: ${e.message}`);
+      console.error(`decrypt falhou org=${ch.organization_id}: ${e.message}`);
       failed++;
       continue;
     }
-    const url = `https://graph.facebook.com/${GRAPH_VERSION}/${ch.wabaId}/message_templates?fields=name,language,category,status,rejection_reason&limit=250`;
+    const url = `https://graph.facebook.com/${GRAPH_VERSION}/${ch.waba_id}/message_templates?fields=name,language,category,status,rejection_reason&limit=250`;
     const gr = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!gr.ok) {
       const body = (await gr.text()).slice(0, 300);
-      console.error(`Graph ${gr.status} org=${ch.organizationId}: ${body}`);
-      await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_channels?organizationId=eq.${ch.organizationId}`, {
+      console.error(`Graph ${gr.status} org=${ch.organization_id}: ${body}`);
+      await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_channels?organization_id=eq.${ch.organization_id}`, {
         method: 'PATCH',
         headers: { ...sbHeaders, Prefer: 'return=minimal' },
-        body: JSON.stringify({ lastError: `graph_templates_${gr.status}`.slice(0, 200), updatedAt: new Date().toISOString() }),
+        body: JSON.stringify({ last_error: `graph_templates_${gr.status}`.slice(0, 200), updated_at: new Date().toISOString() }),
       });
       failed++;
       continue;
@@ -80,20 +80,20 @@ async function main() {
     for (const t of templates) {
       // upsert do espelho (PK única org+name+language; PostgREST upsert on_conflict)
       const up = await fetch(
-        `${SUPABASE_URL}/rest/v1/whatsapp_templates?on_conflict=organizationId,name,language`,
+        `${SUPABASE_URL}/rest/v1/whatsapp_templates?on_conflict=organization_id,name,language`,
         {
           method: 'POST',
           headers: { ...sbHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([
             {
-              organizationId: ch.organizationId,
+              organization_id: ch.organization_id,
               name: t.name,
               language: t.language,
               category: t.category ?? 'MARKETING',
               status: t.status ?? 'PENDING',
-              rejectionReason: t.rejection_reason ?? null,
-              lastCheckedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
+              rejection_reason: t.rejection_reason ?? null,
+              last_checked_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
           ]),
         },

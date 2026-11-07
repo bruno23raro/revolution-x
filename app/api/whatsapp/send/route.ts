@@ -100,8 +100,8 @@ async function resolveTenantWhatsAppAccess(
   // NOTA: PostgREST (Supabase REST API) retorna colunas em snake_case
   q = service
     .from('whatsapp_channels')
-    .select('id, provider, status, waba_id, phone_number_id, phone_number, verified_name, access_token_enc, last_error, tier_limit_per_24h, sent_window_24h, window_started_at')
-    .eq('organization_id', organizationId)
+    .select('id, provider, status, wabaId, phoneNumberId, phoneNumber, verifiedName, accessTokenEnc, lastError, tierLimitPer24h, sentWindow24h, windowStartedAt')
+    .eq('organizationId', organizationId)
     .eq('provider', 'openbsp')
     .neq('status', 'DISCONNECTED');
 
@@ -116,13 +116,13 @@ async function resolveTenantWhatsAppAccess(
 
   // Para OpenBSP, o accessToken já está no formato que podemos usar diretamente
   // (o token não é cifrado como Meta — é o access_token do OpenBSP)
-  const accessToken = channel.access_token_enc as string || '';
+  const accessToken = channel.accessTokenEnc as string || '';
 
   return {
     ok: true,
     provider: 'openbsp',
     accessToken: accessToken, // OpenBSP usa o token diretamente nos headers
-    phoneNumberId: channel.phone_number_id as string || '',
+    phoneNumberId: channel.phoneNumberId as string || '',
     row: channel,
   };
 }
@@ -284,21 +284,21 @@ async function sendMassViaOpenBSP(
   // Atualizar contador de janela 24h no canal (OpenBSP)
   if (resolved.provider === 'openbsp') {
     const channel = resolved.row as Record<string, unknown>;
-    const currentSent = (channel.sent_window_24h as number) || 0;
-    const tierLimit = (channel.tier_limit_per_24h as number) || 250;
+    const currentSent = (channel.sentWindow24h as number) || 0;
+    const tierLimit = (channel.tierLimitPer24h as number) || 250;
 
     if (currentSent + sent >= tierLimit) {
       // Marcar como limite atingido
       const service = createServiceRoleClient();
       await service
         .from('whatsapp_channels')
-        .update({ last_error: `Limite de ${tierLimit} mensagens/24h atingido` })
+        .update({ lastError: `Limite de ${tierLimit} mensagens/24h atingido` })
         .eq('id', resolved.row.id);
     } else {
       const service = createServiceRoleClient();
       await service
         .from('whatsapp_channels')
-        .update({ sent_window_24h: currentSent + sent, updated_at: new Date().toISOString() })
+        .update({ sentWindow24h: currentSent + sent, updatedAt: new Date().toISOString() })
         .eq('id', resolved.row.id);
     }
   }

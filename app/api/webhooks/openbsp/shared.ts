@@ -76,10 +76,32 @@ async function handleMessageEvent(payload: unknown): Promise<void> {
   const change = changes?.[0];
   const value = change?.value as Record<string, unknown> | undefined;
 
+  const svc = createServiceRoleClient();
+
+  // Contacts (vêm como array no payload de mensagens, conforme contrato OpenBSP)
+  // c.id é o WhatsApp ID (waId), c.profile.name é o nome
+  const contacts = value?.contacts as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(contacts)) {
+    for (const c of contacts) {
+      // O ID do contato é o WhatsApp ID (waId)
+      const waId = (c.id as string) ?? crypto.randomUUID();
+      const profile = c.profile as Record<string, unknown> | undefined;
+      await svc.from('crm_contacts').upsert({
+        phone_number: waId,
+        name: typeof profile?.name === 'string' ? profile.name : '',
+        email: (profile as Record<string, unknown>)?.email ?? null,
+        organization_id: null,
+        metadata: c,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+    console.log('[openbsp-webhook:messages] inserted', contacts.length, 'contacts');
+  }
+
   // Messages inserção
   const messages = value?.messages as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(messages)) {
-    const svc = createServiceRoleClient();
     for (const msg of messages) {
       const id = (msg.id as string) ?? crypto.randomUUID();
       const from = (msg.from as string) ?? '';
@@ -98,12 +120,12 @@ async function handleMessageEvent(payload: unknown): Promise<void> {
   // Status updates
   const statuses = value?.statuses as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(statuses)) {
-    const svc = createServiceRoleClient();
     for (const st of statuses) {
       await svc.from('message_status').insert({
         message_id: (st.id as string) ?? '',
         status: (st.status as string) ?? 'unknown',
         timestamp: st.timestamp ? new Date(parseInt(st.timestamp as string) * 1000).toISOString() : new Date().toISOString(),
+        error_code: (st.errors as Array<{ code: string }> | undefined)?.[0]?.code ?? null,
         payload: st,
       });
     }

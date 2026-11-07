@@ -31,10 +31,11 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     // Buscar canais WhatsApp (OpenBSP e Meta) via whatsapp_channels
+    // NOTE: whatsapp_channels (migração 019) usa colunas PascalCase, NÃO snake_case
     const { data: channelRows, error: channelError } = await supabase
       .from('whatsapp_channels')
       .select('*')
-      .eq('organization_id', user.organizationId);
+      .eq('organizationId', user.organizationId);
 
     if (metaError) {
       if (isQueueUnavailable(metaError)) {

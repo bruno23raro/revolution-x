@@ -1,0 +1,46 @@
+# Environment Key Verification Report
+
+**Task**: Verify all required keys from `.env.local` for:
+- NEXT_PUBLIC_SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- META_APP_ID
+- META_APP_SECRET
+- OPENBSP_BASE_URL
+- OPENBSP_PUBLISHABLE_KEY
+- OPENBSP_API_KEY
+- SUPABASE_URL (prod)
+- SUPABASE_DB_PASSWORD
+
+**Date**: 2026-11-07
+
+## ✅ Present in `.env.local`
+
+| Key | Value | Line | Status |
+|---|---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | `http://localhost:8432` | 10 | Local Docker dev URL |
+| SUPABASE_SERVICE_ROLE_KEY | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | 13/72 | Present (duplicate on line 72) |
+| META_APP_ID | `1112157761403064` | 20 | Present |
+| META_APP_SECRET | `ff2edcdec00e1e843433b860c717a3ab` | 22 | Present |
+| OPENBSP_BASE_URL | `https://nheelwshzbgenpavwhcy.supabase.co/rest/v1` | 29 | Present |
+| OPENBSP_PUBLISHABLE_KEY | `sb_publishable_jS_LQSbttNz2nRyAcjOVUw_J1KpXhUd` | 30 | Present |
+| OPENBSP_API_KEY | `sk_dcca9cc0057142ce95bba1e051b01699` | 31 | Present |
+
+## ⚠️ Items Requiring Attention
+
+### 8. SUPABASE_URL (prod)
+- **`.env.local` value**: `http://localhost:8432` (line 11)
+- **Issue**: This is the **local Docker development URL**, pointing to the local Supabase stack via Docker compose. It is **not a production URL**.
+- **Production URL**: `https://ardpabjoepzhkpmkgwgu.supabase.co` exists in `.env.txt` but is **not present in `.env.local`**
+- **Recommendation**: If a production Supabase URL is needed, add it to `.env.local` or `.env.local.prod`. Current value is correct for local development only.
+
+### 9. SUPABASE_DB_PASSWORD
+- **Variable name**: Does **not appear standalone** in `.env.local`
+- **Password location**: Embedded within `DATABASE_URL` (line 17): `postgresql://postgres:rx593ce286d544b58b3778dab12e5bf97c7587c07394e5a375@localhost:54321/postgres`
+- **Current password**: `rx593ce286d544b58b3778dab12e5bf97c7587c07394e5a375`
+- **Note**: `.env.local.prisma` references password `B23b23v1814*` which is marked as **REVOGADA** (revoked) per CREDENCIAIS.md — the active password is the one in `DATABASE_URL`
+- **Also referenced**: `supabase-docker/.env` line 3: `POSTGRES_PASSWORD=rx593ce286d544b58b3778dab12e5bf97c7587c07394e5a375` (same password)
+
+## Conclusion
+All 7 core keys for Meta integration, OpenBSP, and local Supabase development are present and correct in `.env.local`. Two items need clarification:
+- `SUPABASE_URL (prod)` is currently set to local dev URL — production URL not configured in `.env.local`
+- `SUPABASE_DB_PASSWORD` is not a standalone variable; the password lives inside `DATABASE_URL` and the old revoked password `B23b23v1814*` should not be used

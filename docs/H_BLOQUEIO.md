@@ -1,52 +1,77 @@
-# Bloqueio do Token System User Meta — Guia para o Humano
+# H-1: Meta System User Token - Guia de Configuração
 
-## 1. O Problema
+## Status: BLOCKED (Ação Humana Necessária)
 
-- O app `1421814643397349` (CAPI) retorna erro 101 ao usar o secret conhecido `ff2edcdec00e1e843433b860c717a3ab`.
-- Este secret pertence ao app `1112157761403064`, não ao CAPI.
-- A variável `SYSTEM_USER_TOKEN` em `.env.local` é um token de aplicativo, não de usuário do sistema.
+## Descrição
+O token de usuário sistema do Meta não foi gerado. Este token é necessário para:
+- Executar ações administrativas via Marketing API
+- Acessar endpoints de integração do WhatsApp Business
+- Enviar mensagens via API Cloud do WhatsApp
 
-## 2. Passos Exatos no Meta Console (≈5 minutos)
+## App Meta Details
 
-1. **Acesse**: https://developers.facebook.com/
-2. **Encontre o app**: `1421814643397349`
-   - Se não existir, crie um novo app Meta (ou use `1112157761403064` como alternativa).
-3. **Configurações → Básicas**:
-   - Localize **App Secret**.
-   - Se for o secret errado, gere um novo.
-   - Ative **Mostrar App Secret** se necessário.
-4. **Configurações → Avançadas**:
-   - Confirme as permissões do app.
-5. **Configurações → Negócios → Usuários do Sistema**:
-   - Crie um novo Usuário do Sistema (ou use um existente) com nome "Revolution X".
-   - Atribua ao app com papel **Admin**.
-6. **Gerar Token**:
-   - Escolha **Gerar um novo token de acesso do usuário do sistema**.
-   - Marque as permissões:
-     - `ads_management`
-     - `ads_read`
-     - `pages_read_user_content` (se disponível)
-     - `pages_show_list` (se disponível)
-   - Copie o token gerado.
-7. **Atualize arquivos**:
-   - Adicione ao `.env.local`:
-     ```
-     META_SYSTEM_USER_TOKEN_1421814643397349=<TOKEN_COPIADO>
-     ```
-   - Atualize `plan_meta_system_user.md` com o token mascarado (primeiros 8 + últimos 4).
+- **App ID**: 1112157761403064
+- **App Secret**: Armazenado em `.env.local`
+- **Conta**: 1421814643397349
 
-## 3. Caminho Alternativo (se o app 1421814643397349 não for acessível)
+## Passos para Configuração
 
-- Use o app `1112157761403064`.
-- Crie um Usuário do Sistema nele.
-- Gere token com permissões `ads_management` + `ads_read`.
-- Salve como `META_SYSTEM_USER_TOKEN_1112157761403064`.
+### 1. Acessar Business Manager
 
-## 4. Validação
+1. Abrir: https://business.facebook.com/
+2. Fazer login com a conta administradora
 
-- Execute `meta auth status` no terminal.
-- Verifique se o token funciona nas chamadas Graph API.
+### 2. Criar Usuário Sistema
 
----
+1. Navegar para: **Settings** → **Business Settings** → **System Users**
+2. Clicar em: **Add** → **Create System User**
+3. Nome: "Revolution X System User"
+4. Role: **Admin**
+5. Salvar o ID do usuário criado
 
-*Execute este guia e reporte de volta com o token gerado (mascarado).*
+### 3. Gerar Token de Acesso
+
+1. Na lista de System Users, selecionar o criado
+2. Em **Assets** → **Add Assets** → selecionar a App criada
+3. Conceder permissões:
+   - `business_management`
+   - `pages_manage_cta`
+   - `pages_show_list`
+   - `whatsapp_business_messaging`
+   - `ads_management`
+4. Copiar o **System User ID**
+5. Gerar token via Graph API Explorer ou CLI:
+
+```bash
+curl -X GET "https://graph.facebook.com/v19.0/{system-user-id}/access_tokens?access_token={system-user-access-token}&grant_type=client_credentials"
+```
+
+### 4. Adicionar ao .env.local
+
+```env
+SYSTEM_USER_TOKEN=1112157761403064|6PBUFK2Rb96rx7W8-SdvpONKF8s
+```
+
+## Endpoints Necessários com o Token
+
+- `POST /v19.0/{phone-number-id}/messages` - Enviar mensagens
+- `GET /v19.0/{phone-number-id}` - Verificar status
+- `GET /v19.0/{app-id}/lead_ads` - Lead ads insights
+
+## Próximos Testes
+
+Após configuração:
+
+1. Testar conexão com:
+
+```bash
+curl -X GET "https://graph.facebook.com/v19.0/me?access_token={SYSTEM_USER_TOKEN}"
+```
+
+2. Verificar WhatsApp no painel de controle Meta
+
+## Referências
+
+- [Meta System Users Docs](https://developers.facebook.com/docs/business-identity/system-users)
+- [WhatsApp Cloud API Docs](https://developers.facebook.com/docs/whatsapp/cloud-api)
+- [Marketing API Permissions](https://developers.facebook.com/docs/apps/review)

@@ -71,6 +71,15 @@ jest.mock('@/integrations/meta/whatsappTemplates', () => ({
 }));
 jest.mock('@/integrations/meta/tokenRefresh', () => ({ refreshMetaAccessToken: jest.fn() }));
 
+// ── OpenBSP WhatsApp sender (para /api/whatsapp/send) ────────────────────────
+jest.mock('@/integrations/openbsp/send', () => ({
+  sendViaOpenBSP: jest.fn(),
+  sendTemplateViaOpenBSP: jest.fn(),
+  sendMassViaOpenBSP: jest.fn(),
+  Recipient: class {},
+  MassSendOptions: class {},
+}));
+
 // ── exige as rotas sob teste (path relativo; @/connectors e @/integrations mapeados) ──
 const { GET: configGET, POST: configPOST, DELETE: configDELETE } = require('../../app/api/integrations/config/route');
 const { GET: healthGET } = require('../../app/api/integrations/health/route');
@@ -98,6 +107,7 @@ const { runMassSend } = require('@/integrations/meta/whatsappSender');
 const { listWhatsAppTemplates, createWhatsAppTemplate } = require('@/integrations/meta/whatsappTemplates');
 const { refreshMetaAccessToken } = require('@/integrations/meta/tokenRefresh');
 const { PROVIDERS } = require('@/integrations/providers');
+const { sendMassViaOpenBSP } = require('@/integrations/openbsp/send');
 
 // ── fixtures ──────────────────────────────────────────────────────────────────
 const ADMIN = { id: 'user-admin', role: 'admin', organizationId: 'org-admin', email: 'a@x.com' };
@@ -346,7 +356,7 @@ describe('POST /api/whatsapp/send', () => {
 
   it('409 não conectado', async () => {
     asAdmin();
-    // resolveTenantWhatsAppAccess: nenhuma conta Meta nem OpenBSP
+    // resolveTenantOpenBSPAccess: nenhuma conta OpenBSP conectada
     const sr = fakeServiceRole();
     sr.finished.data = null;
     sr.finished.error = null;
@@ -356,18 +366,18 @@ describe('POST /api/whatsapp/send', () => {
 
   it('200 happy: envia, agrega contagens e trackeia (tracked=true)', async () => {
     asAdmin();
-    // resolveTenantWhatsAppAccess: conta Meta encontrada com token
+    // resolveTenantOpenBSPAccess: conta OpenBSP encontrada
     const sr = fakeServiceRole();
     sr.finished.data = {
       id: 'row-1',
-      provider: 'whatsapp',
-      phone_number_id: 'PH',
-      whatsapp_business_account_id: 'WABA',
-      encrypted_access_token: 'ENC',
+      provider: 'openbsp',
+      phoneNumberId: 'PH',
+      accessTokenEnc: 'TOK',
+      tierLimitPer24h: 250,
+      sentWindow24h: 10,
     };
     sr.finished.error = null;
-    decryptToken.mockResolvedValue('TOK');
-    runMassSend.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
+    sendMassViaOpenBSP.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
     const res = await sendPOST(
       req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511', '5522'], text: 'oi', delayMs: 500 } }),
     );
@@ -376,11 +386,13 @@ describe('POST /api/whatsapp/send', () => {
     expect(json.ok).toBe(true);
     expect(json.tracked).toBe(true);
     // `to:[...]` + `text` anexa o texto a cada destinatário
-    expect(runMassSend).toHaveBeenCalledWith(
-      { accessToken: 'TOK', phoneNumberId: 'PH', wabaId: 'WABA' },
-      [{ to: '5511', text: 'oi' }, { to: '5522', text: 'oi' }],
-      expect.objectContaining({ delayMs: 500 }),
-    );
+    const callArgs = sendMassViaOpenBSP.mock.calls[0];
+    expect(callArgs[0].ok).toBe(true);
+    expect(callArgs[0].accessToken).toBe('TOK');
+    expect(callArgs[0].phoneNumberId).toBe('PH');
+    expect(callArgs[0].provider).toBe('openbsp');
+    expect(callArgs[1]).toEqual([{ to: '5511', text: 'oi' }, { to: '5522', text: 'oi' }]);
+    expect(callArgs[2].delayMs).toBe(500);
   });
 
   it('deduplica números repetidos', async () => {
@@ -388,16 +400,16 @@ describe('POST /api/whatsapp/send', () => {
     const sr = fakeServiceRole();
     sr.finished.data = {
       id: 'row-1',
-      provider: 'whatsapp',
-      phone_number_id: 'PH',
-      whatsapp_business_account_id: 'WABA',
-      encrypted_access_token: 'ENC',
+      provider: 'openbsp',
+      phoneNumberId: 'PH',
+      accessTokenEnc: 'TOK',
+      tierLimitPer24h: 250,
+      sentWindow24h: 10,
     };
     sr.finished.error = null;
-    decryptToken.mockResolvedValue('TOK');
-    runMassSend.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
+    sendMassViaOpenBSP.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
     await sendPOST(req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511', '5511', '5522'], text: 'oi' } }));
-    const recipients = runMassSend.mock.calls[0][1];
+    const recipients = sendMassViaOpenBSP.mock.calls[0][1];
     expect(recipients).toHaveLength(2);
   });
 
@@ -406,20 +418,20 @@ describe('POST /api/whatsapp/send', () => {
     const sr = fakeServiceRole();
     sr.finished.data = {
       id: 'row-1',
-      provider: 'whatsapp',
-      phone_number_id: 'PH',
-      whatsapp_business_account_id: 'WABA',
-      encrypted_access_token: 'ENC',
+      provider: 'openbsp',
+      phoneNumberId: 'PH',
+      accessTokenEnc: 'TOK',
+      tierLimitPer24h: 250,
+      sentWindow24h: 10,
     };
     sr.finished.error = null;
-    decryptToken.mockResolvedValue('TOK');
     createTask.mockRejectedValue(new TaskQueueUnavailableError('down'));
-    runMassSend.mockResolvedValue({ total: 1, sent: 1, failed: 0, results: [] });
+    sendMassViaOpenBSP.mockResolvedValue({ total: 1, sent: 1, failed: 0, results: [] });
     const res = await sendPOST(req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511'], text: 'oi' } }));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.tracked).toBe(false);
-    expect(runMassSend).toHaveBeenCalled(); // trabalho real não foi bloqueado
+    expect(sendMassViaOpenBSP).toHaveBeenCalled(); // trabalho real não foi bloqueado
   });
 });
 

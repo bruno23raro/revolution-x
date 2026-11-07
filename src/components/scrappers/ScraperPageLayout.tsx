@@ -2,7 +2,7 @@
 
 // Layout reutilizável para páginas de scraper — Header com RiskBanner, formulário,
 // botão de ação (desabilitado sem ack de risco) e área de resultados.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import RiskBanner from '@/components/RiskBanner';
 
@@ -19,6 +19,12 @@ export default function ScraperPageLayout({ title, description, icon, fields, ch
   const [ack, setAck] = useState(false);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<string | null>(null);
+  const [featureAvailable, setFeatureAvailable] = useState(false);
+
+  useEffect(() => {
+    // Scraper ainda não tem backend real - funcionalidade indisponível no momento
+    setFeatureAvailable(false);
+  }, []);
 
   const handleChange = (name: string, value: string) => {
     setForm((f) => ({ ...f, [name]: value }));
@@ -26,14 +32,13 @@ export default function ScraperPageLayout({ title, description, icon, fields, ch
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ack) return;
+    if (!ack || !featureAvailable) return;
     setRunning(true);
     setResults(null);
-    // Placeholder: a implementação real chama a API de scraping
     setTimeout(() => {
-      setResults(`[PLACEHOLDER] Extração iniciada para: ${JSON.stringify(form)}\n\nEm breve, os resultados serão exibidos aqui.`);
+      setResults(`Função de scraping não disponível no momento. Esta funcionalidade requer backend de extração real que ainda não está implementado.`);
       setRunning(false);
-    }, 1000);
+    }, 500);
   };
 
   return (

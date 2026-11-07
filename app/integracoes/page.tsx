@@ -234,7 +234,7 @@ export default function IntegracoesPage() {
           ) : view === 'OFFICIAL' ? (
             <section>
               <div className="mb-4">
-                <ChannelPicker onChannelSelect={(channel) => toast(`Canal: ${channel}`, 'info')} />
+                <ChannelPicker onChannelSelect={(channel, accountRef) => toast(`Canal: ${channel}${accountRef ? ` (${accountRef})` : ''}`, 'info')} />
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-purple-400" />

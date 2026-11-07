@@ -91,7 +91,7 @@ const {
   saveMemory,
   listMemory,
 } = require('@/lib/taskQueue');
-const { encryptToken } = require('@/lib/encryption');
+const { encryptToken, decryptToken } = require('@/lib/encryption');
 const { createServiceRoleClient } = require('@/lib/supabase/server');
 const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
 const { runMassSend } = require('@/integrations/meta/whatsappSender');
@@ -132,12 +132,18 @@ function notConnected() {
 }
 
 function fakeServiceRole() {
-  const finished = { error: null };
-  const q = { eq: jest.fn(async () => finished) };
-  const update = jest.fn(() => q);
-  const from = jest.fn(() => ({ update }));
-  createServiceRoleClient.mockReturnValue({ from });
-  return { update, q, finished };
+  const finished: Record<string, unknown> = { error: null, data: null };
+  // Chain thenable universal: qualquer sequência .from().select()/update().eq()...
+  // é aguardável (resolve `finished`) e .maybeSingle() devolve `finished`.
+  const chain: any = {};
+  for (const m of ['select', 'eq', 'in', 'neq', 'order', 'limit', 'update', 'upsert', 'delete']) {
+    chain[m] = jest.fn(() => chain);
+  }
+  chain.maybeSingle = jest.fn(async () => finished);
+  chain.then = (res: any, rej?: any) => Promise.resolve(finished).then(res, rej);
+  const fromQ = jest.fn(() => chain);
+  createServiceRoleClient.mockReturnValue({ from: fromQ });
+  return { update: chain.update, q: chain, finished };
 }
 
 beforeEach(() => {
@@ -340,14 +346,27 @@ describe('POST /api/whatsapp/send', () => {
 
   it('409 não conectado', async () => {
     asAdmin();
-    notConnected();
+    // resolveTenantWhatsAppAccess: nenhuma conta Meta nem OpenBSP
+    const sr = fakeServiceRole();
+    sr.finished.data = null;
+    sr.finished.error = null;
     const res = await sendPOST(req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511'], text: 'oi' } }));
     expect(res.status).toBe(409);
   });
 
   it('200 happy: envia, agrega contagens e trackeia (tracked=true)', async () => {
     asAdmin();
-    connectedAccess();
+    // resolveTenantWhatsAppAccess: conta Meta encontrada com token
+    const sr = fakeServiceRole();
+    sr.finished.data = {
+      id: 'row-1',
+      provider: 'whatsapp',
+      phone_number_id: 'PH',
+      whatsapp_business_account_id: 'WABA',
+      encrypted_access_token: 'ENC',
+    };
+    sr.finished.error = null;
+    decryptToken.mockResolvedValue('TOK');
     runMassSend.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
     const res = await sendPOST(
       req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511', '5522'], text: 'oi', delayMs: 500 } }),
@@ -366,7 +385,16 @@ describe('POST /api/whatsapp/send', () => {
 
   it('deduplica números repetidos', async () => {
     asAdmin();
-    connectedAccess();
+    const sr = fakeServiceRole();
+    sr.finished.data = {
+      id: 'row-1',
+      provider: 'whatsapp',
+      phone_number_id: 'PH',
+      whatsapp_business_account_id: 'WABA',
+      encrypted_access_token: 'ENC',
+    };
+    sr.finished.error = null;
+    decryptToken.mockResolvedValue('TOK');
     runMassSend.mockResolvedValue({ total: 2, sent: 2, failed: 0, results: [] });
     await sendPOST(req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511', '5511', '5522'], text: 'oi' } }));
     const recipients = runMassSend.mock.calls[0][1];
@@ -375,7 +403,16 @@ describe('POST /api/whatsapp/send', () => {
 
   it('fila indisponível → tracked=false, MAS o envio acontece (degradação honesta)', async () => {
     asAdmin();
-    connectedAccess();
+    const sr = fakeServiceRole();
+    sr.finished.data = {
+      id: 'row-1',
+      provider: 'whatsapp',
+      phone_number_id: 'PH',
+      whatsapp_business_account_id: 'WABA',
+      encrypted_access_token: 'ENC',
+    };
+    sr.finished.error = null;
+    decryptToken.mockResolvedValue('TOK');
     createTask.mockRejectedValue(new TaskQueueUnavailableError('down'));
     runMassSend.mockResolvedValue({ total: 1, sent: 1, failed: 0, results: [] });
     const res = await sendPOST(req('/api/whatsapp/send', { method: 'POST', body: { to: ['5511'], text: 'oi' } }));

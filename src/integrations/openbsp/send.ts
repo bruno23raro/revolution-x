@@ -186,3 +186,68 @@ export async function sendTemplateViaOpenBSP(
     };
   }
 }
+
+export interface Recipient {
+  to: string;
+  text?: string;
+}
+
+export interface MassSendOptions {
+  delayMs?: number;
+  template?: { name: string; variables: string[]; language?: string };
+}
+
+export interface MassSendResult {
+  total: number;
+  sent: number;
+  failed: number;
+  results: OpenBSPSendResult[];
+}
+
+/**
+ * Envia mensagens em massa via OpenBSP.
+ * Para cada destinatário, usa sendTemplateViaOpenBSP se template definido,
+ * senão usa sendViaOpenBSP.
+ * @param channel - Objeto com propriedade `row` contendo os dados do canal,
+ *   ou diretamente os dados do canal
+ */
+export async function sendMassViaOpenBSP(
+  channel: { row?: WhatsappChannelRow | Record<string, unknown>; accessToken?: string } | WhatsappChannelRow | Record<string, unknown>,
+  recipients: Recipient[],
+  opts: MassSendOptions = {},
+): Promise<MassSendResult> {
+  // Unifica o canal - aceita objeto com .row ou diretamente os dados
+  const channelData = ('row' in channel && channel.row) || (channel as WhatsappChannelRow);
+  const results: OpenBSPSendResult[] = [];
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < recipients.length; i++) {
+    const r = recipients[i];
+    let res: OpenBSPSendResult;
+
+    if (opts.template) {
+      res = await sendTemplateViaOpenBSP(
+        channelData as WhatsappChannelRow | Record<string, unknown>,
+        r.to,
+        opts.template!.name,
+        opts.template!.language || 'pt_BR',
+        opts.template!.variables,
+      );
+    } else {
+      res = await sendViaOpenBSP(channelData as WhatsappChannelRow | Record<string, unknown>, r.to, r.text || '');
+    }
+
+    results.push(res);
+    if (res.ok) sent++;
+    else failed++;
+
+    // Aplicar delay entre mensagens se configurado
+    const delayMs = opts.delayMs ?? 0;
+    if (delayMs > 0 && i < recipients.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  return { total: recipients.length, sent, failed, results };
+}

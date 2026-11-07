@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
     .from('whatsapp_channels')
     .update({
       status: 'DISCONNECTED',
-      accessTokenEnc: null,
-      lastError: 'desconectado_pelo_usuario',
-      updatedAt: new Date().toISOString(),
+      access_token_enc: null,
+      last_error: 'desconectado_pelo_usuario',
+      updated_at: new Date().toISOString(),
     })
-    .eq('organizationId', user.organizationId);
+    .eq('organization_id', user.organizationId);
 
   console.info('[openbsp] canal desconectado', { org: user.organizationId });
   return NextResponse.json({ ok: true, status: 'DISCONNECTED' });

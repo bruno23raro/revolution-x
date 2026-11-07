@@ -130,7 +130,7 @@ describe('OpenBSP Send', () => {
           method: 'POST',
           headers: {
             apikey: 'test-pk',
-            Authorization: 'Bearer test-sk',
+            'api-key': 'test-sk',
             'Content-Type': 'application/json',
             Prefer: 'return=representation',
           },

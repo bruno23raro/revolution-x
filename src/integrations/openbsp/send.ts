@@ -81,8 +81,8 @@ export async function sendViaOpenBSP(
     const response = await fetch(`${baseUrl}/rest/v1/messages`, {
       method: 'POST',
       headers: {
-        'apikey': publishableKey,
-        'Authorization': `Bearer ${apiKey}`,
+        apikey: publishableKey,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
         Prefer: 'return=representation',
       },
@@ -157,8 +157,8 @@ export async function sendTemplateViaOpenBSP(
     const response = await fetch(`${config.baseUrl}/rest/v1/messages`, {
       method: 'POST',
       headers: {
-        'apikey': config.publishableKey,
-        'Authorization': `Bearer ${config.apiKey}`,
+        apikey: config.publishableKey,
+        'api-key': config.apiKey,
         'Content-Type': 'application/json',
         Prefer: 'return=representation',
       },

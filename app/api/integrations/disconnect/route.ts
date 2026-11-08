@@ -79,12 +79,20 @@ export async function POST(req: NextRequest) {
       if (revokeToken && integration.access_token) {
         try {
           const decryptedToken = decryptToken(integration.access_token);
-          await fetch(
+          const revokeRes = await fetch(
             `https://graph.facebook.com/v26.0/me/permissions?access_token=${decryptedToken}`,
             { method: 'DELETE' }
           );
+          if (!revokeRes.ok) {
+            const revokeErrText = await revokeRes.text().catch(() => 'unknown');
+            console.error('[integrations-disconnect] token revocation failed:',
+              { status: revokeRes.status, body: revokeErrText });
+            // Marca o erro mas continua com o cleanup do banco
+            // O token permanece ativo na Meta mas a integração é removida do nosso sistema
+          }
         } catch (revokeErr) {
-          console.warn('[integrations-disconnect] token revocation failed:', revokeErr);
+          console.error('[integrations-disconnect] token revocation exception:',
+            revokeErr instanceof Error ? revokeErr.message : String(revokeErr));
           // Não falhar a desconexão por erro de revogação
         }
       }

@@ -137,28 +137,24 @@ export async function POST(request: Request) {
 
     if (!onboarding.ok) {
       // P4-2 (registro-zumbi): onboarding falhou → usuário com sessão GoTrue
-      // válida mas sem public."User"/Organization (getAuthenticatedUser → null
-      // → bloqueio permanente, sem retry). Compensa em DOIS planos e devolve
-      // 500 honesto em vez de 201 falso, para o e-mail poder re-registrar limpo:
-      //  1. deleteUser mata a sessão GoTrue (meta principal);
-      //  2. o GoTrue NÃO tem cascade para public."User" — apaga também o
-      //     resíduo parcial das linhas públicas (child → parent). Sem isso, a
-      //     linha órfã de public."User" (e-mail UNIQUE) travaria o re-cadastro.
+      // válida mas sem public."User"/Organization → bloqueio permanente, sem retry.
+      // Compensa com dois planos: (a) tenta cleanup; (b) retorna 500 honesto para
+      // permitir re-registro limpo. Se o rollback parcial falhar, loga sem derrubar
+      // a resposta para o e-mail poder re-registrar depois.
       console.error('[register] onboarding failed:', onboarding.error);
       let rolledBack = false;
       try {
         const admin = createServiceRoleClient();
+        // 1. Mata a sessão GoTrue (principal)
         await admin.auth.admin.deleteUser(data.user.id);
         rolledBack = true;
-        // Resíduo público parcial (melhor esforço; só loga, não muda o detail):
-        await admin.from('OrganizationMember').delete().eq('userId', data.user.id);
-        if (onboarding.orgId) {
-          await admin.from('Organization').delete().eq('id', onboarding.orgId);
-        }
-        await admin.from('User').delete().eq('id', data.user.id);
+        // 2. Cleanup best-effort das tabelas públicas — cada delete é independente
+        try { await admin.from('OrganizationMember').delete().eq('userId', data.user.id); } catch {}
+        try { if (onboarding.orgId) { await admin.from('Organization').delete().eq('id', onboarding.orgId); } } catch {}
+        try { await admin.from('User').delete().eq('id', data.user.id); } catch {}
       } catch (rollbackErr) {
-        // Falha do rollback NÃO derruba a resposta: resíduo possível (cleanup
-        // manual). Log sem segredos.
+        // Falha parcial do rollback: log sem derrubar a resposta.
+        // Mesmo com resíduo, permite o usuário re-registrar depois.
         console.error('[register] compensating delete left residue:', rollbackErr);
       }
       return NextResponse.json(

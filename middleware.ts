@@ -1,18 +1,69 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceRoleClient } from './src/lib/supabase/server';
+import { applySecurityHeaders, withCors } from './src/middleware/helmet';
+
+// Rate limit config por endpoint (100 req/min padrão)
+const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
+  '/api/auth': { windowMs: 60_000, max: 30 }, // 30/min para auth (login, register, refresh)
+  '/api/auth/login': { windowMs: 15 * 60_000, max: 10 }, // 10/min específico para login
+  '/api/auth/register': { windowMs: 60 * 60_1000, max: 10 }, // 10/h para register
+  '/api/webhooks': { windowMs: 60_000, max: 2000 }, // 2000/min para webhooks (alto tráfego)
+  '/api/schedules': { windowMs: 60_000, max: 100 }, // 100/min para schedules
+  'default': { windowMs: 60_000, max: 100 },
+};
+
+/**
+ * Aplica rate limiting usando Redis ou fallback em memória.
+ * Retorna { limited, remaining, resetIn } ou undefined se não aplicável.
+ */
+async function checkRateLimit(
+  key: string,
+  config: { windowMs: number; max: number }
+): Promise<{ limited: boolean; remaining: number; resetIn: number } | undefined> {
+  try {
+    const { getRedis } = await import('./src/lib/redis');
+    const redis = await getRedis();
+
+    if (!redis) return undefined; // Redis não configurado → degrade graceful
+
+    const current = await redis.incr(key);
+    if (current === 1) {
+      // TTL em segundos
+      await redis.expire(key, Math.floor(config.windowMs / 1000));
+      const ttl = await redis.ttl(key);
+      return { limited: false, remaining: Math.max(0, config.max - current + 1), resetIn: ttl };
+    }
+
+    const ttl = await redis.ttl(key);
+    if (current > config.max) {
+      return { limited: true, remaining: 0, resetIn: ttl };
+    }
+
+    return { limited: false, remaining: Math.max(0, config.max - current + 1), resetIn: ttl };
+  } catch {
+    return undefined; // Redis error → fail open
+  }
+}
+
+/**
+ * Determina a chave de rate limit com base na URL e IP do cliente.
+ */
+function getRateLimitKey(request: NextRequest, key: string): string {
+  const ip = (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )!.replace(/\D/g, '');
+  return `rate:${key}:${ip}:${new URL(request.url).pathname}`;
+}
 
 export async function middleware(request: NextRequest) {
-  // Canonical host: apex (revolutionx.com.br), nunca o www. O www serve a
-  // MESMA página hoje (ETag idêntico, sem redirect) → conteúdo duplicado.
-  // 301 aqui (ANTES de qualquer coisa que use Supabase) elimina o duplicado;
-  // o alvo é construído removendo o prefixo www do próprio Host recebido,
-  // portanto o loop é impossível por construção (www.x → x, nunca o
-  // contrário). Preserva protocolo, caminho e query; a porta é preservada
-  // SÓ para hosts locais (dev) — em hosts públicos o proxy interno do
-  // Hostinger reporta o Host com a porta interna do app (ex.: :3000), que
-  // não é alcançável pelo usuário (ele chega por 443/80); expor a porta
-  // no 301 apontaria para uma URL morta.
+  const pathname = request.nextUrl.pathname;
+
+  // ----------------------------------------
+  // 1. REDIRECIONAR WWW → APEX (SEO)
+  // ----------------------------------------
   const host = (request.headers.get('host') ?? '').toLowerCase();
   if (host.startsWith('www.')) {
     const target = new URL(request.url);
@@ -27,15 +78,45 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(target, 301);
   }
 
-  let response = NextResponse.next({
-    request,
-  });
+  // ----------------------------------------
+  // 2. RATE LIMITING (exceto assets estáticos)
+  // ----------------------------------------
+  if (pathname.startsWith('/api/')) {
+    let config: { windowMs: number; max: number } | undefined;
+
+    // Match mais específico primeiro
+    for (const [path, limit] of Object.entries(RATE_LIMITS)) {
+      if (path !== 'default' && pathname.startsWith(path)) {
+        config = limit;
+        break;
+      }
+    }
+    // Fallback para default
+    if (!config) config = RATE_LIMITS.default;
+
+    const rateKey = getRateLimitKey(request, pathname);
+    const result = await checkRateLimit(rateKey, config);
+
+    if (result?.limited) {
+      const response = NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: result.resetIn },
+        { status: 429 }
+      );
+      response.headers.set('X-RateLimit-Remaining', '0');
+      response.headers.set('X-RateLimit-Reset', String(result.resetIn));
+      return response;
+    }
+  }
+
+  // ----------------------------------------
+  // 3. VERIFICAR SUPABASE (modo degraded se ausente)
+  // ----------------------------------------
+  let response = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    const pathname = request.nextUrl.pathname;
     const isPublicRoute =
       pathname === '/' ||
       pathname === '/login' ||
@@ -45,8 +126,6 @@ export async function middleware(request: NextRequest) {
       pathname === '/verify-email' ||
       pathname.startsWith('/onboarding');
 
-    // A preview without Supabase may render public pages, but must never make
-    // protected UI appear authenticated in a production-like runtime.
     if (process.env.NODE_ENV === 'production' && !isPublicRoute) {
       if (pathname.startsWith('/api/')) {
         return new NextResponse('Authentication service is not configured', { status: 503 });
@@ -54,53 +133,47 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // Apply security headers even in degraded mode
+    applySecurityHeaders(response);
     return response;
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
-          });
-
-          response = NextResponse.next({
-            request,
-          });
-
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
-        },
+  // ----------------------------------------
+  // 4. AUTHENTICATION CONTEXT (SSR)
+  // ----------------------------------------
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+
+        response = NextResponse.next({ request });
+
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    applySecurityHeaders(response);
     return response;
   }
 
-  // Fetch user's organization from database.
-  // Uses service role here because this query runs before any tenant context
-  // is available (middleware has no GUC). The user identity is already validated
-  // by Supabase Auth above, so the lookup is safe — only the user's own row
-  // can be read (userId is the partition key).
+  // ----------------------------------------
+  // 5. TENANT CONTEXT (cookies)
+  // ----------------------------------------
   try {
     const svc = createServiceRoleClient();
-    // Um usuário pode pertencer a várias organizações: OrganizationMember tem
-    // @@unique([organizationId,userId]), não um userId único. maybeSingle()
-    // lançava para o 2º registro e o catch engolia → multi-org perdia o cookie
-    // de contexto. Buscamos a lista e usamos a primeira como a org ativa.
     const { data: members } = await svc
       .from('OrganizationMember')
       .select('organizationId')
@@ -119,11 +192,16 @@ export async function middleware(request: NextRequest) {
     // Ignore errors fetching org
   }
 
+  // ----------------------------------------
+  // 6. APLICAR HEADERS DE SEGURANÇA
+  // ----------------------------------------
+  applySecurityHeaders(response);
+
   return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

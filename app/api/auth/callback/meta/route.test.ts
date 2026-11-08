@@ -200,4 +200,85 @@ describe('OAuth callback meta', () => {
     // token NUNCA aparece no redirect.
     expect(res.headers.get('location')).not.toContain('tok');
   });
+
+  it('constraint violation 23505 (UNIQUE org+provider) é ignorada como idempotente', async () => {
+    global.fetch = jest.fn(async (input: unknown) => {
+      const url = String(input);
+      return {
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.includes('oauth/access_token')
+            ? { access_token: 'tok', expires_in: 3600 }
+            : { data: [] },
+      };
+    }) as unknown as typeof fetch;
+
+    // Mock para inserir com erro 23505 (violação de constraint)
+    let insertCallCount = 0;
+    const originalInsert = mockDbChain.insert;
+    mockDbChain.insert = jest.fn(async () => {
+      insertCallCount++;
+      // Simula erro de violação de constraint única
+      if (insertCallCount <= 2) {
+        return {
+          error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+        };
+      }
+      return { error: null };
+    });
+
+    const res = await GET(cbReq('?code=x&state=good'));
+    // Mesmo com error 23505, deve retornar sucesso (idempotente)
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get('location')!).pathname).toBe('/onboarding/success');
+    expect(res.cookies.get('oauth_state')?.value).toBe('');
+  });
+
+  it('insere falha com outro código de erro (não 23505) retorna db_error', async () => {
+    global.fetch = jest.fn(async (input: unknown) => {
+      const url = String(input);
+      return {
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.includes('oauth/access_token')
+            ? { access_token: 'tok', expires_in: 3600 }
+            : { data: [] },
+      };
+    }) as unknown as typeof fetch;
+
+    // Mock para inserir com erro não-23505
+    mockDbChain.insert = jest.fn(async () => ({
+      error: { code: '23503', message: 'foreign key violation' },
+    }));
+
+    const res = await GET(cbReq('?code=x&state=good'));
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get('location')!).searchParams.get('reason')).toBe('db_error');
+  });
+
+  it('update falha com código diferente de 23505 retorna db_error', async () => {
+    global.fetch = jest.fn(async (input: unknown) => {
+      const url = String(input);
+      return {
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.includes('oauth/access_token')
+            ? { access_token: 'tok', expires_in: 3600 }
+            : { data: [] },
+      };
+    }) as unknown as typeof fetch;
+
+    // Mock: encontra registro existente, mas update falha com erro não-23505
+    mockDbChain.maybeSingle = jest.fn(async () => ({ data: { id: 'existing-id' }, error: null }));
+    mockDbChain.update = jest.fn(async () => ({
+      error: { code: '23502', message: 'not null violation' },
+    }));
+
+    const res = await GET(cbReq('?code=x&state=good'));
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get('location')!).searchParams.get('reason')).toBe('db_error');
+  });
 });

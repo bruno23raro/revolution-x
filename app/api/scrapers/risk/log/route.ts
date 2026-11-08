@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Check risk acknowledgment (required for all operations)
+    // Para este endpoint, usamos o userId como logId temporário para verificar handshake
     const acknowledged = await checkRiskAcknowledgment(
       user.id,
-      body.platform,
-      CURRENT_RISK_VERSION
+      user.id
     );
 
     if (!acknowledged) {

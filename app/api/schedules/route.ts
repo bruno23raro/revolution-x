@@ -1,26 +1,37 @@
 // FASE 5 — GET /api/schedules (listar agendamentos)
 // Baseado no padrão de app/api/crm/leads/route.ts
-// Não inventado; funcionalidade inequívoca para calendário de marketing
-// DEPENDÊNCIA DE BANCO — NÃO VALIDADA (usa mock)
+// Usa Supabase service-role client para queries reais
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateSchedule } from '../../../src/services/scheduleService';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { validateSchedule } from '@/services/scheduleService';
 
-const mockSchedules = [
-  {
-    id: 's-001',
-    organizationId: 'mock-org',
-    title: 'Post Instagram - Produto Novo',
-    scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-    status: 'scheduled',
-    channel: 'social',
-    createdAt: new Date().toISOString(),
-  },
-];
+interface ScheduleRecord {
+  id: string;
+  organizationId: string;
+  title: string;
+  scheduledAt: string;
+  status: string;
+  channel: string;
+  createdAt: string;
+}
 
 // GET /api/schedules
 export async function GET() {
-  return NextResponse.json({ data: mockSchedules, total: mockSchedules.length });
+  try {
+    const admin = createServiceRoleClient();
+    const { data, error } = await admin.from('Schedule').select('*');
+
+    if (error) {
+      console.error('[schedules] DB error:', error);
+      return NextResponse.json({ data: [], total: 0, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data, total: data?.length ?? 0 });
+  } catch (err) {
+    console.error('[schedules] Unexpected error:', err);
+    return NextResponse.json({ data: [], total: 0, error: 'internal_error' }, { status: 500 });
+  }
 }
 
 // POST /api/schedules
@@ -35,9 +46,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errors }, { status: 400 });
   }
 
-  // DEPENDÊNCIA DE BANCO — NÃO VALIDADA (substituir por query real quando DB confirmado)
-  return NextResponse.json({
-    data: { id: 's-' + Date.now(), ...body, organizationId: 'org-mock', createdAt: new Date().toISOString() },
-    status: 201,
-  });
+  try {
+    const admin = createServiceRoleClient();
+    const { data, error } = await admin.from('Schedule').insert({
+      id: 's-' + Date.now(),
+      organizationId: body.organizationId || crypto.randomUUID().toString(),
+      title: body.title,
+      scheduledAt: body.scheduledAt,
+      status: 'scheduled',
+      channel: body.channel || 'social',
+      createdAt: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('[schedules] DB insert error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data, status: 201 });
+  } catch (err) {
+    console.error('[schedules] Unexpected error:', err);
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
 }

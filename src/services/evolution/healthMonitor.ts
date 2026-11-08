@@ -12,6 +12,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { EvolutionService } from './EvolutionService';
+import { info, error } from '../../lib/logger';
 
 const INTERVAL_MS = Number(process.env.HEALTH_MONITOR_INTERVAL_MS || 60000);
 const ORG_ID = process.env.HEALTH_MONITOR_ORG_ID || '9d7114cd-013e-4e03-b91d-848518bf6514';
@@ -42,8 +43,9 @@ async function sendAdminAlert(
         message,
         metadata: metadata ?? {},
       });
+    info('[HealthMonitor] AdminAlert gravado', { type, severity, title });
   } catch (e) {
-    console.error(`[HealthMonitor] Falha ao gravar AdminAlert (${type}):`, e);
+    error('[HealthMonitor] Falha ao gravar AdminAlert', e, { type });
   }
 }
 
@@ -52,18 +54,18 @@ async function runOnce() {
   const evolution = new EvolutionService();
 
   // Carregar instâncias da organização diretamente do Supabase (RLS)
-  const { data: instances, error } = await supa
+  const { data: instances, error: dbError } = await supa
     .from('whatsapp_instances')
     .select('*')
     .eq('organizationId', ORG_ID);
 
-  if (error) {
-    console.error(`[HealthMonitor] Erro ao carregar instâncias:`, error);
+  if (dbError) {
+    error('[HealthMonitor] Erro ao carregar instâncias', { error: dbError.message });
     return;
   }
 
   if (!instances || instances.length === 0) {
-    console.log(`[HealthMonitor] Nenhuma instância registrada para org ${ORG_ID}`);
+    info('[HealthMonitor] Nenhuma instância registrada', { orgId: ORG_ID });
     return;
   }
 
@@ -78,19 +80,18 @@ async function runOnce() {
       if (prevStatus === undefined) {
         // Primeira observação: apenas registra, não alerta
         lastStatus.set(instanceName, newStatus);
-        console.log(`[HealthMonitor] ${instanceName}: status inicial ${newStatus}`);
+        info('[HealthMonitor] status inicial', { instanceName, status: newStatus });
         continue;
       }
 
       if (newStatus !== prevStatus) {
         // Mudança de status: alerta
-        const severity = newStatus === 'CONNECTED' ? 'warning' : 'critical';
         const title = `Instância ${instanceName} mudou de status`;
         const message = `Status mudou de "${prevStatus}" para "${newStatus}"`;
         await sendAdminAlert(
           supa,
           'integration_status',
-          severity,
+          newStatus === 'CONNECTED' ? 'warning' : 'critical',
           title,
           message,
           {
@@ -100,7 +101,7 @@ async function runOnce() {
             checkedAt: new Date().toISOString(),
           },
         );
-        console.log(`[HealthMonitor] ${instanceName}: ${prevStatus} → ${newStatus} (alerta enviado)`);
+        info('[HealthMonitor] status mudou', { instanceName, prevStatus, newStatus });
         lastStatus.set(instanceName, newStatus);
       } else if (newStatus === 'ERROR') {
         // Instância permanecendo em ERROR: alerta crítico periódico
@@ -117,23 +118,22 @@ async function runOnce() {
             checkedAt: new Date().toISOString(),
           },
         );
-        console.log(`[HealthMonitor] ${instanceName}: ERROR persistente (alerta crítico)`);
+        info('[HealthMonitor] ERROR persistente', { instanceName });
       } else {
         // Status estável e não-error: apenas heartbeat de saúde
         await evolution.updateHeartbeat(instanceName).catch(() => {
           // Falha de heartbeat não bloqueia o loop
         });
-        console.log(`[HealthMonitor] ${instanceName}: estável (${newStatus})`);
+        info('[HealthMonitor] instância estável', { instanceName, status: newStatus });
       }
     } catch (e) {
       // Falha ao consultar Evolution API para esta instância
-      const severity = 'critical';
       const title = `Falha ao consultar instância ${instanceName}`;
       const message = `Não foi possível obter status da instância ${instanceName} via Evolution API`;
       await sendAdminAlert(
         supa,
         'integration_status',
-        severity,
+        'critical',
         title,
         message,
         {
@@ -142,28 +142,27 @@ async function runOnce() {
           checkedAt: new Date().toISOString(),
         },
       );
-      console.error(`[HealthMonitor] Erro ao consultar ${instanceName}:`, e);
+      error('[HealthMonitor] Erro ao consultar instância', e, { instanceName });
       // Mantém o último status conhecido para não gerar alerta falso de mudança
     }
   }
 }
 
 async function main() {
-  console.log(`[HealthMonitor] Iniciando monitor de instâncias WhatsApp (org ${ORG_ID})`);
-  console.log(`[HealthMonitor] Intervalo: ${INTERVAL_MS}ms`);
+  info('[HealthMonitor] Iniciando monitor', { orgId: ORG_ID, intervalMs: INTERVAL_MS });
 
   // Executa imediatamente uma vez
-  await runOnce().catch(e => console.error('[HealthMonitor] Erro na execução inicial:', e));
+  await runOnce().catch(e => error('[HealthMonitor] Erro na execução inicial', { error: e }));
 
   // Loop periódico
   setInterval(() => {
-    runOnce().catch(e => console.error('[HealthMonitor] Erro no ciclo periódico:', e));
+    runOnce().catch(e => error('[HealthMonitor] Erro no ciclo periódico', { error: e }));
   }, INTERVAL_MS);
 
-  console.log('[HealthMonitor] Loop iniciado. Pressione Ctrl+C para parar.');
+  info('[HealthMonitor] Loop iniciado', { note: 'Pressione Ctrl+C para parar' });
 }
 
 main().catch(e => {
-  console.error('[HealthMonitor] Erro fatal:', e);
+  error('[HealthMonitor] Erro fatal', { error: e });
   process.exit(1);
 });

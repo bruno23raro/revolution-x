@@ -1,0 +1,80 @@
+# Docker Compose para Revolution X - Stack completo
+# Uso: docker compose up -d
+#       docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+#
+# Serviços:
+#   - app: Next.js (localhost:3000)
+#   - db: PostgreSQL 17 (localhost:54321)
+#   - redis: Redis 7 (localhost:6379)
+#   - studio: Supabase Studio (localhost:54323)
+
+name: revolution-x
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: revolution-x-db
+    restart: unless-stopped
+    ports:
+      - "54321:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rx593ce286d544b58b3778dab12e5bf97c7587c07394e5a375}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: revolution-x-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: revolution-x-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-rx593ce286d544b58b3778dab12e5bf97c7587c07394e5a375}@db:5432/postgres
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:8432
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3OTMyOTMzNzcsImV4cCI6MjEwODY1MzM3NywicmVmIjoibG9jYWwiLCJyb2xlIjoiYW5vbiJ9.wv0aPeI-lOm33QeeHTMs143Hz-haQn9MBSzE8cHSV0
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3OTMyOTMzNzcsImV4cCI6MjEwODY1MzM3NywicmVmIjoic2VydmljZV9yb2xlIn0.gPEti9FmSQS0_oSdrJK9PihtQENsFAZFqU2nUY4h3G8
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - .next:/app/.next
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  db-data:
+  redis-data:

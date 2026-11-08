@@ -1,0 +1,42 @@
+{
+  "name": "Revolution X MCP Client",
+  "url": "https://mcp.openbsp.dev/sse",
+  "token": "",
+  "headers": {
+    "organization-id": "9d7114cd-013e-4e03-b91d-848518bf6514",
+    "organization-address": "",
+    "conversation-id": "",
+    "agent-id": "revx-agent-main",
+    "contact-id": "",
+    "contact-address": ""
+  },
+  "notes": {
+    "organizationId": "9d7114cd-013e-4e03-b91d-848518bf6514",
+    "explaination": "Usaremos headers customizados em vez de token. Os headers organization-address, conversation-id, contact-id e contact-address são gerados dinamicamente pelo sistema e não precisam ser fixos.",
+    "agentId": "revx-agent-main"
+  },
+  "onboarding": {
+    "thirdPartyWhatsAppLink": "https://web.openbsp.dev/onboard/instagram/0a5c4d02-645f-4793-b8f6-19cee1c03ebc",
+    "description": "Para quem usar: Envie este link para qualquer pessoa/empresa que quer conectar seu WhatsApp ao Revolution X. Eles clicam, autorizam, e o WhatsApp deles fica vinculado automaticamente."
+  },
+  "agent": {
+    "name": "Revolution X Assistant",
+    "status": "Ativo",
+    "instructions": "Você é um assistente de marketing automatizado da Revolution X. Responda mensagens de clientes com empatia, profissionalismo e foco em conversão. Sempre inclua CTA (call-to-action). Use português brasileiro.",
+    "model": "gemini-2.5-flash",
+    "tools": [
+      "send_message",
+      "get_contact",
+      "create_lead"
+    ]
+  },
+  "webhook": {
+    "baseUrl": "https://revolutionx.com.br/api/webhooks/openbsp/messages",
+    "verifyToken": "revolutionx_webhook_2026",
+    "description": "Webhook configurado para receber mensagens WhatsApp do OpenBSP"
+  },
+  "gemini": {
+    "keyExists": false,
+    "note": "GEMINI_API_KEY not found in .env.local - configure it if needed for media preprocessing"
+  }
+}

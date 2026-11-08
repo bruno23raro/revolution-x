@@ -2,7 +2,7 @@
 
 // Layout reutilizável para páginas de scraper — Header com RiskBanner, formulário,
 // botão de ação (desabilitado sem ack de risco) e área de resultados.
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import RiskBanner from '@/components/RiskBanner';
 
@@ -17,14 +17,7 @@ interface ScraperPageLayoutProps {
 export default function ScraperPageLayout({ title, description, icon, fields, children }: ScraperPageLayoutProps) {
   const [form, setForm] = useState<Record<string, string>>({});
   const [ack, setAck] = useState(false);
-  const [running, setRunning] = useState(false);
   const [results, setResults] = useState<string | null>(null);
-  const [featureAvailable, setFeatureAvailable] = useState(false);
-
-  useEffect(() => {
-    // Scraper ainda não tem backend real - funcionalidade indisponível no momento
-    setFeatureAvailable(false);
-  }, []);
 
   const handleChange = (name: string, value: string) => {
     setForm((f) => ({ ...f, [name]: value }));
@@ -32,13 +25,8 @@ export default function ScraperPageLayout({ title, description, icon, fields, ch
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ack || !featureAvailable) return;
-    setRunning(true);
-    setResults(null);
-    setTimeout(() => {
-      setResults(`Função de scraping não disponível no momento. Esta funcionalidade requer backend de extração real que ainda não está implementado.`);
-      setRunning(false);
-    }, 500);
+    if (!ack) return;
+    setResults('Funcionalidade em desenvolvimento - será implementada em breve. Contate a equipe para detalhes.');
   };
 
   return (
@@ -66,6 +54,16 @@ export default function ScraperPageLayout({ title, description, icon, fields, ch
           Termos de Serviço das plataformas e resultar em bloqueio de conta. Use apenas para fins
           autorizados, com consentimento explícito e em conformidade com a LGPD e demais regulamentações.
         </RiskBanner>
+      </div>
+
+      {/* Status da funcionalidade */}
+      <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+        <span className="inline-flex items-center gap-2 text-xs font-medium text-yellow-400">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15H9v-2h4v2zm0-4H9V5h4v8z"/>
+          </svg>
+          Em desenvolvimento - função indisponível no momento
+        </span>
       </div>
 
       {/* Formulário */}
@@ -101,14 +99,14 @@ export default function ScraperPageLayout({ title, description, icon, fields, ch
 
         <button
           type="submit"
-          disabled={!ack || running}
+          disabled={!ack}
           className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-            !ack || running
+            !ack
               ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-              : 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-yellow-600 text-white hover:bg-yellow-700'
           }`}
         >
-          {running ? 'Iniciando extração…' : 'Iniciar Extração'}
+          Iniciar Extração
         </button>
       </form>
 

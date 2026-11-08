@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceRoleClient } from '../../../../src/lib/supabase/server';
-import { resolvePublicSiteOrigin } from '../../../../src/lib/site-origin';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { resolvePublicSiteOrigin } from '@/lib/site-origin';
+import { hashPassword } from '@/lib/auth';
 
 function slugify(name: string): string {
   return name
@@ -12,28 +13,33 @@ function slugify(name: string): string {
     + '-' + crypto.randomUUID().substring(0, 6);
 }
 
-interface OnboardingResult {
+export interface OnboardingResult {
   ok: boolean;
   /** orgId gerado mesmo que o insert falhe — o cleanup de resíduo parcial precisa dele. */
   orgId?: string;
   /** Erro original (NUNCA exposto ao client; só log). */
   error?: unknown;
+  /** Se true, o usuário foi criado mas o onboarding falhou → precisa de rollback */
+  rollbackNeeded?: boolean;
 }
 
 async function createOnboardingRecords(
   userId: string,
   name: string,
   email: string,
+  passwordHash: string,
 ): Promise<OnboardingResult> {
   const admin = createServiceRoleClient();
 
   // 1. Sync to public.User (auth.users → public."User")
+  // O passwordHash é obrigatório pela constraint NOT NULL da coluna.
+  // Usamos o hash gerado localmente com bcrypt (mesmo algoritmo usado pelo GoTrue).
   const { error: userError } = await admin.from('User').insert({
     id: userId,
     email,
     name,
-    passwordHash: 'placeholder_migrated_user',
-    emailVerified: true,
+    passwordHash,
+    emailVerified: false,
   });
   if (userError) {
     // 23505 = e-mail já em uso por linha anterior → idempotente, ignora.
@@ -110,6 +116,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'registration_failed' }, { status: 400 });
     }
 
+    // Hash da senha para armazenar em public.User (coluna obrigatória passwordHash)
+    const passwordHash = await hashPassword(normalizedPassword);
+
     // Create public.User + Organization + OrganizationMember for CRM access.
     // NUNCA lança: devolve um resultado — a falha é o ponto de compensação P4-2.
     let onboarding: OnboardingResult;
@@ -118,6 +127,7 @@ export async function POST(request: Request) {
         data.user.id,
         String(name ?? '').trim(),
         normalizedEmail,
+        passwordHash,
       );
     } catch (onboardErr) {
       // createServiceRoleClient() pode lançar (service key ausente) — trata

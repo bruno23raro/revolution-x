@@ -7,8 +7,17 @@ const __dirname = dirname(__filename);
 
 const nextConfig = {
   poweredByHeader: false,
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.alias['@'] = __dirname;
+
+    // ioredis só é usado no servidor (APIs de rota). Impedir que o webpack
+    // tente empacotá-lo no cliente, onde `node:diagnostics_channel` não existe
+    // no webpack 5 do Next.js 14 (Node.js 24 incompatível).
+    config.externals = config.externals || [];
+    config.externals.push({
+      ioredis: 'commonjs ioredis',
+    });
+
     return config;
   },
   async headers() {
@@ -16,9 +25,6 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
-          // HSTS: reforça o https no app (o http→https 301 já existe na borda
-          // Hostinger). Cabeçalho entregue por respostas https não afeta a
-          // execução local (browsers só aceitam HSTS de respostas https).
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
         ],
       },

@@ -3,6 +3,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 import { createClient } from './supabase/server';
 import { prisma, withUserContext } from './prisma';
+import * as log from './logger';
 
 // ============================================================
 // Auth helpers — works without DB for token-based validation
@@ -51,7 +52,7 @@ export async function getAuthenticatedUser(
 
   if (!user) {
     // Log: sem sessão Supabase (usuário não autenticado)
-    console.log('[auth] getAuthenticatedUser: no supabase session');
+    log.info('[auth] getAuthenticatedUser: no supabase session');
     return null;
   }
 
@@ -66,22 +67,25 @@ export async function getAuthenticatedUser(
         include: { organizationMembers: true },
       })
     );
-  } catch (error) {
+  } catch (err) {
     // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
-    const err = error instanceof Error ? error : new Error(String(error));
-    console.log('[auth] getAuthenticatedUser: database error, code=' + (err as { code?: string }).code + ', name=' + err.name);
+    const e = err instanceof Error ? err : new Error(String(err));
+    log.error('[auth] getAuthenticatedUser: database error', e, {
+      code: (e as { code?: string }).code,
+      name: e.name
+    });
     return null;
   }
 
   if (!dbUser) {
     // Log: usuário sem registro no banco de dados
-    console.log('[auth] getAuthenticatedUser: user not found in database');
+    log.info('[auth] getAuthenticatedUser: user not found in database');
     return null;
   }
 
   if (dbUser.organizationMembers.length === 0) {
     // Log: usuário sem membership em nenhuma organização
-    console.log('[auth] getAuthenticatedUser: user has no organization memberships');
+    log.info('[auth] getAuthenticatedUser: user has no organization memberships');
     return null;
   }
 
@@ -126,10 +130,13 @@ export async function getAllOrganizationMemberships(
         include: { organizationMembers: { select: { organizationId: true, role: true } } },
       })
     );
-  } catch (error) {
+  } catch (err) {
     // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
-    const err = error instanceof Error ? error : new Error(String(error));
-    console.log('[auth] getAllOrganizationMemberships: database error, code=' + (err as { code?: string }).code + ', name=' + err.name);
+    const e = err instanceof Error ? err : new Error(String(err));
+    log.error('[auth] getAllOrganizationMemberships: database error', e, {
+      code: (e as { code?: string }).code,
+      name: e.name
+    });
     return null;
   }
 

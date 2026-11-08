@@ -131,74 +131,68 @@ export async function POST(req: NextRequest) {
   // Se o claim retorna vazio → evento já registrado por outra entrega →
   // duplicado, não reprocessamos. O fast-path acima (service_role) é
   // otimização; o claim é a garantia.
+  let isDuplicate = false;
   try {
-    const outcome = await withTenantContext(organizationId, async (tx) => {
-      if (metaEventId) {
-        try {
-          const claimed = await tx.$queryRaw`
-            INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
-            VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, sha256(${payloadText}::text), NOW())
-            ON CONFLICT (meta_event_id) DO NOTHING
-            RETURNING event_id
-          ` as Array<{ event_id: string }>;
-          if (claimed.length === 0) {
-            return { kind: 'duplicate' as const };
-          }
-        } catch (claimErr) {
-          // 015 ainda não aplicada / índice ausente → não bloquear entrega
-          console.warn('[meta-webhook] claim de idempotência falhou, processando mesmo assim:', (claimErr as Error).message);
-        }
-      }
+    const crypto = await import('crypto');
+    const payloadHash = crypto
+      .createHmac('sha256', META_APP_SECRET ?? '')
+      .update(String(payloadText))
+      .digest('hex');
 
-      const results = await processWhatsAppPayload(safe, organizationId, tx);
-      return { kind: 'processed' as const, results };
-    });
+    const result = await prisma.$queryRaw<{ event_id: string }[]>`
+      INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
+      VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, ${payloadHash}, NOW())
+      ON CONFLICT (meta_event_id) DO NOTHING
+      RETURNING event_id`;
 
-    if (outcome.kind === 'duplicate') {
-      return NextResponse.json({ status: 'duplicate_skipped' }, { status: 200 });
+    if (result.length === 0) {
+      isDuplicate = true;
     }
-
-    const hasErrors = outcome.results.some((r) => !r.success);
-    if (hasErrors) {
-      const errors = outcome.results.filter((r) => r.error).map((r) => r.error);
-      console.warn('[meta-webhook] partial processing errors:', errors);
-    }
-
-    // FASE 3 · slice 2 — Chatbot visual: resposta automática.
-    // Lê a config do tenant (AgentMemory) e envia pela Cloud API oficial.
-    // Nunca quebra o webhook: bot desligado, Meta não conectada ou falha
-    // de envio → loga e segue devolvendo 200.
-    for (const r of outcome.results) {
-      if (!r.success || !r.waId) continue;
-      try {
-        const auto = await maybeAutoReply(
-          organizationId,
-          r.waId,
-          r.text ?? '',
-          { firstContact: r.firstContact === true },
-          { client: prisma },
-        );
-        if (auto.replied) {
-          console.log(`[meta-webhook] chatbot replied (source=${auto.source}) to ${r.waId}`);
-        } else if (auto.skipReason === 'send_failed') {
-          console.warn(
-            '[meta-webhook] chatbot send failed:',
-            auto.send?.error,
-            auto.send?.errorDetail,
-          );
-        }
-      } catch (e) {
-        console.warn('[meta-webhook] chatbot auto-reply error:', (e as Error).message);
-      }
-    }
-
-    return NextResponse.json({ status: 'accepted' }, { status: 200 });
-  } catch (err) {
-    // Falha no processor — logging sem expor dados sensíveis
-    console.error('[meta-webhook] processor error:', (err as Error).message);
-    // Meta espera 200 rápido; falhas internas são logadas, não retornam erro
-    return NextResponse.json({ status: 'accepted' }, { status: 200 });
+  } catch (claimErr) {
+    // 015 ainda não aplicada / índice ausente → não bloquear entrega
+    console.warn('[meta-webhook] claim de idempotência falhou, processando mesmo assim:', (claimErr as Error).message);
   }
+
+  if (isDuplicate) {
+    return NextResponse.json({ status: 'duplicate_skipped' }, { status: 200 });
+  }
+
+  // Processar payload dentro do contexto de tenant
+  const result = await withTenantContext(organizationId, async (tx) => {
+    const results = await processWhatsAppPayload(safe, organizationId, tx);
+    // Ensure results is always an array
+    return { results: Array.isArray(results) ? results : [results] };
+  });
+
+  // FASE 3 · slice 2 — Chatbot visual: resposta automática.
+  // Lê a config do tenant (AgentMemory) e envia pela Cloud API oficial.
+  // Nunca quebra o webhook: bot desligado, Meta não conectada ou falha
+  // de envio → loga e segue devolvendo 200.
+  for (const r of result.results) {
+    if (!r.success || !r.waId) continue;
+    try {
+      const auto = await maybeAutoReply(
+        organizationId,
+        r.waId,
+        r.text ?? '',
+        { firstContact: r.firstContact === true },
+        { client: prisma },
+      );
+      if (auto.replied) {
+        console.log(`[meta-webhook] chatbot replied (source=${auto.source}) to ${r.waId}`);
+      } else if (auto.skipReason === 'send_failed') {
+        console.warn(
+          '[meta-webhook] chatbot send failed:',
+          auto.send?.error,
+          auto.send?.errorDetail,
+        );
+      }
+    } catch (e) {
+      console.warn('[meta-webhook] chatbot auto-reply error:', (e as Error).message);
+    }
+  }
+
+  return NextResponse.json({ status: 'accepted' }, { status: 200 });
 }
 
 function extractEventId(payload: unknown): string {

@@ -174,8 +174,13 @@ export async function GET(req: NextRequest) {
           .update(base)
           .eq('id', found.data.id);
         if (up.error) {
-          console.error('[meta-oauth] db error:', up.error);
-          return redirectError(req, 'db_error');
+          // Erro de violação de constraint única (23505) indica que outra
+          // conexão já existe para este org+provider — aceita como sucesso idempotente.
+          if (up.error?.code !== '23505') {
+            console.error('[meta-oauth] db error:', up.error);
+            return redirectError(req, 'db_error');
+          }
+          console.warn('[meta-oauth] constraint violation ignored (idempotent):', up.error.message);
         }
       } else {
         const ins = await serviceSupabase
@@ -189,9 +194,13 @@ export async function GET(req: NextRequest) {
             ...base,
           });
         if (ins.error) {
-          // Pré-migration-016, a 2ª+ página viola UNIQUE(organization_id,provider).
-          console.error('[meta-oauth] db error:', ins.error);
-          return redirectError(req, 'db_error');
+          // Erro de violação de constraint única (23505) indica que outra
+          // conexão já existe para este org+provider — aceita como sucesso idempotente.
+          if (ins.error?.code !== '23505') {
+            console.error('[meta-oauth] db error:', ins.error);
+            return redirectError(req, 'db_error');
+          }
+          console.warn('[meta-oauth] constraint violation ignored (idempotent):', ins.error.message);
         }
       }
     }

@@ -34,10 +34,19 @@ export class MetaOAuthAdapter implements IntegrationAdapter {
   }> {
     // Verifica se flag ENABLE_META_OAUTH está ligada
     // Se desligado, retorna erro orientando para o modo session_login
+    if (!this.hasCredentials()) {
+      return {
+        success: false,
+        status: 'ERROR',
+        reason: 'ENABLE_META_OAUTH desligado. Use modo session_login ou habilite a flag para OAuth.',
+      };
+    }
+    // Quando hasCredentials estiver true, continua com a conexão real
+    // TODO: Implementar lógica de conexão OAuth completa quando habilitado
     return {
       success: false,
       status: 'ERROR',
-      reason: 'ENABLE_META_OAUTH desligado. Use modo session_login ou habilite a flag para OAuth.',
+      reason: 'Conexão OAuth ainda não implementada — placeholder.',
     };
   }
 
@@ -87,7 +96,13 @@ export class MetaOAuthAdapter implements IntegrationAdapter {
   }
 
   hasCredentials(): boolean {
-    return false; // Credenciais vêm das env vars, não do banco
+    // Verificar se credenciais estão configuradas via .env
+    // e se a flag ENABLE_META_OAUTH está ligada
+    const hasAppId = !!process.env.META_APP_ID;
+    const hasAppSecret = !!process.env.META_APP_SECRET;
+    const enableOAuth = process.env.ENABLE_META_OAUTH !== 'false'; // Default: true
+
+    return hasAppId && hasAppSecret && enableOAuth;
   }
 
   neededCredentialName(): string {

@@ -130,15 +130,32 @@ export const pipelineRepoReal: PipelineRepo = {
 
 // O Json do Prisma devolve `stages` como string codificada quando gravado via
 // JSON.stringify; normaliza para array de strings sempre.
+// Segurança: valida estritamente que é um array simples de strings, com limite máximo.
+const MAX_STAGES = 50;
 function normalizeStages(stages: unknown): string[] {
-  if (Array.isArray(stages)) return stages.map((s) => String(s));
+  // Validação de tipo já verificado
+  if (!stages) return [];
+
+  // Caso já seja um array
+  if (Array.isArray(stages)) {
+    if (stages.length > MAX_STAGES) return [];
+    return stages
+      .filter((s): s is string => typeof s === 'string')
+      .map((s) => s.slice(0, 100)); // Limite de caracteres por etapa
+  }
+
+  // Caso seja string JSON codificada
   if (typeof stages === 'string') {
     try {
       const parsed = JSON.parse(stages);
-      return Array.isArray(parsed) ? parsed.map((s) => String(s)) : [];
+      if (!Array.isArray(parsed) || parsed.length > MAX_STAGES) return [];
+      return parsed
+        .filter((s): s is string => typeof s === 'string')
+        .map((s) => s.slice(0, 100)); // Limite de caracteres por etapa
     } catch {
       return [];
     }
   }
+
   return [];
 }

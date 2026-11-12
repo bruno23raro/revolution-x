@@ -1,13 +1,14 @@
 {
   "continuity_mode": "SNC_GOD_MODE_BYPASS",
-  "swarm_status": "INITIALIZED",
-  "pending_migrations": [
-    "025",
-    "026",
-    "027"
-  ],
-  "target_email": "brunoalmeida23111996@gmail.com",
+  "swarm_status": "SYNC_COMPLETE",
+  "last_sync_commit": "776a2e3",
+  "last_sync_date": "2026-11-12",
+  "deploy_status": "DEPLOYED_HOSTINGER",
+  "site_health": "HTTP_200_OK",
+  "auth_unauthorized": "HTTP_401_OK",
+  "pending_migrations": [],
   "security_status": "RLS_HARDENING_100_PERCENT_COMPLETE",
+  "tables_with_rls": "64/64",
   "last_phase": "3.5",
   "infra": "DOCKER_READY",
   "openbsp_status": "RESEARCH_PHASE_ACTIVE",

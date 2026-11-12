@@ -106,3 +106,4 @@ FrontCode/
 test-results/
 .venv/
 __pycache__/
+vendor/chrome-mcp-stealth/

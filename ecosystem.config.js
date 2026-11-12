@@ -1,7 +1,7 @@
 // PM2 Ecosystem — Revolution X (Hostinger)
 //
 // Este arquivo configura o processo Node.js que serve o build standalone
-// do Next.js na Hostinger via PM2. Copie para o servidor (ex: htpcms)
+// do Next.js na Hostinger via PM2. Copie para o servidor (ex: /home/u681336378)
 // e rode:  pm2 start ecosystem.config.js --env production
 //
 // IMPORTANTE: com `output: 'standalone'`, o servidor usa:
@@ -13,15 +13,15 @@ module.exports = {
     {
       name: 'revolution-x',
       script: './.next/standalone/server.js',
-      instances: 'max', // cluster mode: usa todos os cores
+      instances: 'max',
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        HOSTNAME: '0.0.0.0',
-        // As variáveis SECRETAS (DATABASE_URL, SUPABASE_*, OPENBSP_*, META_*,
-        // RESEND_*, JWT_SECRET) são injetadas via .env OU painel hPanel.
-        // NUNCA coloque segredos neste arquivo.
+        HOST: '0.0.0.0',
+        // As variáveis SECRETAS (DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        // OPENBSP_*, META_*, RESEND_*, JWT_SECRET) são injetadas via .env
+        // OU painel hPanel. NUNCA coloque segredos neste arquivo.
       },
       env_production: {
         NODE_ENV: 'production',

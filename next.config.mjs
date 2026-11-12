@@ -7,6 +7,10 @@ const __dirname = dirname(__filename);
 
 const nextConfig = {
   poweredByHeader: false,
+  // Deploy Hostinger: output standalone reduz drasticamente o tamanho do
+  // artefato (apenas .next/standalone) e inclui só as deps de runtime.
+  // Evita node_modules ausente/completa no servidor. `npm start` via PM2.
+  output: 'standalone',
   webpack: (config, { isServer }) => {
     config.resolve.alias['@'] = __dirname;
 

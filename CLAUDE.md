@@ -71,3 +71,9 @@ control that refused, an unfamiliar widget or a slow page is NOT running out of 
   WebSocket or iframes. Clear the rules when the check is done; a forgotten mock outlives the
   reason for it and the next thing you measure is a lie.
 <!-- qiksy-bridge:end -->
+
+#>>> VENDOR
+- vendor/chrome-mcp-stealth e ignorado. Reinstalar com:
+  git clone https://github.com/Riaan-Fourie/chrome-mcp-stealth vendor/chrome-mcp-stealth
+  cd vendor/chrome-mcp-stealth; npm install
+#<<< VENDOR

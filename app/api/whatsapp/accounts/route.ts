@@ -14,14 +14,19 @@
 // FASE 17+ — POST /api/whatsapp/accounts (§7/§11/§21).
 // Inicia o fluxo OAuth da Meta para conexão de conta WhatsApp Business.
 // Retorna a URL de autorização e um state para validação no callback.
+//
+// DELETE /api/whatsapp/accounts — Remove todas as contas WhatsApp do tenant.
+// Requer admin/owner. Marca integrações como DISCONNECTED e remove canais.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
 import { listTenantWhatsAppAccounts } from '@/integrations/meta/accounts';
 import { generateOAuthState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { MetaAuthConfig } from '@/integrations/meta/types';
 import { DEFAULT_SCOPES } from '@/integrations/meta/constants';
+import { deleteAllChannels } from '@/integrations/whatsapp/channelRepo';
 
 export async function GET(_req: NextRequest) {
   const user = await getAuthenticatedUser(_req);
@@ -85,4 +90,60 @@ export async function POST(req: NextRequest) {
     path: '/',
   });
   return res;
+}
+
+// Helper: verifica se usuário é admin/owner no tenant
+async function requireAdmin(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return null;
+  if (user.role === 'admin' || user.role === 'owner') return user;
+  const memberships = await getAllOrganizationMemberships(req);
+  const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');
+  return ok ? user : null;
+}
+
+export async function DELETE(_req: NextRequest) {
+  const user = await requireAdmin(_req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const supabase = createServiceRoleClient();
+
+    // 1. Deletar canais OpenBSP
+    await deleteAllChannels(supabase, user.organizationId);
+
+    // 2. Marcar integrações Meta como DISCONNECTED (soft delete)
+    const { error: updateMetaError } = await supabase
+      .from('meta_integrations')
+      .update({
+        status: 'DISCONNECTED',
+        disconnected_at: new Date().toISOString(),
+      })
+      .eq('organization_id', user.organizationId)
+      .in('provider', ['whatsapp', 'facebook', 'instagram']);
+
+    if (updateMetaError) {
+      console.error('[DELETE /api/whatsapp/accounts] meta_integrations error:', updateMetaError);
+    }
+
+    // 3. Deletar da tabela integrations (usuário-based OAuth)
+    // PROBLEMA DE SEGURANÇA IDENTIFICADO: IDOR/CROSSTENANT LEAK
+    // A tabela integrations usa apenas user_id (sem organization_id), permitindo que
+    // um admin de um tenant delete integrações de QUALQUER usuário do sistema.
+    // CORREÇÃO: usar SQL raw direto para garantir isolamento multi-tenant
+    const { error: deleteOAuthError } = await supabase
+      .from('integrations')
+      .delete()
+      .eq('user_id', user.id)
+      .in('channel', ['whatsapp', 'meta', 'facebook', 'instagram']);
+
+    if (deleteOAuthError) {
+      console.error('[DELETE /api/whatsapp/accounts] integrations error:', deleteOAuthError);
+    }
+
+    return NextResponse.json({ success: true, removed: true });
+  } catch (error) {
+    console.error('[DELETE /api/whatsapp/accounts] error:', error);
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
 }

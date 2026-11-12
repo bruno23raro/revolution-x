@@ -39,6 +39,7 @@ type Query = {
     select: (cols: string) => any;
     upsert: (row: unknown, opts?: Record<string, unknown>) => any;
     update: (patch: Record<string, unknown>) => any;
+    delete: () => any;
   };
 };
 
@@ -142,6 +143,11 @@ export async function setChannelStatus(
     .from('whatsapp_channels')
     .update({ status, lastError: lastError ?? null, updatedAt: new Date().toISOString() })
     .eq('organizationId', organizationId);
+}
+
+/** Remove todas as linhas de whatsapp_channels para um organizationId específico. */
+export async function deleteAllChannels(client: Query, organizationId: string): Promise<void> {
+  await client.from('whatsapp_channels').delete().eq('organizationId', organizationId);
 }
 
 /** Contador da janela móvel de 24h do tier (250/24h em número novo). */

@@ -5,7 +5,7 @@
 // Retorna: { ok, taskId, total, sent, pending, results }
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendMassViaOpenBSP } from '@/integrations/openbsp/send';
 
@@ -37,8 +37,12 @@ interface CampaignRecord {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+
+  // Lazy auth: if no session, reject with proper error but don't eagerly validate
+  if (!hasSession || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const url = new URL(req.url);
   const channel = url.searchParams.get('channel') || url.pathname.split('/').pop();
@@ -191,8 +195,10 @@ export async function POST(req: NextRequest) {
 
 // GET para buscar status de campanha
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+
+  // Lazy auth: if no session, reject
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
   const campaignId = url.searchParams.get('campaignId');

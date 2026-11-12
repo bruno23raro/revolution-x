@@ -1,0 +1,46 @@
+{
+  "searchServices": [
+    {
+      "name": "Firecrawl MCP",
+      "type": "authenticated_web_search",
+      "status": "configured",
+      "description": "Authenticated web search with best results via Firecrawl MCP. Part of the project's MCP configuration with sources: [\"web\", \"alexandria\"]. Provides structured data and web search capabilities.",
+      "mcpTool": "mcp__firecrawl_firecrawl__firecrawl_search",
+      "priority": 1,
+      "requiresAuth": true,
+      "features": ["web_search", "developer_search", "research_search", "gov_search", "people_company_search", "people_company_enrich"]
+    },
+    {
+      "name": "Context7 MCP",
+      "type": "library_documentation_search",
+      "status": "configured",
+      "description": "Library and documentation search via Context7 MCP. Fetches current documentation for frameworks, SDKs, APIs, and CLI tools. Preferred over web search for library-specific queries.",
+      "mcpTool": "mcp__context7__query-docs",
+      "priority": 3,
+      "requiresAuth": false,
+      "features": ["api_docs", "library_docs", "sdk_guides", "cli_tools", "version_migration", "setup_instructions"]
+    },
+    {
+      "name": "free-search MCP",
+      "type": "keyless_multi_engine_search",
+      "status": "configured",
+      "description": "Keyless multi-engine web search via free-search MCP. No API key needed; aggregates results from Google, Bing, DuckDuckGo, Wikipedia, and other engines. Falls back when authenticated services are unavailable.",
+      "mcpTool": "mcp__free-search__search",
+      "priority": 2,
+      "requiresAuth": false,
+      "features": ["web_search", "news_search", "image_search", "pdf_search", "paper_search", "research_search"]
+    },
+    {
+      "name": "Exa MCP (conditional)",
+      "type": "high_quality_search",
+      "status": "available_if_key_provided",
+      "description": "High-quality search via Exa MCP. Available when API key is configured. Provides superior relevance for certain query types but not currently configured with API key.",
+      "mcpTool": "mcp__exa__web_search_exa",
+      "priority": 4,
+      "requiresAuth": true,
+      "features": ["similarity_search", "keyphrase_search", "autoprompt", "neural_search"]
+    }
+  ],
+  "unifiedSearchCreated": true,
+  "testQuery": "multi-tenant SaaS architecture best practices 2026"
+}

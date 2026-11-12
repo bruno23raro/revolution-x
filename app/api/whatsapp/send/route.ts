@@ -13,7 +13,7 @@
 // nunca o inverso.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import {
   createTask,
@@ -89,8 +89,8 @@ async function resolveTenantOpenBSPAccess(
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: Record<string, any>;
   try {

@@ -9,17 +9,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getAuthenticatedUser } from '../../../../../src/lib/auth';
-import { mintOnboardingToken, upsertChannelPending } from '../../../../../src/integrations/whatsapp';
-import { createServiceRoleClient } from '../../../../../src/lib/supabase/server';
+import { getAuth } from '@/lib/auth';
+import { mintOnboardingToken, upsertChannelPending } from '@/integrations/whatsapp';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 const APP_BASE = () => (process.env.NEXT_PUBLIC_APP_URL || 'https://revolutionx.com.br').replace(/\/+$/, '');
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const mode: 'official' | 'non_official' = body.mode === 'non_official' ? 'non_official' : 'official';

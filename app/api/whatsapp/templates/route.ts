@@ -8,7 +8,7 @@
 // retorna resultado honesto com código HTTP coerente.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
 import {
@@ -23,8 +23,8 @@ export const dynamic = 'force-dynamic';
 const CATEGORIES = ['MARKETING', 'UTILITY', 'AUTHENTICATION'] as const;
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');
@@ -32,8 +32,8 @@ async function requireAdmin(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   // MULTICONTAS — `account` (?account=rowId) ancora o número; ausente → padrão.
   const account = new URL(req.url).searchParams.get('account')?.trim() || undefined;

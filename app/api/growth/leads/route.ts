@@ -5,15 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatE164 } from '@/services/evolution/EvolutionService';
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supa = createServiceRoleClient();
   const body = await req.json();

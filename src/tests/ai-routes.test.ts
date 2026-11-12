@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 jest.mock('@/lib/taskQueue', () => ({
   listMemory: jest.fn().mockResolvedValue([]),
@@ -15,7 +15,7 @@ jest.mock('@/lib/taskQueue', () => ({
 
 const { GET: modelsGET } = require('../../app/api/ai/models/route');
 const { POST: generatePOST } = require('../../app/api/ai/generate/route');
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const { setTestProviders } = require('@/ai/testSeam');
 
 // Provedor fake: configurado, sem rede. `listModels` devolve dados sintéticos.
@@ -45,13 +45,13 @@ describe('GET /api/ai/models', () => {
   afterEach(() => setTestProviders(undefined));
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await modelsGET(req('/api/ai/models'));
     expect(res.status).toBe(401);
   });
 
   it('devolve provedores sem segredos (configured booleano, sem apiKey/baseUrl)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue({
+    (getAuth as jest.Mock).mockResolvedValue({
       id: 'u', organizationId: 'o', role: 'member',
     });
     setTestProviders([fakeProvider()]);
@@ -74,7 +74,7 @@ describe('POST /api/ai/generate', () => {
   afterEach(() => setTestProviders(undefined));
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await generatePOST(req('/api/ai/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -84,7 +84,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('prompt vazio → 400', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue({
+    (getAuth as jest.Mock).mockResolvedValue({
       id: 'u', organizationId: 'o', role: 'member',
     });
     setTestProviders([fakeProvider()]);
@@ -97,7 +97,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('provedor ok devolve texto real do provedor fake', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue({
+    (getAuth as jest.Mock).mockResolvedValue({
       id: 'u', organizationId: 'o', role: 'member',
     });
     setTestProviders([fakeProvider()]);
@@ -114,7 +114,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('sem provedor configurado → BLOQUEADO honesto (nunca inventa)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue({
+    (getAuth as jest.Mock).mockResolvedValue({
       id: 'u', organizationId: 'o', role: 'member',
     });
     setTestProviders([{ ...fakeProvider(), configured: false, generate: async () => { throw new Error('sem chave'); } }]);

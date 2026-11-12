@@ -6,7 +6,7 @@
 //   GET /api/integrations/health → { health: [{ provider, status, detail }], at }
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { TaskQueueUnavailableError } from '@/lib/taskQueue';
 import { getProviderConfig } from '@/integrations/configStore';
@@ -15,8 +15,8 @@ import { PROVIDERS, probeMany } from '@/integrations/providers';
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');

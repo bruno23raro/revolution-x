@@ -101,3 +101,8 @@ artifacts/playwright-results/
 # FrontCode VS Code extension (auxiliar)
 FrontCode/
 
+.auth/
+.logs/
+test-results/
+.venv/
+__pycache__/

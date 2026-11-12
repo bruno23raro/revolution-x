@@ -3,7 +3,7 @@
 // Regressão de isolamento multi-tenant (escrita): as rotas POST NUNCA confiam
 // em organizationId enviado pelo cliente (mass-assignment). A organização da
 // linha é SEMPRE a do usuário autenticado (server-derived, via
-// getAuthenticatedUser).
+// getAuth).
 //
 // Antes do fix, o padrão `repo.create({ organizationId: user.organizationId, ...body })`
 // deixava `body.organizationId` sobrescrever o valor do servidor → qualquer
@@ -16,7 +16,7 @@
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 
 jest.mock('@/services/crmService', () => ({
@@ -41,7 +41,7 @@ jest.mock('@/repositories/productRepoReal', () => ({
   productRepoReal: { create: jest.fn().mockResolvedValue({ id: 'pr-1' }), findByOrganization: jest.fn() },
 }));
 
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const {
   contactRepoReal,
   leadRepoReal,
@@ -70,7 +70,7 @@ function post(url, body) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  getAuthenticatedUser.mockResolvedValue(USER);
+  getAuth.mockResolvedValue(USER);
 });
 
 describe('isolamento multi-tenant em rotas de escrita (POST)', () => {
@@ -113,7 +113,7 @@ describe('isolamento multi-tenant em rotas de escrita (POST)', () => {
   });
 
   it('sem usuário autenticado → 401 e nenhuma escrita', async () => {
-    getAuthenticatedUser.mockResolvedValue(null);
+    getAuth.mockResolvedValue(null);
     const res = await contactPOST(post('/api/crm/contacts', { name: 'Ana', email: 'ana@x.com' }));
     expect(res.status).toBe(401);
     expect(contactRepoReal.create).not.toHaveBeenCalled();

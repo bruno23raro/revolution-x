@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateDeal } from '../../../../src/services/crmService';
 import { dealRepoReal } from '../../../../src/repositories/crmRepoReal';
-import { getAuthenticatedUser } from '../../../../src/lib/auth';
+import { getAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const items = await dealRepoReal.findByOrganization(user.organizationId);
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const body = await req.json();

@@ -5,14 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const days = parseInt(searchParams.get('days') || '30');

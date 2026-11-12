@@ -6,12 +6,12 @@
 // e NUNCA tokens/segredos vazam).
 
 import { NextRequest } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { listTikTokAccounts } from '@/integrations/tiktok/resolveAccess';
 import { GET } from '../../app/api/integrations/tiktok/route';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 jest.mock('@/lib/prisma', () => ({
   prisma: { __prisma: true },
@@ -26,14 +26,14 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('GET /api/integrations/tiktok', () => {
   it('401 sem autenticação', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await GET(new NextRequest('http://localhost/api/integrations/tiktok'));
     expect(res.status).toBe(401);
     expect(listTikTokAccounts).not.toHaveBeenCalled();
   });
 
   it('devolve as contas do tenant + count (2 contas)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     (listTikTokAccounts as jest.Mock).mockResolvedValue([
       { openId: 'OID_A', source: 'oauth', obtainedAt: '2026-01-01T00:00:00Z', tokenExpired: false },
       { openId: 'OID_B', source: 'manual', obtainedAt: '2026-02-01T00:00:00Z', tokenExpired: false },
@@ -53,7 +53,7 @@ describe('GET /api/integrations/tiktok', () => {
   });
 
   it('tenant sem contas → count 0, accounts []', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     (listTikTokAccounts as jest.Mock).mockResolvedValue([]);
     const res = await GET(new NextRequest('http://localhost/api/integrations/tiktok'));
     expect(res.status).toBe(200);

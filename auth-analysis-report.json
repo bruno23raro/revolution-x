@@ -1,0 +1,124 @@
+{
+  "eagerAuthPoints": [
+    {
+      "file": "middleware.ts",
+      "line": 163,
+      "description": "Supabase auth.getUser() called on every request to validate session and organization membership via createServerClient"
+    },
+    {
+      "file": "app/api/auth/login/route.ts",
+      "line": 20,
+      "description": "supabase.auth.signInWithPassword() validates credentials against Supabase Auth on each login attempt"
+    },
+    {
+      "file": "app/api/auth/register/route.ts",
+      "line": 94,
+      "description": "supabase.auth.signUp() creates new user via Supabase Auth on each registration attempt"
+    }
+  ],
+  "lazyAuthCandidates": [
+    {
+      "file": "app/api/auth/forgot-password/route.ts",
+      "line": 47,
+      "description": "createServiceRoleClient().from('User').select() looks up user by email — only when user requests password reset"
+    },
+    {
+      "file": "app/api/auth/reset-password/route.ts",
+      "line": 28,
+      "description": "Validates PasswordResetToken hash and updates user password — only when user submits reset form"
+    },
+    {
+      "file": "app/api/auth/callback/meta/route.ts",
+      "line": 33,
+      "description": "Validates OAuth state and exchanges code for tokens — only on Meta OAuth callback"
+    }
+  ],
+  "requiredApiKeys": [
+    {
+      "service": "Supabase",
+      "envVar": "NEXT_PUBLIC_SUPABASE_URL",
+      "status": "configured",
+      "description": "Supabase project URL — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Supabase",
+      "envVar": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "status": "configured",
+      "description": "Supabase anon key for client-side auth — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Supabase",
+      "envVar": "SUPABASE_SERVICE_ROLE_KEY",
+      "status": "configured",
+      "description": "Supabase service role key for privileged operations — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Meta",
+      "envVar": "META_APP_ID",
+      "status": "configured",
+      "description": "Meta App ID for OAuth and Graph API — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Meta",
+      "envVar": "META_APP_SECRET",
+      "status": "configured",
+      "description": "Meta App Secret for OAuth token exchange — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Meta",
+      "envVar": "META_WEBHOOK_VERIFY_TOKEN",
+      "status": "configured",
+      "description": "Meta webhook verify token for webhook subscription validation — configured in .env.local and .env.production"
+    },
+    {
+      "service": "OpenBSP",
+      "envVar": "OPENBSP_BASE_URL",
+      "status": "configured",
+      "description": "OpenBSP API base URL for WhatsApp Business — configured in .env.local and .env.production"
+    },
+    {
+      "service": "OpenBSP",
+      "envVar": "OPENBSP_PUBLISHABLE_KEY",
+      "status": "configured",
+      "description": "OpenBSP publishable key for client-side operations — configured in .env.local and .env.production"
+    },
+    {
+      "service": "OpenBSP",
+      "envVar": "OPENBSP_API_KEY",
+      "status": "configured",
+      "description": "OpenBSP API key for server-side operations — configured in .env.local and .env.production"
+    },
+    {
+      "service": "OpenBSP",
+      "envVar": "OPENBSP_ORG_ID",
+      "status": "configured",
+      "description": "OpenBSP organization ID — configured in .env.local and .env.production"
+    },
+    {
+      "service": "Meta Token Encryption",
+      "envVar": "META_TOKEN_ENCRYPTION_KEY",
+      "status": "configured",
+      "description": "AES encryption key for encrypting Meta access tokens — configured in .env.production"
+    },
+    {
+      "service": "Resend",
+      "envVar": "EMAIL_API_KEY",
+      "status": "configured",
+      "description": "Resend API key for email sending — configured in .env.production"
+    },
+    {
+      "service": "OpenAI",
+      "envVar": "OPENAI_API_KEY",
+      "status": "placeholder",
+      "description": "Referenced in demoMode.ts and demoAISimulate.ts — not verified in .env files"
+    },
+    {
+      "service": "Anthropic",
+      "envVar": "ANTHROPIC_API_KEY",
+      "status": "placeholder",
+      "description": "Referenced in demoMode.ts and demoAISimulate.ts — not verified in .env files"
+    }
+  ],
+  "middlewareBehavior": "eager",
+  "notes": "Middleware.ts performs eager Supabase authentication on every /api/ request. If Supabase credentials are missing in production and the route is not public, returns 503. All external service credentials are configured in .env.local (development) and .env.production (production). OpenAI/Anthropic keys are referenced in demo code but status unconfirmed."
+}

@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '../../../../src/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '../../../../src/lib/auth';
 import { prisma } from '../../../../src/lib/prisma';
 import {
   resolveOmniRouterConfig,
@@ -40,8 +40,8 @@ export const dynamic = 'force-dynamic';
 // Autenticação + papel (admin/owner em qualquer membership)
 // ------------------------------------------------------------------
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');

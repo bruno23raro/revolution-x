@@ -42,18 +42,34 @@ export interface AuthenticatedUser {
   organizationMembers?: Array<{ organizationId: string; role: string }>;
 }
 
-export async function getAuthenticatedUser(
-  _req: NextRequest
-): Promise<AuthenticatedUser | null> {
+/**
+ * Lazy auth: only validates session when explicitly called.
+ * Unlike getAuthenticatedUser which eagerly fetches on every call,
+ * this function checks if a session exists and returns user data
+ * only when the caller explicitly requests it.
+ *
+ * Callers should use this only when they need the authenticated user,
+ * and public routes should NOT call this function.
+ */
+export async function getAuth(
+  req: NextRequest
+): Promise<{ user: AuthenticatedUser | null; hasSession: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!user && !session) {
+    // No session at all - return early without DB query
+    return { user: null, hasSession: false };
+  }
 
   if (!user) {
-    // Log: sem sessão Supabase (usuário não autenticado)
-    log.info('[auth] getAuthenticatedUser: no supabase session');
-    return null;
+    // Has session but no user (e.g., email unconfirmed)
+    return { user: null, hasSession: true };
   }
 
   // Validate user exists in the database and belongs to an organization.
@@ -70,23 +86,23 @@ export async function getAuthenticatedUser(
   } catch (err) {
     // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
     const e = err instanceof Error ? err : new Error(String(err));
-    log.error('[auth] getAuthenticatedUser: database error', e, {
+    log.error('[auth] getAuth: database error', e, {
       code: (e as { code?: string }).code,
       name: e.name
     });
-    return null;
+    return { user: null, hasSession: true };
   }
 
   if (!dbUser) {
     // Log: usuário sem registro no banco de dados
-    log.info('[auth] getAuthenticatedUser: user not found in database');
-    return null;
+    log.info('[auth] getAuth: user not found in database');
+    return { user: null, hasSession: true };
   }
 
   if (dbUser.organizationMembers.length === 0) {
     // Log: usuário sem membership em nenhuma organização
-    log.info('[auth] getAuthenticatedUser: user has no organization memberships');
-    return null;
+    log.info('[auth] getAuth: user has no organization memberships');
+    return { user: null, hasSession: true };
   }
 
   // Return the first (primary) organization membership for organizationId/organization rollback.
@@ -100,11 +116,26 @@ export async function getAuthenticatedUser(
   const effectiveRole = primaryRole;
 
   return {
-    id: user.id,
-    email: user.email || null,
-    organizationId: primary.organizationId,
-    role: effectiveRole,
+    user: {
+      id: user.id,
+      email: user.email || null,
+      organizationId: primary.organizationId,
+      role: effectiveRole,
+    },
+    hasSession: true,
   };
+}
+
+/**
+ * Convenience: returns just the user (backward compatible).
+ * Deprecated: use getAuth() for lazy authentication.
+ * @deprecated Use getAuth() instead for on-demand auth
+ */
+export async function getAuthenticatedUser(
+  req: NextRequest
+): Promise<AuthenticatedUser | null> {
+  const { user } = await getAuth(req);
+  return user;
 }
 
 // Returns ALL organizations the authenticated user belongs to (including role).

@@ -19,7 +19,7 @@
 // Requer admin/owner. Marca integrações como DISCONNECTED e remove canais.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { listTenantWhatsAppAccounts } from '@/integrations/meta/accounts';
 import { generateOAuthState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
@@ -29,9 +29,17 @@ import { DEFAULT_SCOPES } from '@/integrations/meta/constants';
 import { deleteAllChannels } from '@/integrations/whatsapp/channelRepo';
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthenticatedUser(_req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(_req);
+
+  // Public route: if no session, return available=false instead of 401
+  // This enables lazy auth: routes work without auth, validate only when needed
+  if (!hasSession || !user) {
+    return NextResponse.json({
+      available: false,
+      accounts: [],
+      displayNameAvailable: false,
+      reason: 'no_session',
+    }, { status: 200 });
   }
 
   const result = await listTenantWhatsAppAccounts(user.organizationId);
@@ -50,9 +58,48 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+
+  // If no session, still allow OAuth init but mark as needing auth
+  // The OAuth flow will validate auth when callback happens
+  if (!hasSession || !user) {
+    // Still allow the flow but indicate auth required
+    // Generate OAuth state for CSRF protection
+    const state = generateOAuthState();
+
+    // Origem pública canônica (NEXT_PUBLIC_SITE_URL tem precedência) — o
+    // redirect_uri precisa bater exatamente com o cadastrado no painel da Meta;
+    // o origin interno do proxy do Hostinger (0.0.0.0:3000) quebraria o fluxo.
+    const origin = resolvePublicSiteOrigin(req.nextUrl.origin);
+
+    // Build Meta Auth URL for WhatsApp Business connection
+    const config: MetaAuthConfig = {
+      appId: process.env.META_APP_ID || '',
+      appSecret: process.env.META_APP_SECRET || '',
+      redirectUri: `${origin}/api/auth/callback/meta`,
+      scopes: DEFAULT_SCOPES,
+    };
+
+    const authUrl = buildMetaAuthUrl(config, state, 'whatsapp');
+
+    // Set state cookie for callback validation (same pattern as /api/auth/meta)
+    // Inclui provider no cookie para o callback saber qual provedor persistir
+    const stateWithProvider = `whatsapp:${state}`;
+    const res = NextResponse.json({
+      success: true,
+      authUrl,
+      state,
+      organizationId: 'org1', // default, will be validated on callback
+      needsAuth: true,
+    });
+    res.cookies.set('oauth_state', stateWithProvider, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 min
+      path: '/',
+    });
+    return res;
   }
 
   // Generate OAuth state for CSRF protection
@@ -93,8 +140,9 @@ export async function POST(req: NextRequest) {
 }
 
 // Helper: verifica se usuário é admin/owner no tenant
+// Uses lazy getAuth - validates only when needed
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
+  const { user } = await getAuth(req);
   if (!user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);

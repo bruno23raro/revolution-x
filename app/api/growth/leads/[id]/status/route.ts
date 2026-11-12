@@ -5,15 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

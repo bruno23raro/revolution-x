@@ -4,17 +4,17 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } fro
 import { Search, Users, DollarSign, Activity, CheckCircle, Clock, } from 'lucide-react';
 
 interface DashboardChartProps {
-  contacts?: number;
-  deals?: number;
-  leads?: number;
-  date?: string;
+  contacts?: number | undefined;
+  deals?: number | undefined;
+  leads?: number | undefined;
+  date?: string | undefined;
 }
 
 export function DashboardChart({ contacts = 0, deals = 0, leads = 0, date }: DashboardChartProps) {
   const chartData = [
-    { name: 'Contatos', uv: contacts ?? 0, pv: contacts * 2 ?? 0 },
-    { name: 'Leads', uv: leads ?? 0, pv: leads * 2 ?? 0 },
-    { name: 'Negociações', uv: deals ?? 0, pv: deals * 2 ?? 0 },
+    { name: 'Contatos', uv: contacts, pv: contacts * 2 },
+    { name: 'Leads', uv: leads, pv: leads * 2 },
+    { name: 'Negociações', uv: deals, pv: deals * 2 },
   ];
 
   return (

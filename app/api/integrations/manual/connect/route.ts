@@ -10,7 +10,7 @@
 // WhatsApp: apenas modo A (cookie/token colado), máx. 5 canais por usuário.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { connectManualAccount, MANUAL_CHANNELS, type ManualChannel } from '@/integrations/manual';
 import { extractSessionByLogin, type LoginPlatform } from '@/integrations/manualLogin';
 import { logRisk } from '@/integrations/riskLogger';
@@ -21,8 +21,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: {
     channel?: string;

@@ -10,7 +10,7 @@
 // autenticado (401 sem sessão).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { campaignRepoReal } from '@/repositories/campaignRepoReal';
 
 function parseLimit(v: string | null): number {
@@ -25,8 +25,8 @@ function parseOffset(v: string | null): number {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // A campanha deve pertencer à org do usuário (404 para outra org).
   const campaign = await campaignRepoReal.get(user.organizationId, params.id);

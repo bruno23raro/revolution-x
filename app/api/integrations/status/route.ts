@@ -4,13 +4,13 @@
 // Inclui conexões WhatsApp OpenBSP e Meta via whatsapp_channels + meta_integrations
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { isQueueUnavailable } from '@/lib/taskQueue';
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

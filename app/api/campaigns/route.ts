@@ -8,8 +8,8 @@
 // acontece na criação — a campanha nasce `draft` (§10).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../src/lib/auth';
-import { campaignRepoReal } from '../../../src/repositories/campaignRepoReal';
+import { getAuth } from '@/lib/auth';
+import { campaignRepoReal } from '@/repositories/campaignRepoReal';
 
 // 'whatsapp_api' = canal OFICIAL (OpenBSP/Cloud API, migration 019);
 // 'whatsapp' permanece o canal legado (QR/MetaIntegration). Nunca mesmo
@@ -32,8 +32,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const items = await campaignRepoReal.list(user.organizationId);
   // Contagens REAIS por campanha (métricas nunca fictícias, §10).
@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: Record<string, unknown>;
   try {

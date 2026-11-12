@@ -139,57 +139,49 @@ export async function middleware(request: NextRequest) {
   }
 
   // ----------------------------------------
-  // 4. AUTHENTICATION CONTEXT (SSR)
+  // 4. SESSION COOKIES EXTRACT (LAZY - just copy auth cookies)
   // ----------------------------------------
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
+  // Only extract session cookies for routes that need them.
+  // Actual authentication happens in API routes when getAuth() is called.
+  // This makes auth lazy: public routes work without auth overhead.
+  const authCookieNames = ['sb:token', 'sb:refresh-token', 'auth-token', 'session'];
+
+  // Copy auth cookies to response - the client-side supabase-js will restore them
+  // This allows SSR hydration without eagerly validating the session
+  const hasAnyAuthCookie = authCookieNames.some(name =>
+    request.cookies.has(name)
+  );
+
+  if (hasAnyAuthCookie) {
+    // Clone cookies for response - the client will rehydrate auth state
+    request.cookies.getAll().forEach(({ name, value }) => {
+      if (authCookieNames.includes(name)) {
+        response.cookies.set(name, value, {
+          httpOnly: name.startsWith('sb:') ? false : true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30, // 30 days
         });
-
-        response = NextResponse.next({ request });
-
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    applySecurityHeaders(response);
-    return response;
+      }
+    });
   }
 
   // ----------------------------------------
-  // 5. TENANT CONTEXT (cookies)
+  // 5. TENANT CONTEXT (lazy - only if user has org membership)
   // ----------------------------------------
-  try {
-    const svc = createServiceRoleClient();
-    const { data: members } = await svc
-      .from('OrganizationMember')
-      .select('organizationId')
-      .eq('userId', user.id);
+  // Store the organization ID in a cookie when it can be determined.
+  // Actual tenant isolation happens at the database level via RLS policies.
+  // We check for a pre-existing org cookie from previous requests.
+  const existingOrgId = request.cookies.get('x-organization-id')?.value;
 
-    const orgId = members?.[0]?.organizationId;
-    if (orgId) {
-      response.cookies.set('x-organization-id', orgId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-      });
-    }
-  } catch {
-    // Ignore errors fetching org
+  if (existingOrgId) {
+    response.cookies.set('x-organization-id', existingOrgId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
   }
 
   // ----------------------------------------

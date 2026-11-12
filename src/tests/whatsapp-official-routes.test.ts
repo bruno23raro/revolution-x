@@ -5,7 +5,7 @@
 // 404 no disconnect sem canal. Sem rede, sem Meta.
 import { NextRequest } from 'next/server';
 
-jest.mock('@/lib/auth', () => ({ getAuthenticatedUser: jest.fn() }));
+jest.mock('@/lib/auth', () => ({ getAuth: jest.fn() }));
 jest.mock('@/lib/supabase/server', () => ({ createServiceRoleClient: jest.fn(() => ({})) }));
 jest.mock('@/integrations/whatsapp', () => ({
   getChannelDecrypted: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('../../src/integrations/whatsapp', () => ({
   fetchConnectedAddress: jest.fn(),
 }));
 
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const { getChannelDecrypted } = require('../../src/integrations/whatsapp');
 
 const ROUTES = {
@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe('rotas whatsapp oficial — autenticacao', () => {
   it.each(Object.keys(ROUTES))('%s devolve 401 sem sessao', async (name) => {
-    getAuthenticatedUser.mockResolvedValue(null);
+    getAuth.mockResolvedValue(null);
     const handler = ROUTES[name]();
     const res = await handler(req('/x', name === 'connect' || name === 'disconnect' ? { method: 'POST' } : undefined));
     expect(res.status).toBe(401);
@@ -61,7 +61,7 @@ describe('rotas whatsapp oficial — autenticacao', () => {
 
 describe('connect', () => {
   it('503 honesto sem OPENBSP_ORG_ID (nao finge popup)', async () => {
-    getAuthenticatedUser.mockResolvedValue(USER);
+    getAuth.mockResolvedValue(USER);
     const res = await ROUTES.connect()(req('/x', { method: 'POST' }));
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({ error: 'openbsp_not_configured' });
@@ -70,7 +70,7 @@ describe('connect', () => {
 
 describe('disconnect', () => {
   it('404 quando o tenant nunca teve canal', async () => {
-    getAuthenticatedUser.mockResolvedValue(USER);
+    getAuth.mockResolvedValue(USER);
     getChannelDecrypted.mockResolvedValue(null);
     const res = await ROUTES.disconnect()(req('/x', { method: 'POST' }));
     expect(res.status).toBe(404);

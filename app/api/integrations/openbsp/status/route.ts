@@ -22,15 +22,15 @@
 // de segredos no navegador e permite isolamento multi-tenant seguro.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../../src/lib/auth';
-import { prisma } from '../../../../../src/lib/prisma';
-import { fetchConnectedAddress } from '../../../../../src/integrations/whatsapp/openbsp/client';
+import { getAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { fetchConnectedAddress } from '@/integrations/whatsapp/openbsp/client';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Recupera o verifyToken do banco usando a organização do usuário autenticado
   // Isso elimina a necessidade de o frontend transportar esse segredo

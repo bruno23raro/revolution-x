@@ -41,14 +41,15 @@ function fromHex(s: string): Uint8Array {
 
 /** Deriva a chave AES-GCM do usuário: PBKDF2(userId, salt). */
 async function deriveKey(userId: string, salt: Uint8Array): Promise<CryptoKey> {
-  const keyMaterial = await webcrypto.subtle.importKey(
+  const cryptoModule = require('crypto');
+  const keyMaterial = await cryptoModule.webcrypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(userId),
     'PBKDF2',
     false,
     ['deriveKey'],
   );
-  return webcrypto.subtle.deriveKey(
+  return cryptoModule.webcrypto.subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     keyMaterial,
     { name: ALGORITHM, length: KEY_LENGTH },
@@ -69,12 +70,18 @@ export async function encryptToken(token: string, userId: string): Promise<strin
   const iv = randomBytes(IV_LENGTH);
   const key = await deriveKey(userId, salt);
 
-  // Web Crypto concatena o authTag (16 bytes) ao fim do ciphertext.
-  const sealed = new Uint8Array(
-    await webcrypto.subtle.encrypt({ name: ALGORITHM, iv }, key, new TextEncoder().encode(token)),
-  );
-  const ciphertext = sealed.slice(0, -TAG_BYTES);
-  const authTag = sealed.slice(-TAG_BYTES);
+  // Convert string to Uint8Array using Buffer for compatibility
+  const nodeCrypto = require('crypto');
+  const tokenBytes = nodeCrypto.Buffer.from(token, 'utf-8');
+
+  // Web Crypto retorna ArrayBuffer diretamente
+  const encryptedArrayBuffer = await webcrypto.subtle.encrypt({ name: ALGORITHM, iv } as any, key, tokenBytes as any);
+
+  // Converter ArrayBuffer para Buffer e extrair ciphertext e authTag
+  const encryptedBuffer = nodeCrypto.Buffer.from(encryptedArrayBuffer);
+  // O Web Crypto coloca o authTag (16 bytes) ao final do ciphertext
+  const ciphertext = encryptedBuffer.subarray(0, -TAG_BYTES);
+  const authTag = encryptedBuffer.subarray(-TAG_BYTES);
 
   return [toHex(salt), toHex(iv), toHex(ciphertext), toHex(authTag)].join(':');
 }
@@ -100,14 +107,13 @@ export async function decryptToken(encrypted: string, userId: string): Promise<s
 
   const key = await deriveKey(userId, salt);
 
-  // Rejunta ciphertext + authTag para o Web Crypto.
-  const sealed = new Uint8Array(ciphertext.length + authTag.length);
-  sealed.set(ciphertext, 0);
-  sealed.set(authTag, ciphertext.length);
+  // Rejunta ciphertext + authTag para o Web Crypto
+  const nodeCrypto = require('crypto');
+  const combined = Buffer.concat([Buffer.from(ciphertext), Buffer.from(authTag)]);
 
   let plain: ArrayBuffer;
   try {
-    plain = await webcrypto.subtle.decrypt({ name: ALGORITHM, iv }, key, sealed);
+    plain = await webcrypto.subtle.decrypt({ name: ALGORITHM, iv } as any, key, combined as any);
   } catch {
     throw new Error('falha ao decriptografar token');
   }

@@ -43,7 +43,7 @@ describe('Publish routes — IDOR security (demo mode before tenant resolution)'
       // Mock do módulo auth de forma dinâmica
       jest.resetModules();
       jest.doMock('../lib/auth', () => ({
-        getAuthenticatedUser: jest.fn().mockResolvedValue(null),
+        getAuth: jest.fn().mockResolvedValue({ user: null, hasSession: false }),
       }));
 
       const authRoute = require('../../app/api/facebook/publish/route');
@@ -63,7 +63,7 @@ describe('Publish routes — IDOR security (demo mode before tenant resolution)'
       // Mock do módulo auth
       jest.resetModules();
       jest.doMock('../lib/auth', () => ({
-        getAuthenticatedUser: jest.fn().mockResolvedValue(MOCK_DEMO_USER),
+        getAuth: jest.fn().mockResolvedValue({ user: MOCK_DEMO_USER, hasSession: true }),
       }));
 
       const authRoute = require('../../app/api/facebook/publish/route');
@@ -90,7 +90,7 @@ describe('Publish routes — IDOR security (demo mode before tenant resolution)'
     it('retorna 401 quando usuário NÃO está autenticado', async () => {
       jest.resetModules();
       jest.doMock('../lib/auth', () => ({
-        getAuthenticatedUser: jest.fn().mockResolvedValue(null),
+        getAuth: jest.fn().mockResolvedValue({ user: null, hasSession: false }),
       }));
 
       const authRoute = require('../../app/api/instagram/publish/route');
@@ -109,7 +109,7 @@ describe('Publish routes — IDOR security (demo mode before tenant resolution)'
     it('requer demoMode para acesso sem tenant (verifica header x-demo-mode)', async () => {
       jest.resetModules();
       jest.doMock('../lib/auth', () => ({
-        getAuthenticatedUser: jest.fn().mockResolvedValue(MOCK_DEMO_USER),
+        getAuth: jest.fn().mockResolvedValue({ user: MOCK_DEMO_USER, hasSession: true }),
       }));
 
       const authRoute = require('../../app/api/instagram/publish/route');
@@ -138,7 +138,7 @@ describe('Publish routes — IDOR security (demo mode before tenant resolution)'
     it('não expõe dados quando account é forçado via body', async () => {
       jest.resetModules();
       jest.doMock('../lib/auth', () => ({
-        getAuthenticatedUser: jest.fn().mockResolvedValue(MOCK_REAL_USER),
+        getAuth: jest.fn().mockResolvedValue({ user: MOCK_REAL_USER, hasSession: true }),
       }));
       // Mock da resolução de acesso para o usuário REAL (não-demo): deve
       // rejeitar (account_not_found), nunca servir dados de outro tenant.

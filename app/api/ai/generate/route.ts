@@ -6,11 +6,11 @@
 // Resultado ok=false + error honesto; NUNCA inventa texto.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../src/lib/auth';
-import { prisma } from '../../../../src/lib/prisma';
-import { listMemory } from '../../../../src/lib/taskQueue';
-import { buildAiProviders, generateWithFallback } from '../../../../src/ai';
-import { getTestProviders } from '../../../../src/ai/testSeam';
+import { getAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { listMemory } from '@/lib/taskQueue';
+import { buildAiProviders, generateWithFallback } from '@/ai';
+import { getTestProviders } from '@/ai/testSeam';
 
 const AI_CONFIG_KEY = 'ai_config';
 const MAX_PROMPT = 8_000;
@@ -40,8 +40,8 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

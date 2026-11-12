@@ -1,6 +1,6 @@
 // src/tests/meta-idor.test.ts — negative tests for Meta IDOR remediation
 // The route at app/api/integrations/meta/route.ts now:
-//   1. Calls getAuthenticatedUser(req) — rejects unauthenticated requests
+//   1. Calls getAuth(req) — rejects unauthenticated requests
 //   2. Uses user.organizationId from DB membership — never from URL/body
 //   3. Calls Supabase with anon key (RLS-subject) — never service_role
 import { NextRequest } from 'next/server';
@@ -11,13 +11,13 @@ jest.mock('../../app/api/integrations/meta/route', () => {
   return { ...actual };
 });
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }));
 
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const { createClient } = require('@/lib/supabase/server');
 
 const originalEnv = process.env;
@@ -67,8 +67,8 @@ describe('Meta integration route — IDOR negative tests', () => {
   // GET
   // ========================================================================
   describe('GET /api/integrations/meta', () => {
-    it('rejeita request sem autenticacao (getAuthenticatedUser returns null)', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    it('rejeita request sem autenticacao (getAuth returns null)', async () => {
+      (getAuth as jest.Mock).mockResolvedValue(null);
       const req = new NextRequest('http://localhost/api/integrations/meta');
       const res = await GET(req);
       expect(res.status).toBe(401);
@@ -77,7 +77,7 @@ describe('Meta integration route — IDOR negative tests', () => {
 
     it('rejeita session cookie forjado (mock returns null for invalid session)', async () => {
       // Simula supabase.auth.getUser() retornando null (cookie forjado ou expirado)
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+      (getAuth as jest.Mock).mockResolvedValue(null);
       const req = new NextRequest('http://localhost/api/integrations/meta', {
         headers: { cookie: 'sb-access-token=forged' },
       });
@@ -87,7 +87,7 @@ describe('Meta integration route — IDOR negative tests', () => {
 
     it('nao usa organizationId da URL — usa o do banco (membership)', async () => {
       // Usuario pertence a org-real
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
+      (getAuth as jest.Mock).mockResolvedValue(MOCK_USER);
       (createClient as jest.Mock).mockResolvedValue(makeSupabaseClient(null));
 
       // Tenta fraudar via query param
@@ -103,7 +103,7 @@ describe('Meta integration route — IDOR negative tests', () => {
     });
 
     it('nao expoe access_token, ciphertext ou campos sensiveis na resposta', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
+      (getAuth as jest.Mock).mockResolvedValue(MOCK_USER);
       (createClient as jest.Mock).mockResolvedValue(
         makeSupabaseClient({
           provider: 'facebook',
@@ -128,7 +128,7 @@ describe('Meta integration route — IDOR negative tests', () => {
     });
 
     it('consulta meta_integrations com organization_id do banco, nao de input do usuario', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
+      (getAuth as jest.Mock).mockResolvedValue(MOCK_USER);
       // Cadeia MULTICONTAS: .select().eq(org).neq(status).order(connected_at).
       const orderMock = jest.fn().mockResolvedValue({ data: null, error: null });
       const neqMock = jest.fn().mockReturnValue({ order: orderMock });
@@ -153,7 +153,7 @@ describe('Meta integration route — IDOR negative tests', () => {
   // ========================================================================
   describe('DELETE /api/integrations/meta', () => {
     it('rejeita request sem autenticacao', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+      (getAuth as jest.Mock).mockResolvedValue(null);
       const req = new NextRequest('http://localhost/api/integrations/meta?provider=facebook', {
         method: 'DELETE',
       });
@@ -162,7 +162,7 @@ describe('Meta integration route — IDOR negative tests', () => {
     });
 
     it('rejeita quando provider eh ausente', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
+      (getAuth as jest.Mock).mockResolvedValue(MOCK_USER);
       const req = new NextRequest('http://localhost/api/integrations/meta', { method: 'DELETE' });
       const res = await DELETE(req);
       expect(res.status).toBe(400);
@@ -170,7 +170,7 @@ describe('Meta integration route — IDOR negative tests', () => {
 
     it('nao permite deletar integracao de outra organizacao (IDOR)', async () => {
       // Usuario so pertence a org-real
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(MOCK_USER);
+      (getAuth as jest.Mock).mockResolvedValue(MOCK_USER);
 
       // Mock the Supabase chain. Each .eq() returns the same builder so .eq().eq() chains.
       const builder: any = {};

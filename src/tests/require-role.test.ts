@@ -32,7 +32,7 @@ jest.mock('@/lib/prisma', () => ({
 // MOCKS DAS FUNÇÕES QUE requireRole USA INTERNAMENTE
 // ============================================================
 
-const mockGetAuthenticatedUser = jest.fn();
+const mockgetAuth = jest.fn();
 const mockGetAllOrganizationMemberships = jest.fn();
 
 // Versão local de requireRole que usa nossos mocks (evita problema de closure do módulo real)
@@ -40,7 +40,7 @@ async function requireRoleTest(
   req: NextRequest,
   allowedRoles: string[]
 ): Promise<import('@/lib/auth').AuthenticatedUser | null> {
-  const user = await mockGetAuthenticatedUser(req);
+  const user = await mockgetAuth(req);
   if (!user) return null;
 
   // Check role in the PRIMARY organization ONLY (target org context)
@@ -89,7 +89,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
 
   describe('Acesso por role na organização primária', () => {
     it('Owner tem acesso a recursos admin/owner', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.owner);
+      mockgetAuth.mockResolvedValue(testUsers.owner);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -98,7 +98,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Admin tem acesso a recursos admin/owner', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.admin);
+      mockgetAuth.mockResolvedValue(testUsers.admin);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -107,7 +107,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Agent NÃO tem acesso a recursos admin/owner', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.agent);
+      mockgetAuth.mockResolvedValue(testUsers.agent);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -115,7 +115,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Viewer NÃO tem acesso a recursos admin/owner', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.viewer);
+      mockgetAuth.mockResolvedValue(testUsers.viewer);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -123,7 +123,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Agent tem acesso a recursos agent', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.agent);
+      mockgetAuth.mockResolvedValue(testUsers.agent);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['agent']);
@@ -132,7 +132,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Viewer tem acesso a recursos viewer', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.viewer);
+      mockgetAuth.mockResolvedValue(testUsers.viewer);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['viewer']);
@@ -141,7 +141,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Owner tem acesso quando owner está na lista permitida', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.owner);
+      mockgetAuth.mockResolvedValue(testUsers.owner);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       // Owner só tem acesso quando 'owner' está explicitamente na lista
@@ -151,7 +151,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Owner NÃO tem acesso a admin/agent/viewer se owner não estiver na lista (sem hierarquia implícita)', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.owner);
+      mockgetAuth.mockResolvedValue(testUsers.owner);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       // Sem role hierarchy implícita - owner precisa estar na lista permitida
@@ -164,7 +164,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
 
   describe('Acesso via membership cross-tenant (herança de role)', () => {
     it('Agent na org primária + Admin em org secundária → NEGADO a admin/owner (cross-tenant bloqueado)', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue({
+      mockgetAuth.mockResolvedValue({
         ...testUsers.agent,
         organizationMembers: crossTenantMemberships.agentPrimaryAdminSecondary,
       });
@@ -175,7 +175,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Viewer na org primária + Owner em org secundária → NEGADO a admin/owner (cross-tenant bloqueado)', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue({
+      mockgetAuth.mockResolvedValue({
         ...testUsers.viewer,
         organizationMembers: crossTenantMemberships.viewerPrimaryOwnerSecondary,
       });
@@ -186,7 +186,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Cross-tenant NÃO eleva role na organização primária', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue({
+      mockgetAuth.mockResolvedValue({
         ...testUsers.agent,
         organizationMembers: crossTenantMemberships.agentPrimaryAdminSecondary,
       });
@@ -201,7 +201,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
 
   describe('Casos de negação', () => {
     it('Retorna null quando usuário não autenticado', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(null);
+      mockgetAuth.mockResolvedValue(null);
       mockGetAllOrganizationMemberships.mockResolvedValue(null);
 
       const result = await requireRoleTest(createMockRequest(), ['admin']);
@@ -209,7 +209,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Retorna null quando usuário sem memberships', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue({
+      mockgetAuth.mockResolvedValue({
         ...testUsers.agent,
         organizationMembers: [],
       });
@@ -220,7 +220,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Retorna null quando role não está na lista permitida', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.agent);
+      mockgetAuth.mockResolvedValue(testUsers.agent);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['owner']);
@@ -228,7 +228,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('Retorna null quando getAllOrganizationMemberships retorna null', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.agent);
+      mockgetAuth.mockResolvedValue(testUsers.agent);
       mockGetAllOrganizationMemberships.mockResolvedValue(null);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -259,7 +259,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
           for (const [role, shouldAllow] of Object.entries(permissions)) {
             it(`${role} ${shouldAllow ? 'TEM' : 'NÃO TEM'} acesso`, async () => {
               const user = testUsers[role as keyof typeof testUsers];
-              mockGetAuthenticatedUser.mockResolvedValue(user);
+              mockgetAuth.mockResolvedValue(user);
               mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
               const result = await requireRoleTest(createMockRequest(), allowedRoles);
@@ -283,7 +283,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
         ...testUsers.agent,
         organizationMembers: crossTenantMemberships.agentPrimaryAdminSecondary,
       };
-      mockGetAuthenticatedUser.mockResolvedValue(user);
+      mockgetAuth.mockResolvedValue(user);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.agentPrimaryAdminSecondary);
 
       const result = await requireRoleTest(createMockRequest(), ['admin', 'owner']);
@@ -293,7 +293,7 @@ describe('FASE 2.1.3 — requireRole helper', () => {
     });
 
     it('requireRole retorna objeto AuthenticatedUser completo', async () => {
-      mockGetAuthenticatedUser.mockResolvedValue(testUsers.admin);
+      mockgetAuth.mockResolvedValue(testUsers.admin);
       mockGetAllOrganizationMemberships.mockResolvedValue(crossTenantMemberships.none);
 
       const result = await requireRoleTest(createMockRequest(), ['admin']);
@@ -308,10 +308,10 @@ describe('FASE 2.1.3 — requireRole helper', () => {
 
   describe('Modo Demo', () => {
     // O modo demo é testado via integração, aqui apenas confirmamos que
-    // a função lida com getAuthenticatedUser retornando user demo
-    it('Funciona com usuário demo (mock de getAuthenticatedUser)', async () => {
+    // a função lida com getAuth retornando user demo
+    it('Funciona com usuário demo (mock de getAuth)', async () => {
       const demoUser = { id: 'demo-user', email: 'demo@test.com', organizationId: 'demo-org', role: 'admin' };
-      mockGetAuthenticatedUser.mockResolvedValue(demoUser);
+      mockgetAuth.mockResolvedValue(demoUser);
       mockGetAllOrganizationMemberships.mockResolvedValue([{ organizationId: 'demo-org', role: 'admin' }]);
 
       const result = await requireRoleTest(createMockRequest(), ['admin']);

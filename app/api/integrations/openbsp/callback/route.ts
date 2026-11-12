@@ -4,15 +4,15 @@
 // e grava as credenciais (access_token AES-GCM). Sem webhook de conta no MVP.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../../src/lib/auth';
-import { fetchConnectedAddress, getChannelDecrypted, markChannelConnected } from '../../../../../src/integrations/whatsapp';
-import { createServiceRoleClient } from '../../../../../src/lib/supabase/server';
+import { getAuth } from '@/lib/auth';
+import { fetchConnectedAddress, getChannelDecrypted, markChannelConnected } from '@/integrations/whatsapp';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const client = createServiceRoleClient();
 
   const channel = await getChannelDecrypted(client, user.organizationId);

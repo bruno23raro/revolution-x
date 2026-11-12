@@ -17,15 +17,15 @@
 // Só admin/owner (mesmo gate do refresh Meta/TikTok).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { openbspConfig, fetchConnectedAddress } from '@/integrations/whatsapp/openbsp/client';
 
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');

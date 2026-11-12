@@ -6,7 +6,7 @@
 // componentes (header, body, footer, buttons) e status de aprovação.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
 import { getWhatsAppTemplate } from '@/integrations/meta/whatsappTemplates';
@@ -15,8 +15,8 @@ import { rateLimit } from '@/middleware/rate-limit';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -101,8 +101,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 
 // DELETE /api/whatsapp/templates/[id] — Excluir template (admin)
 export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 

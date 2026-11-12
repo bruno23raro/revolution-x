@@ -9,7 +9,7 @@
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 jest.mock('@/integrations/meta/accounts', () => ({
   listTenantWhatsAppAccounts: jest.fn(),
@@ -24,7 +24,7 @@ jest.mock('@/repositories/campaignRepoReal', () => ({
 const { GET: accountsGET } = require('../../app/api/whatsapp/accounts/route');
 const { GET: recipientsGET } = require('../../app/api/campaigns/[id]/recipients/route');
 
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const { listTenantWhatsAppAccounts } = require('@/integrations/meta/accounts');
 const { campaignRepoReal } = require('@/repositories/campaignRepoReal');
 
@@ -37,13 +37,16 @@ describe('GET /api/whatsapp/accounts (§7/§11)', () => {
   afterEach(() => jest.resetAllMocks());
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await accountsGET(req('/api/whatsapp/accounts'));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200); // Lazy auth: returns available=false instead of 401
+    const data = await res.json();
+    expect(data.available).toBe(false);
+    expect(data.reason).toBe('no_session');
   });
 
   it('devolve metadados SEM segredos (nada de tokens/chaves)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (listTenantWhatsAppAccounts as jest.Mock).mockResolvedValue({
       ok: true,
       accounts: [
@@ -71,7 +74,7 @@ describe('GET /api/whatsapp/accounts (§7/§11)', () => {
   });
 
   it('degradação honesta: sem clientes Supabase → available=false (não inventa)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (listTenantWhatsAppAccounts as jest.Mock).mockResolvedValue({
       ok: false,
       reason: 'client_unavailable',
@@ -89,13 +92,13 @@ describe('GET /api/campaigns/[id]/recipients (§10)', () => {
   afterEach(() => jest.resetAllMocks());
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await recipientsGET(req('/api/campaigns/c1/recipients'), { params: { id: 'c1' } });
     expect(res.status).toBe(401);
   });
 
   it('404 para campanha de outra org (isolamento multi-tenant)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (campaignRepoReal.get as jest.Mock).mockResolvedValue(null);
     const res = await recipientsGET(req('/api/campaigns/cX/recipients'), { params: { id: 'cX' } });
     expect(res.status).toBe(404);
@@ -104,7 +107,7 @@ describe('GET /api/campaigns/[id]/recipients (§10)', () => {
   });
 
   it('status fora do domínio → 400 invalid_status', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (campaignRepoReal.get as jest.Mock).mockResolvedValue({ id: 'c1', status: 'running' });
     (campaignRepoReal.listRecipients as jest.Mock).mockResolvedValue({ items: [], total: 0 });
     const res = await recipientsGET(
@@ -116,7 +119,7 @@ describe('GET /api/campaigns/[id]/recipients (§10)', () => {
   });
 
   it('lista resultados REAIS por destinatário (paginado + filtro)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (campaignRepoReal.get as jest.Mock).mockResolvedValue({ id: 'c1', status: 'running' });
     (campaignRepoReal.listRecipients as jest.Mock).mockResolvedValue({
       items: [
@@ -152,7 +155,7 @@ describe('GET /api/campaigns/[id]/recipients (§10)', () => {
   });
 
   it('limit acima do teto é limitado a 100 (defesa em profundidade)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (campaignRepoReal.get as jest.Mock).mockResolvedValue({ id: 'c1', status: 'running' });
     (campaignRepoReal.listRecipients as jest.Mock).mockResolvedValue({ items: [], total: 0 });
     await recipientsGET(req('/api/campaigns/c1/recipients?limit=99999'), { params: { id: 'c1' } });

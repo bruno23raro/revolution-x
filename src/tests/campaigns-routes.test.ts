@@ -10,7 +10,7 @@
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 jest.mock('@/repositories/campaignRepoReal', () => ({
   campaignRepoReal: {
@@ -46,7 +46,7 @@ const { GET: campGET, POST: campPOST } = require('../../app/api/campaigns/route'
 const { GET: campIdGET, POST: campIdPOST } = require('../../app/api/campaigns/[id]/route');
 const { POST: importPOST } = require('../../app/api/crm/contacts/import/route');
 
-const { getAuthenticatedUser } = require('@/lib/auth');
+const { getAuth } = require('@/lib/auth');
 const { campaignRepoReal } = require('@/repositories/campaignRepoReal');
 const {
   listIdentifiers,
@@ -70,11 +70,11 @@ function req(url, { method = 'GET', body, headers } = {}) {
 }
 
 function asUser() {
-  getAuthenticatedUser.mockResolvedValue(USER);
+  getAuth.mockResolvedValue(USER);
 }
 
 function asNoUser() {
-  getAuthenticatedUser.mockResolvedValue(null);
+  getAuth.mockResolvedValue(null);
 }
 
 function campaignFixture(over = {}) {

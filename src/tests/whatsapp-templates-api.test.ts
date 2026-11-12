@@ -12,7 +12,7 @@ jest.mock('@/middleware/rate-limit', () => ({
 
 // Mock dos módulos de autenticação
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 
@@ -39,7 +39,7 @@ jest.mock('@/integrations/meta/whatsappTemplates', () => ({
 const { GET: templatesGET, POST: templatesPOST } = require('../../app/api/whatsapp/templates/route');
 const { POST: testPOST } = require('../../app/api/whatsapp/templates/[id]/test/route');
 
-const { getAuthenticatedUser, getAllOrganizationMemberships } = require('@/lib/auth');
+const { getAuth, getAllOrganizationMemberships } = require('@/lib/auth');
 const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
 const { listWhatsAppTemplates, createWhatsAppTemplate, sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
 const { prisma } = require('@/lib/prisma');
@@ -78,13 +78,13 @@ describe('GET /api/whatsapp/templates', () => {
   });
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await templatesGET(req('/api/whatsapp/templates'));
     expect(res.status).toBe(401);
   });
 
   it('devolve templates do tenant (sem dados sensíveis)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
       access: { accessToken: 'tok', phoneNumberId: '123', wabaId: 'w1' },
@@ -108,7 +108,7 @@ describe('GET /api/whatsapp/templates', () => {
   });
 
   it('409 quando Meta não configurado (not_connected)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({ ok: false, reason: 'not_connected' });
 
     const res = await templatesGET(req('/api/whatsapp/templates'));
@@ -119,7 +119,7 @@ describe('GET /api/whatsapp/templates', () => {
   });
 
   it('suporta filtro por conta (multicontas)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
       access: { accessToken: 'tok', phoneNumberId: '456', wabaId: 'w1' },
@@ -145,19 +145,19 @@ describe('POST /api/whatsapp/templates', () => {
   });
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await templatesPOST(req('/api/whatsapp/templates', JSON.stringify({ name: 'test' }), 'POST'));
     expect(res.status).toBe(401);
   });
 
   it('401 para membro não-admin', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     const res = await templatesPOST(req('/api/whatsapp/templates', JSON.stringify({ name: 'test' }), 'POST'));
     expect(res.status).toBe(401);
   });
 
   it('cria template com sucesso (admin)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
@@ -184,7 +184,7 @@ describe('POST /api/whatsapp/templates', () => {
   });
 
   it('400 com nome vazio', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
 
     const res = await templatesPOST(req('/api/whatsapp/templates', JSON.stringify({ name: '' }), 'POST'));
@@ -195,7 +195,7 @@ describe('POST /api/whatsapp/templates', () => {
   });
 
   it('400 com nome com letra maiúscula (inválido)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
@@ -212,7 +212,7 @@ describe('POST /api/whatsapp/templates', () => {
   });
 
   it('aceita nome começando com número (regra Meta: a-z, 0-9, underscore)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
@@ -235,7 +235,7 @@ describe('POST /api/whatsapp/templates', () => {
 
   it('cria template com header de texto', async () => {
     jest.clearAllMocks();
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
     (resolveTenantMetaAccess as jest.Mock).mockResolvedValue({
       ok: true,
@@ -274,13 +274,13 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue(null);
     const res = await testPOST(req('/api/whatsapp/templates/tpl-1/test', JSON.stringify({ to: '5511999998888' }), 'POST'), { params: { id: 'tpl-1' } });
     expect(res.status).toBe(401);
   });
 
   it('401 para membro tentando enviar teste', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue(USER);
     const res = await testPOST(req('/api/whatsapp/templates/tpl-1/test', JSON.stringify({ to: '5511999998888' }), 'POST'), { params: { id: 'tpl-1' } });
     expect(res.status).toBe(401);
     const data = await res.json();
@@ -288,7 +288,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('404 para template não encontrado', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue(null);
 
     const res = await testPOST(req('/api/whatsapp/templates/nonexistent/test', JSON.stringify({ to: '5511999998888' }), 'POST'), { params: { id: 'nonexistent' } });
@@ -296,7 +296,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('400 para template não aprovado', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue({
       id: 'tpl-123',
       name: 'pending_template',
@@ -312,7 +312,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('400 sem campo to', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue({
       id: 'tpl-123',
       name: 'approved_template',
@@ -328,7 +328,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('503 quando Meta não configurado (not_connected)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue({
       id: 'tpl-123',
       name: 'approved_template',
@@ -345,7 +345,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('envia mensagem de teste com sucesso', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue({
       id: 'tpl-123',
       name: 'boas_vindas',
@@ -383,7 +383,7 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('envia teste sem variáveis', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue(ADMIN);
     (prisma.whatsappTemplate.findFirst as jest.Mock).mockResolvedValue({
       id: 'tpl-456',
       name: 'simple_template',

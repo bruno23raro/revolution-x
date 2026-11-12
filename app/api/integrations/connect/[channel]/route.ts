@@ -5,7 +5,7 @@
 // Usa o fluxo OpenBSP quando disponível, fallback para manual/QR
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { mintOnboardingToken, upsertChannelPending } from '@/integrations/whatsapp';
@@ -23,8 +23,8 @@ interface ConnectRequest {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
   const channel = url.pathname.split('/').pop() as Channel;
@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
 
 // GET para verificar status da conexão
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
   const channel = url.searchParams.get('channel') || url.pathname.split('/').pop();

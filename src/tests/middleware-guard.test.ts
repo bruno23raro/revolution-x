@@ -10,7 +10,7 @@
 //       - página privada        → redirect p/ /login (nunca finge autenticação);
 //       - rotas públicas        → seguem renderizando (shell público).
 //   • Env ausente + NÃO-prod → preview renderiza (200), mas NUNCA libera dado
-//     privado: as APIs ainda validam auth no próprio fluxo (getAuthenticatedUser).
+//     privado: as APIs ainda validam auth no próprio fluxo (getAuth).
 //
 // Uma configuração ausente pode BLOQUEAR funcionalidades, mas não pode LIBERAR
 // acesso privado. Este teste trava essa propriedade.

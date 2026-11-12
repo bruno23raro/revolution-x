@@ -1,11 +1,65 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "agent-desktop": {
       "source": "vercel-labs/agent-desktop",
       "sourceType": "github",
       "skillPath": "skills/agent-desktop/SKILL.md",
-      "computedHash": "2c448f01c9eed390e9d6226a3e1998cc60504c4c038fed36d1e1eb0fe7ce408e"
+      "computedHash": ""
+    },
+    "playwright-skill": {
+      "source": "lackeyjb/playwright-skill",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-skill/SKILL.md",
+      "computedHash": "11a5e9fbfdb24afdd7f7a682711f68a9caa6be91b70d8531e578fdce438e0fad"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "2fbff32fd63b7d31585cacf0ed43e5bf8d05dd20d6c0c751d256cb967a00eec1"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
+    },
+    "unslop": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "skills/unslop/SKILL.md",
+      "computedHash": "e6fe9e2488cf57f90f7483b998a692e85630fa01596c9a9fa91ceaf947bb1e58"
+    },
+    "unslop-commit": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "skills/unslop-commit/SKILL.md",
+      "computedHash": "7060fb7a13c1e9ebc6581d57eb829234652dab0fab6c0205fb865bd52238164d"
+    },
+    "unslop-file": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "unslop/SKILL.md",
+      "computedHash": "51ec62eb673982f28d717226ffd29bb8cb244ac7a74adee666ccc30b0df122c7"
+    },
+    "unslop-help": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "skills/unslop-help/SKILL.md",
+      "computedHash": "85a88be3c32f9c0b53de735728da277c28171a84c906bd19a6cf64d45ee46be7"
+    },
+    "unslop-reasoning": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "skills/unslop-reasoning/SKILL.md",
+      "computedHash": "2fbb6d0ac7054e4e154b4026951cf5f2beb7c1e6e12d62393dda103fd82747ea"
+    },
+    "unslop-review": {
+      "source": "MohamedAbdallah-14/unslop",
+      "sourceType": "github",
+      "skillPath": "skills/unslop-review/SKILL.md",
+      "computedHash": "a15f349d43287bf6c199153799949da6bdfabdb6df17949aef4be0c77a67a3b2"
     }
   }
 }

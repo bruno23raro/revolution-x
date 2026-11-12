@@ -29,7 +29,7 @@ jest.mock('../../src/ai/omniRouter', () => ({
 
 // ── auth ──────────────────────────────────────────────────────────────────────
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 
@@ -73,7 +73,7 @@ jest.mock('@/lib/prisma', () => {
   };
 });
 
-const { getAuthenticatedUser, getAllOrganizationMemberships } = require('@/lib/auth');
+const { getAuth, getAllOrganizationMemberships } = require('@/lib/auth');
 const { prisma } = require('@/lib/prisma');
 const { resolveOmniRouterConfig, chatCompletion } = require('../../src/ai/omniRouter');
 
@@ -89,7 +89,7 @@ const ADMIN = { id: 'user-admin', role: 'admin', organizationId: 'org-admin', em
 const MEMBER = { id: 'user-member', role: 'member', organizationId: 'org-a', email: 'member@x.com' };
 
 function asUser(user: unknown) {
-  (getAuthenticatedUser as jest.Mock).mockResolvedValue(user);
+  (getAuth as jest.Mock).mockResolvedValue({ user: user, hasSession: true });
 }
 function asMemberWith(memberships: Array<{ role: string; organizationId?: string }>) {
   (getAllOrganizationMemberships as jest.Mock).mockResolvedValue(memberships);

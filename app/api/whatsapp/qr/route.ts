@@ -11,11 +11,11 @@
 //   GET /api/whatsapp/qr?sessionId=xxx — Retorna status da sessão
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthenticatedUser(_req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(_req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

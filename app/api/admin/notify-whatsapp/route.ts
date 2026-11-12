@@ -2,14 +2,14 @@
 // POST /api/admin/notify-whatsapp — Enviar alerta para WhatsApp
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '../../../../src/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '../../../../src/lib/auth';
 import { verifyAdminBearer } from '../../../../src/lib/admin-bearer';
 
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');

@@ -3,9 +3,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '../../../../../src/lib/auth';
-import { verifyAdminBearer } from '../../../../../src/lib/admin-bearer';
-import { prisma } from '../../../../../src/lib/prisma';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
+import { verifyAdminBearer } from '@/lib/admin-bearer';
+import { prisma } from '@/lib/prisma';
 
 // C3 — schema/diff: cache 60s + timeout 10s
 // Duas chamadas seguidas não reconsultam o banco (cache na borda)
@@ -24,8 +24,8 @@ function hasCacheExpired(): boolean {
 }
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   const memberships = await getAllOrganizationMemberships(req);
   const ok = memberships?.some((m) => m.role === 'admin' || m.role === 'owner');

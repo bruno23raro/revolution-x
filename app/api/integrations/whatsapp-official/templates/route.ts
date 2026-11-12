@@ -7,15 +7,15 @@
 //        e grava como PENDING. NUNCA fica "aprovado" sem o Meta dizer.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../../src/lib/auth';
+import { getAuth } from '@/lib/auth';
 import {
   getChannelDecrypted,
   getWhatsAppProvider,
   listTemplateRows,
   upsertTemplateRow,
-} from '../../../../../src/integrations/whatsapp';
-import type { OfficialTemplateSpec } from '../../../../../src/integrations/whatsapp';
-import { createServiceRoleClient } from '../../../../../src/lib/supabase/server';
+} from '@/integrations/whatsapp';
+import type { OfficialTemplateSpec } from '@/integrations/whatsapp';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +27,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const rows = await listTemplateRows(createServiceRoleClient(), user.organizationId);
   return NextResponse.json({
     items: rows.map((r) => ({
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   let body: Record<string, unknown>;
   try {
     body = await req.json();

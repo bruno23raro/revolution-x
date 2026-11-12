@@ -6,15 +6,15 @@
 // auto-modo sem inventar dados.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../src/lib/auth';
-import { prisma } from '../../../../src/lib/prisma';
-import { listMemory } from '../../../../src/lib/taskQueue';
+import { getAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { listMemory } from '@/lib/taskQueue';
 import {
   buildAiProviders,
   discoverModels,
   type AutoSelectPrefs,
-} from '../../../../src/ai';
-import { getTestProviders } from '../../../../src/ai/testSeam';
+} from '@/ai';
+import { getTestProviders } from '@/ai/testSeam';
 
 const AI_CONFIG_KEY = 'ai_config';
 
@@ -41,8 +41,8 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function GET(_req: NextRequest) {
-  const user = await getAuthenticatedUser(_req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(_req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

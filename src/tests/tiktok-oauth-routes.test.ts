@@ -9,7 +9,7 @@
 // A rede (open.tiktokapis.com) NUNCA entra: a API é mockada na fronteira.
 
 import { NextRequest } from 'next/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { encryptToken } from '@/lib/encryption';
 import { TaskQueueUnavailableError } from '@/lib/taskQueue';
@@ -31,7 +31,7 @@ import { GET as callbackGet } from '../../app/api/auth/callback/tiktok/route';
 import { POST as refreshPost } from '../../app/api/integrations/tiktok/refresh-token/route';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 jest.mock('@/lib/prisma', () => ({
@@ -99,7 +99,7 @@ let consoleErr: jest.SpyInstance;
 beforeEach(() => {
   consoleErr = jest.spyOn(console, 'error').mockImplementation(() => {});
   setEnv(false);
-  jest.mocked(getAuthenticatedUser).mockReset();
+  jest.mocked(getAuth).mockReset();
   jest.mocked(getAllOrganizationMemberships).mockReset();
   jest.mocked(resolveTenantTikTokAccess).mockReset();
   jest.mocked(saveTikTokOAuthTokens).mockReset();
@@ -125,7 +125,7 @@ describe('GET /api/auth/callback/tiktok', () => {
 
   it('sucesso: troca, cifra, persiste no tenant e limpa cookies → /onboarding/success', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+    jest.mocked(getAuth).mockResolvedValue(user as never);
     jest.mocked(exchangeTikTokCode).mockResolvedValue(tokens);
     jest.mocked(encryptToken).mockReturnValue('ENC');
     jest.mocked(saveTikTokOAuthTokens).mockResolvedValue(undefined);
@@ -180,12 +180,12 @@ describe('GET /api/auth/callback/tiktok', () => {
     // setEnv(false) já no beforeEach
     const res = await callbackGet(cb('?code=CODE&state=STATE', cookie));
     expect(new URL(res.headers.get('location')!).searchParams.get('reason')).toBe('config_missing');
-    expect(getAuthenticatedUser).not.toHaveBeenCalled();
+    expect(getAuth).not.toHaveBeenCalled();
   });
 
   it('sem sessão → not_authenticated', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(null);
+    jest.mocked(getAuth).mockResolvedValue(null);
     const res = await callbackGet(cb('?code=CODE&state=STATE', cookie));
     expect(new URL(res.headers.get('location')!).searchParams.get('reason')).toBe('not_authenticated');
     expect(exchangeTikTokCode).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe('GET /api/auth/callback/tiktok', () => {
 
   it('falha no exchange → token_exchange_failed (detail = code do TikTokOAuthError REAL)', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+    jest.mocked(getAuth).mockResolvedValue(user as never);
     jest.mocked(exchangeTikTokCode).mockRejectedValue(
       new TikTokOAuthError('grant inválido', 'TOKEN_EXCHANGE_FAILED'),
     );
@@ -206,7 +206,7 @@ describe('GET /api/auth/callback/tiktok', () => {
 
   it('encryptToken lança → encryption_failed', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+    jest.mocked(getAuth).mockResolvedValue(user as never);
     jest.mocked(exchangeTikTokCode).mockResolvedValue(tokens);
     jest.mocked(encryptToken).mockImplementation(() => {
       throw new Error('sem META_TOKEN_ENCRYPTION_KEY');
@@ -217,7 +217,7 @@ describe('GET /api/auth/callback/tiktok', () => {
 
   it('persistência: TaskQueueUnavailableError REAL → queue_unavailable', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+    jest.mocked(getAuth).mockResolvedValue(user as never);
     jest.mocked(exchangeTikTokCode).mockResolvedValue(tokens);
     jest.mocked(encryptToken).mockReturnValue('ENC');
     jest.mocked(saveTikTokOAuthTokens).mockRejectedValue(new TaskQueueUnavailableError('fila fora'));
@@ -229,7 +229,7 @@ describe('GET /api/auth/callback/tiktok', () => {
 
   it('persistência: erro genérico → db_error', async () => {
     setEnv(true);
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+    jest.mocked(getAuth).mockResolvedValue(user as never);
     jest.mocked(exchangeTikTokCode).mockResolvedValue(tokens);
     jest.mocked(encryptToken).mockReturnValue('ENC');
     jest.mocked(saveTikTokOAuthTokens).mockRejectedValue(new Error('disk full'));
@@ -245,10 +245,10 @@ describe('POST /api/integrations/tiktok/refresh-token', () => {
   const req = (): NextRequest =>
     new NextRequest('http://localhost/api/integrations/tiktok/refresh-token', { method: 'POST' });
 
-  const asAdmin = () => jest.mocked(getAuthenticatedUser).mockResolvedValue(user as never);
+  const asAdmin = () => jest.mocked(getAuth).mockResolvedValue(user as never);
 
   it('401 sem sessão', async () => {
-    jest.mocked(getAuthenticatedUser).mockResolvedValue(null);
+    jest.mocked(getAuth).mockResolvedValue(null);
     const res = await refreshPost(req());
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Unauthorized' });

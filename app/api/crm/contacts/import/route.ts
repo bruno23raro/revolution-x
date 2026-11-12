@@ -14,7 +14,7 @@
 // O mapeamento passa por `sanitizeMapping` (allow-list de campos).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../../src/lib/auth';
+import { getAuth } from '@/lib/auth';
 import {
   detectDelimiter,
   errorReportCsv,
@@ -36,8 +36,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

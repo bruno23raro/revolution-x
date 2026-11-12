@@ -17,9 +17,9 @@
 //  * Tenant: 404 para campanha de outra org (isolamento multi-tenant, §16).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '../../../../src/lib/auth';
-import { campaignRepoReal } from '../../../../src/repositories/campaignRepoReal';
-import { listMarketingContacts } from '../../../../src/repositories/contactImportRepo';
+import { getAuth } from '@/lib/auth';
+import { campaignRepoReal } from '@/repositories/campaignRepoReal';
+import { listMarketingContacts } from '@/repositories/contactImportRepo';
 import {
   canTransition,
   type AudienceSpec,
@@ -27,12 +27,12 @@ import {
   buildRecipientVars,
   buildRecipients,
   interpolateVars,
-} from '../../../../src/services/campaignService';
-import { executeCampaignBatch, mergeCounts } from '../../../../src/services/campaignExecutor';
-import { resolveTenantMetaAccess } from '../../../../src/integrations/meta/resolveAccess';
-import { sendWhatsAppText } from '../../../../src/integrations/meta/whatsappSender';
-import { getChannelDecrypted, buildOfficialSender, checkTier } from '../../../../src/integrations/whatsapp';
-import { createServiceRoleClient } from '../../../../src/lib/supabase/server';
+} from '@/services/campaignService';
+import { executeCampaignBatch, mergeCounts } from '@/services/campaignExecutor';
+import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
+import { sendWhatsAppText } from '@/integrations/meta/whatsappSender';
+import { getChannelDecrypted, buildOfficialSender, checkTier } from '@/integrations/whatsapp';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 const MAX_ACTION_ACCOUNT = 64;
 
@@ -41,8 +41,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const campaign = await campaignRepoReal.get(user.organizationId, params.id);
   if (!campaign) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -51,8 +51,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: Record<string, unknown>;
   try {

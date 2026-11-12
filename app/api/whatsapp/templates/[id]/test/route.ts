@@ -6,7 +6,7 @@
 // Apenas templates com status APPROVED podem enviar testes.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
 import { sendTestMessage } from '@/integrations/meta/whatsappTemplates';
@@ -15,8 +15,8 @@ import { rateLimit } from '@/middleware/rate-limit';
 export const dynamic = 'force-dynamic';
 
 async function requireAdmin(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return null;
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
   if (user.role === 'admin' || user.role === 'owner') return user;
   return null;
 }

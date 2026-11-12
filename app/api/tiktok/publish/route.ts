@@ -15,7 +15,7 @@
 // O segredo (access token) vive SÓ no banco (AgentMemory), nunca no front-end.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { TaskQueueUnavailableError } from '@/lib/taskQueue';
 import {
@@ -53,8 +53,8 @@ function parseSpec(body: Record<string, unknown>): { spec: PublishVideoSpec; sou
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const scope = { organizationId: user.organizationId, userId: user.id };
 
   let body: Record<string, unknown>;

@@ -104,11 +104,11 @@ export async function POST(req: NextRequest) {
     // Buscar todos contatos da organização
     const { data: allContacts, error: allErr } = await service
       .from('crm_contacts')
-      .select('phone')
+      .select('phone_number')
       .eq('organization_id', user.organizationId);
 
     if (!allErr && allContacts) {
-      recipients = allContacts.map((c: any) => c.phone).filter(Boolean);
+      recipients = allContacts.map((c: any) => c.phone_number).filter(Boolean);
     }
   }
 

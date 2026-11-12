@@ -160,8 +160,8 @@ async function upsertContacts(organizationId: string, contacts: any[]) {
       .upsert({
         organization_id: organizationId,
         external_id: contact.id,
+        phone_number: phone,
         name: contact.name,
-        phone: phone,
         email: contact.email,
         profile_picture_url: contact.profile_picture_url,
         last_synced_at: new Date().toISOString(),

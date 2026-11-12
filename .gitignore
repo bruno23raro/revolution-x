@@ -97,3 +97,7 @@ playwright-report/
 artifacts/playwright-report/
 artifacts/playwright-results/
 .claude-flow/memory/
+
+# FrontCode VS Code extension (auxiliar)
+FrontCode/
+

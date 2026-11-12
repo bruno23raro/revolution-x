@@ -29,6 +29,9 @@ export default function IntegracoesPage() {
   const [view, setView] = useState<Mode>('OFFICIAL');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [removeConfirm, setRemoveConfirm] = useState<{ label: string; id: string } | null>(null);
+  const [syncingContacts, setSyncingContacts] = useState(false);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
 
   const toast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now();
@@ -252,6 +255,35 @@ export default function IntegracoesPage() {
                     if (a) askRemove(a);
                   }}
                 />
+              </div>
+              {/* Ações adicionais do card WhatsApp */}
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  onClick={async () => {
+                    setSyncingContacts(true);
+                    try {
+                      const r = await fetch('/api/integrations/sync-contacts/whatsapp?channel=whatsapp', { method: 'POST' });
+                      const d = await r.json();
+                      if (r.ok) toast(`Sincronizados ${d.synced} contatos (${d.upserted} novos)`, 'success');
+                      else toast(d.error ?? 'Falha ao sincronizar contatos', 'error');
+                    } catch {
+                      toast('Falha de rede ao sincronizar contatos', 'error');
+                    } finally {
+                      setSyncingContacts(false);
+                    }
+                  }}
+                  disabled={syncingContacts || !statusFor('whatsapp').connected}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600/20 text-blue-400 border border-blue-400/30 hover:bg-blue-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {syncingContacts ? 'Sincronizando…' : 'Sincronizar Contatos'}
+                </button>
+                <button
+                  onClick={() => toast('Funcionalidade em desenvolvimento - selecione uma campanha', 'info')}
+                  disabled={!statusFor('whatsapp').connected}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600/20 text-amber-400 border border-amber-400/30 hover:bg-amber-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Enviar Campanha
+                </button>
               </div>
             </section>
           ) : (

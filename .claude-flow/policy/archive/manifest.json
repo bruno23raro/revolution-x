@@ -1,0 +1,12 @@
+{
+  "archives": [
+    {
+      "path": "receipts-batch-20261110-145715.jsonl",
+      "count": 13565,
+      "timestamp": "20261110-145715",
+      "sequenceStart": 0,
+      "sha256": "541E8C0CF9A35EC1E1556CF9A516ABF0ADFD1C4B4B7120EDDAB815870095D4F9",
+      "sequenceEnd": 13564
+    }
+  ]
+}

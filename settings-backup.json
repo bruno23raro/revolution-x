@@ -1,0 +1,65 @@
+{
+    "claudeCode.preferredLocation": "panel",
+    "terminal.integrated.commandsToSkipShell": [
+        "kilo-code.new.agentManagerOpen",
+        "kilo-code.new.agentManager.showTerminal",
+        "kilo-code.new.agentManager.previousTerminal",
+        "kilo-code.new.agentManager.nextTerminal"
+    ],
+    "kilo-code.new.agentWorkStyle": "unset",
+    "opa.dependency_paths.opa": "C:\\Users\\Bruno/opa",
+    "opa.dependency_paths.regal": "C:\\Users\\Bruno/regal",
+    "mssql.connectionGroups": [
+        {
+            "name": "ROOT",
+            "id": "ROOT"
+        }
+    ],
+    "claudeCode.hideOnboarding": true,
+    "mssql.autoDisableNonTSqlLanguageService": true,
+    "terminal.integrated.mouseWheelScrollSensitivity": 3,
+    "terminal.integrated.gpuAcceleration": "off",
+    "chat.permissions.default": "ask",
+    "chat.agent.sandbox.network.allowLocalNetwork": true,
+    "chat.agent.sandbox.enabled": "on",
+    "chat.mcp.discovery.enabled": {
+        "claude-desktop": true,
+        "windsurf": true,
+        "cursor-global": true,
+        "cursor-workspace": true
+    },
+    "chat.mcp.gallery.enabled": true,
+    "chat.mcp.assisted.nuget.enabled": true,
+    "chrome-devtools-mcp-relay.autoConnect": true,
+    "github.copilot.chat.githubMcpServer.enabled": true,
+    "github.copilot.chat.githubMcpServer.lockdown": true,
+    "github.copilot.chat.githubMcpServer.readonly": true,
+    "integratedBrowserMcp.allowAllExistingTabs": true,
+    "playwright-mcp-relay.autoConnect": true,
+    "QoderCN.aI Chat.mcpToolsInAgentMode": true,
+    "chat.customizations.mcpServerMigration.enabled": true,
+    "extensions.allowOpenInModalEditor": true,
+    "terminal.integrated.allowInUntrustedWorkspace": true,
+    "accessibility.openChatEditedFiles": true,
+    "claudeCode.allowDangerouslySkipPermissions": true,
+    "accessibility.signalOptions.debouncePositionChanges": true,
+    "js/ts.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis": true,
+    "gitlens.advanced.skipOnboarding": true,
+    "chat.agent.networkFilter": true,
+    "chat.useClaudeHooks": true
+,
+  "chat.pluginLocations": {
+    "C:\\Users\\Bruno\\.cache\\plugins\\.install-staging\\5ac4ca1a59841716ebe5a41691e06879ed1ad6fd\\vscode\\repo": true
+},
+"workbench.editorAssociations": {
+    "*.zip": "zip.redirectToTree",
+    "*.vsix": "zip.redirectToTree"
+},
+"chatgpt.followUpQueueMode": "queue",
+"editor.foldingMaximumRegions": 65000,
+"diffEditor.maxComputationTime": 650000000000,
+"cmake.environment": {
+    "PATH": "c:/Users/Bruno/.vscode/extensions/stmicroelectronics.stm32cube-ide-build-cmake-1.47.0-win32-x64/resources/cube-cmake/win32/x86_64;c:\\Users\\Bruno\\.vscode\\extensions\\stmicroelectronics.stm32cube-ide-core-1.5.0-win32-x64\\resources\\binaries\\win32\\x86_64;${env.PATH}"
+},
+"debug.allowBreakpointsEverywhere": true
+}

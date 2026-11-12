@@ -1,0 +1,23 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /crm
+Disallow: /reports
+Disallow: /calendar
+Disallow: /publisher
+Disallow: /video
+Disallow: /account
+Disallow: /integrations
+Disallow: /integracoes
+Disallow: /hub-integracoes
+Disallow: /facebook
+Disallow: /instagram
+Disallow: /whatsapp
+Disallow: /tiktok
+Disallow: /testcenter
+Disallow: /onboarding/
+Disallow: /reset-password
+
+Sitemap: http://localhost:3003/sitemap.xml

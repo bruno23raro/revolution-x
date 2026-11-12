@@ -310,3 +310,118 @@ describe('RLS Tenant Isolation (restricted role vs real PostgreSQL)', () => {
     await adminQ(admin, 'DELETE FROM "Organization" WHERE id = $1', [keep]);
   });
 });
+
+// ============================================================
+// FASE 3.5 — Testes de RLS para integration_events
+// ============================================================
+
+describe('integration_events RLS (multi-tenant isolation)', () => {
+  let orgA: string;
+  let orgB: string;
+  let integrationId: string;
+  let eventId: string;
+
+  beforeAll(async () => {
+    orgA = uuidv4();
+    orgB = uuidv4();
+    integrationId = uuidv4();
+
+    // Criar organizações
+    await adminQ(admin, `INSERT INTO "Organization" (id, name, slug) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`, [
+      orgA, 'Org A', `a_${uuidv4().slice(0, 8)}`
+    ]);
+    await adminQ(admin, `INSERT INTO "Organization" (id, name, slug) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`, [
+      orgB, 'Org B', `b_${uuidv4().slice(0, 8)}`
+    ]);
+
+    // Criar uma integração de teste
+    await adminQ(admin, `INSERT INTO "Integration" (id, "userId", "channel", "provider", "connectionMode", "status")
+      VALUES ($1, $2, 'whatsapp', 'openbsp', 'official', 'connected)
+      ON CONFLICT (id) DO NOTHING`, [
+      integrationId, orgA
+    ]);
+  });
+
+  afterAll(async () => {
+    await adminQ(admin, 'DELETE FROM "integration_events" WHERE "integrationId" = $1', [integrationId]);
+    await adminQ(admin, 'DELETE FROM "Integration" WHERE id = $1', [integrationId]);
+    await adminQ(admin, 'DELETE FROM "Organization" WHERE id IN ($1, $2)', [orgA, orgB]);
+  });
+
+  it('org A can read its own integration_events', async () => {
+    eventId = uuidv4();
+    await adminQ(admin,
+      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [eventId, integrationId, orgA, 'connection_success', {}]
+    );
+
+    const rows = await withCtx({ kind: 'org', org: orgA }, async (q) => {
+      const { rows } = await q('SELECT id, "eventType" FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      return rows;
+    });
+
+    expect(rows.length).toBe(1);
+    expect(rows[0].id).toBe(eventId);
+    expect(rows[0].eventType).toBe('connection_success');
+
+    await adminQ(admin, 'DELETE FROM "integration_events" WHERE id = $1', [eventId]);
+  });
+
+  it('org B cannot read org A integration_events', async () => {
+    eventId = uuidv4();
+    await adminQ(admin,
+      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [eventId, integrationId, orgA, 'connection_success', {}]
+    );
+
+    const rows = await withCtx({ kind: 'org', org: orgB }, async (q) => {
+      const { rows } = await q('SELECT id FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      return rows;
+    });
+
+    expect(rows.length).toBe(0);
+    await adminQ(admin, 'DELETE FROM "integration_events" WHERE id = $1', [eventId]);
+  });
+
+  it('INSERT with wrong workspace_id is rejected by WITH CHECK', async () => {
+    await expect(
+      withCtx({ kind: 'org', org: orgA }, async (q) => {
+        await q(
+          `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload")
+           VALUES ($1, $2, $3, $4, $5)`,
+          [uuidv4(), integrationId, orgB, 'connection_success', {}]
+        );
+      })
+    ).rejects.toThrow();
+  });
+
+  it('empty tenant context grants no access to integration_events', async () => {
+    eventId = uuidv4();
+    await adminQ(admin,
+      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [eventId, integrationId, orgA, 'connection_success', {}]
+    );
+
+    const rows = await withCtx({ kind: 'empty' }, async (q) => {
+      const { rows } = await q('SELECT id FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      return rows;
+    });
+
+    expect(rows.length).toBe(0);
+    await adminQ(admin, 'DELETE FROM "integration_events" WHERE id = $1', [eventId]);
+  });
+
+  it('integration_events has FORCE RLS enabled', async () => {
+    const { rows } = await adminQ(admin,
+      `SELECT relname, relforcerowsecurity AS forced
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = 'integration_events'`
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].forced).toBe(true);
+  });
+});

@@ -60,7 +60,7 @@ interface LogEventInput {
   integrationId: string;
   workspaceId: string;
   userId: string;
-  event: string;
+  event_type: string;
   payload?: Record<string, unknown>;
 }
 
@@ -251,7 +251,7 @@ export async function setStatus(
     integrationId: input.integrationId,
     workspaceId,
     userId: workspaceId,
-    event: `status_changed_to_${input.status}`,
+    event_type: `status_changed_to_${input.status}`,
     payload: {
       from_status: current.status,
       to_status: input.status,
@@ -292,7 +292,7 @@ export async function archive(
     integrationId,
     workspaceId,
     userId: workspaceId,
-    event: 'disconnection',
+    event_type: 'disconnection',
     payload: { reason, archived: true },
   });
 }
@@ -314,13 +314,15 @@ export async function logEvent(
   await adapter.create('integration_events', {
     integration_id: input.integrationId,
     workspace_id: workspaceId,
-    event: input.event,
+    event_type: input.event_type,
+    user_id: input.userId,
     payload: input.payload ?? {},
   }, resolvedTenant);
 }
 
 /**
  * Busca eventos de auditoria de uma integração
+ * Nota: Tenant context é aplicado internamente pelo adapter via defaultTenant
  */
 export async function getEvents(
   adapter: DatabaseAdapter,
@@ -331,7 +333,7 @@ export async function getEvents(
   id: string;
   integration_id: string;
   workspace_id: string;
-  event: string;
+  event_type: string;
   payload: Record<string, unknown>;
   created_at: string;
 }>> {
@@ -348,7 +350,7 @@ export async function getEvents(
     id: string;
     integration_id: string;
     workspace_id: string;
-    event: string;
+    event_type: string;
     payload: Record<string, unknown>;
     created_at: string;
   }>;

@@ -1,0 +1,126 @@
+{
+  "fonte": {
+    "repositorio": "https://github.com/matiasbattocchia/open-bsp-api",
+    "documentacao": "https://github.com/matiasbattocchia/open-bsp-api/blob/main/INTEGRATING.md",
+    "dashboard": "https://web.openbsp.dev",
+    "base_url_rest": "https://nheelwshzbgenpavwhcy.supabase.co"
+  },
+  "resumo": "OpenBSP atua como Tech Provider do WhatsApp/Instagram via Embedded Signup. O cliente conecta sua WABA sob o app Meta da OpenBSP; a app integradora consome uma REST API com API key. Apenas um passo exige UI (criar org + API key no dashboard); tudo o mais é REST.",
+  "onboarding": {
+    "1_endpoint_criar_onboarding_tokens": {
+      "metodo": "POST",
+      "url": "<BASE_URL>/rest/v1/onboarding_tokens",
+      "query_params": "?select=id",
+      "requer_role": "owner (apenas a role owner pode criar onboarding_tokens)"
+    },
+    "2_payload_exato": {
+      "campos": {
+        "name": "string — nome da organização/cliente do cliente (ex: \"Acme Corp\")",
+        "organization_id": "string (UUID) — obrigatório; deve ser a org à qual a api-key pertence; RLS rejeita com 42501 caso contrário",
+        "service": "string — ex: \"whatsapp\"",
+        "expires_at": "string ISO 8601 — data de expiração do link (ex: \"2026-07-01T00:00:00Z\")",
+        "callback_url": "string — opcional; URL do webhook por conta para receber mensagens da Meta diretamente na app integradora",
+        "verify_token": "string — opcional; segredo compartilhado usado pela Meta/verificação do webhook por conta"
+      },
+      "exemplo_json": {
+        "name": "Acme Corp",
+        "organization_id": "<YOUR_ORG_ID>",
+        "service": "whatsapp",
+        "expires_at": "2026-07-01T00:00:00Z",
+        "callback_url": "https://your-app.com/acme/whatsapp",
+        "verify_token": "a-long-random-secret"
+      },
+      "headers_requeridos": {
+        "apikey": "<PUBLISHABLE_KEY>",
+        "api-key": "<OWNER_OPENBSP_API_KEY>",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      "cuidado": "Nunca enviar Authorization: Bearer <api-key> para o REST — PostgREST rejeita por não ser JWT."
+    },
+    "3_resposta_esperada": {
+      "campo_principal": "id — o token do link de onboarding",
+      "como_entregar_ao_cliente": "https://web.openbsp.dev/onboard/whatsapp/<id>",
+      "fluxo": "O cliente abre o link, completa o Embedded Signup (sem conta OpenBSP, sem setup Meta do lado do cliente). Ao sucesso: o token vira 'used'; uma linha aparece em organizations_addresses (status=connected) com waba_id, phone_number e access_token em extra."
+    },
+    "4_headers_autenticacao": {
+      "rest_api": {
+        "apikey": "Supabase anon key / publishable key (chave pública, está no bundle web)",
+        "api-key": "OPENBSP_API_KEY secreta gerada no dashboard (Settings → API Keys → New)",
+        "nota": "Não usar Authorization: Bearer com a api-key no REST"
+      },
+      "edge_functions": {
+        "Authorization": "Bearer <OPENBSP_API_KEY>"
+      },
+      "roles_api_key": {
+        "owner": "acesso total, incluindo criar onboarding links",
+        "admin": "gerenciar templates, contatos, webhooks, enviar mensagens",
+        "member": "leitura + envio"
+      },
+      "como_obter_organization_id": "URL do dashboard ou GET /rest/v1/organizations?select=id,name"
+    },
+    "5_gerar_link_onboarding": {
+      "passo_1": "Criar organização no dashboard (web.openbsp.dev) — único passo com login",
+      "passo_2": "Gerar API key no dashboard → Settings → API Keys → New",
+      "passo_3": "POST /rest/v1/onboarding_tokens com o payload da seção 2",
+      "passo_4": "Construir URL: https://web.openbsp.dev/onboard/whatsapp/<id_do_token>",
+      "passo_5": "Enviar link ao cliente; ele completa o cadastro na OpenBSP"
+    },
+    "6_eventos_webhook_organizations_addresses": {
+      "tabelas_inscreviveis": ["organizations_addresses", "logs", "contacts", "contacts_addresses", "messages", "conversations"],
+      "foco_organizacoes_enderecos": "organizations_addresses — conta conectada/desconectada. O payload inclui o access_token da conta.",
+      "payload_webhook": {
+        "entity": "organizations_addresses",
+        "action": "insert | update",
+        "data": {
+          "organization_id": "string",
+          "service": "whatsapp",
+          "address": "string (phone_number_id)",
+          "status": "connected",
+          "extra": {
+            "waba_id": "string",
+            "access_token": "EAAG...",
+            "phone_number": "string",
+            "verified_name": "string",
+            "flow_type": "existing_phone_number",
+            "callback_url": "string",
+            "verify_token": "string"
+          }
+        }
+      },
+      "correlacao_tenant": "O id do onboarding_token NÃO está na linha. Correlacionar por extra.callback_url ou extra.verify_token (valores escolhidos ao criar o link; usar um único por tenant)."
+    },
+    "7_campos_verificacao_assinatura_webhook": {
+      "registro_webhook_openbsp": {
+        "endpoint": "POST /rest/v1/webhooks",
+        "payload": {
+          "table_name": "organizations_addresses",
+          "operations": ["insert", "update"],
+          "url": "https://seu-app.com/openbsp/accounts",
+          "token": "<seu_segredo_compartilhado>"
+        }
+      },
+      "requisicao_openbsp_para_sua_app": {
+        "corpo": "{ entity, action, data: <linha> }",
+        "header_autenticacao": "Authorization: Bearer <token> (se definido no cadastro do webhook)"
+      }
+    },
+    "8_rate_limits_e_requisitos": {
+      "rate_limits_documentados": "Não informados explicitamente na documentação INTEGRATING.md.",
+      "requisitos": {
+        "dashboard": "Uma única vez: criar organização e API key via web.openbsp.dev (Google/GitHub).",
+        "role_para_onboarding": "A API key usada deve ter role 'owner'.",
+        "organization_id": "Obrigatório e deve pertencer à org da API key (RLS aplica).",
+        "callback_url_registrado_na_meta": "Quando definido, é registrado com a Meta; Meta envia tráfego de mensagens para essa URL (payloads trazem apenas phone_number_id, nunca credenciais). Credenciais chegam pelo webhook OpenBSP organizations_addresses.",
+        "envio_de_mensagens": "Duas opções: (a) via OpenBSP POST /rest/v1/messages com organization_address, conversation_address e content; (b) diretamente na WhatsApp Cloud API usando extra.access_token.",
+        "recebimento_de_mensagens": "Com callback_url definido, Meta entrega mensagens diretamente à URL da app (verificadas com verify_token). Sem callback_url, mensagens ficam na OpenBSp e podem ser lidas via messages/conversations."
+      }
+    }
+  },
+  "autenticacao_detalhada_fonte_auth_md": {
+    "rest": "apikey define o role do Postgres via Kong→PostgREST; Authorization opcional (se presente deve ser JWT válido, senão PGRST301); api-key resolvida por RLS via get_authorized_orgs().",
+    "edge_function": "Kong repassa Authorization diretamente ao Deno function sem validação de JWT; o middleware da function extrai o Bearer, faz lookup em api_keys e cria cliente com createApiClient().",
+    "supabase_js_client_exemplo": "createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false }, global: { headers: { 'api-key': token } } })"
+  },
+  "observacao": "Todas as informações acima foram extraídas diretamente do repositório oficial open-bsp-api (branches main, arquivos INTEGRATING.md e AUTH.md). Rate limits específicos não constam na documentação consultada."
+}

@@ -124,45 +124,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'accepted' }, { status: 200 });
   }
 
-  // Claim atômico de idempotência: INSERT ... ON CONFLICT (meta_event_id)
-  // DO NOTHING RETURNING — exige índice único simples em meta_event_id
-  // (migration 015). Se a fila ainda está em 015-absente, o claim lança
-  // erro e a entrega segue (degradação honesta, nunca perda de evento).
-  // Se o claim retorna vazio → evento já registrado por outra entrega →
-  // duplicado, não reprocessamos. O fast-path acima (service_role) é
-  // otimização; o claim é a garantia.
-  let isDuplicate = false;
-  try {
-    const crypto = await import('crypto');
-    const payloadHash = crypto
-      .createHmac('sha256', META_APP_SECRET ?? '')
-      .update(String(payloadText))
-      .digest('hex');
+  // Claim atômico de idempotência + processamento dentro do MESMO contexto de
+  // tenant: INSERT ... ON CONFLICT (meta_event_id) DO NOTHING RETURNING — exige
+  // índice único simples em meta_event_id (migration 015). Se o claim retorna
+  // vazio → evento já registrado por outra entrega → duplicado, não reprocessamos.
+  // Se o claim lança (015 ausente) → degradação honesta: processa mesmo assim,
+  // nunca perde evento. Rodar no tx preserva o isolamento de organização (RLS).
+  const outcome = await withTenantContext(organizationId, async (tx) => {
+    let isDuplicate = false;
+    try {
+      const nodeCrypto = await import('crypto');
+      const payloadHash = nodeCrypto
+        .createHmac('sha256', META_APP_SECRET ?? '')
+        .update(String(payloadText))
+        .digest('hex');
 
-    const result = await prisma.$queryRaw<{ event_id: string }[]>`
-      INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
-      VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, ${payloadHash}, NOW())
-      ON CONFLICT (meta_event_id) DO NOTHING
-      RETURNING event_id`;
+      const rows = await (tx as { $queryRaw: (q: TemplateStringsArray, ...vals: unknown[]) => Promise<Array<{ event_id: string }>> }).$queryRaw`
+        INSERT INTO webhook_events (event_id, meta_event_id, event_type, payload_hash, processed_at)
+        VALUES (gen_random_uuid(), ${metaEventId}, ${eventType}, ${payloadHash}, NOW())
+        ON CONFLICT (meta_event_id) DO NOTHING
+        RETURNING event_id`;
 
-    if (result.length === 0) {
-      isDuplicate = true;
+      if (rows.length === 0) {
+        isDuplicate = true;
+      }
+    } catch (claimErr) {
+      // 015 ainda não aplicada / índice ausente → não bloquear entrega
+      console.warn('[meta-webhook] claim de idempotência falhou, processando mesmo assim:', (claimErr as Error).message);
     }
-  } catch (claimErr) {
-    // 015 ainda não aplicada / índice ausente → não bloquear entrega
-    console.warn('[meta-webhook] claim de idempotência falhou, processando mesmo assim:', (claimErr as Error).message);
-  }
 
-  if (isDuplicate) {
+    if (isDuplicate) {
+      return { duplicate: true };
+    }
+
+    const results = await processWhatsAppPayload(safe, organizationId, tx);
+    return { duplicate: false, results: Array.isArray(results) ? results : [results] };
+  });
+
+  if (outcome.duplicate) {
     return NextResponse.json({ status: 'duplicate_skipped' }, { status: 200 });
   }
 
-  // Processar payload dentro do contexto de tenant
-  const result = await withTenantContext(organizationId, async (tx) => {
-    const results = await processWhatsAppPayload(safe, organizationId, tx);
-    // Ensure results is always an array
-    return { results: Array.isArray(results) ? results : [results] };
-  });
+  // Após o guard acima (outcome.duplicate), o ramo processado tem `results`.
+  const result = { results: outcome.results ?? [] };
 
   // FASE 3 · slice 2 — Chatbot visual: resposta automática.
   // Lê a config do tenant (AgentMemory) e envia pela Cloud API oficial.

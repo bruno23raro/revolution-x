@@ -188,7 +188,7 @@ describe('Fase 1 - Repository', () => {
   });
 
   describe('logEvent', () => {
-    it('registra evento em integration_events', async () => {
+    it('registra evento em integration_events com event_type', async () => {
       const adapter = makeMockAdapter();
       (adapter.create as jest.Mock).mockResolvedValue({ id: 'event-1' });
 
@@ -196,31 +196,33 @@ describe('Fase 1 - Repository', () => {
         integrationId: 'test-id',
         workspaceId: 'user-1',
         userId: 'user-1',
-        event: 'connection_success',
+        event_type: 'connection_success',
         payload: { success: true },
       });
       expect(result).toBeUndefined();
       expect(adapter.create).toHaveBeenCalledWith('integration_events', expect.objectContaining({
         integration_id: 'test-id',
         workspace_id: 'user-1',
-        event: 'connection_success',
+        event_type: 'connection_success',
+        user_id: 'user-1',
+        payload: { success: true },
       }), expect.anything());
     });
   });
 
   describe('getEvents', () => {
-    it('retorna eventos de uma integração', async () => {
+    it('retorna eventos de uma integração com event_type', async () => {
       const adapter = makeMockAdapter();
       const events = [
-        { id: 'event-1', event: 'connection_success', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T10:00:00Z' },
-        { id: 'event-2', event: 'connection_lost', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T11:00:00Z' },
+        { id: 'event-1', event_type: 'connection_success', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T10:00:00Z' },
+        { id: 'event-2', event_type: 'connection_lost', workspace_id: 'user-1', integration_id: 'test-id', created_at: '2024-01-01T11:00:00Z' },
       ];
       (adapter.findMany as jest.Mock).mockResolvedValue(events);
 
       const result = await getEvents(adapter, 'user-1', 'test-id', 50);
       expect(result).toEqual(expect.arrayContaining([
-        expect.objectContaining({ event: 'connection_success' }),
-        expect.objectContaining({ event: 'connection_lost' }),
+        expect.objectContaining({ event_type: 'connection_success' }),
+        expect.objectContaining({ event_type: 'connection_lost' }),
       ]));
     });
 

@@ -21,6 +21,11 @@ import { NextRequest } from 'next/server';
 // SEM tocar Supabase/Prisma, e para inspecionar o caminho saudável de forma isolada.
 jest.mock('@supabase/ssr', () => ({ createServerClient: jest.fn() }));
 jest.mock('../../src/lib/supabase/server', () => ({ createServiceRoleClient: jest.fn() }));
+// Sem Redis configurado, getRedis() retornaria um cliente ioredis que tentaria
+// conectar em localhost:6379 (síncrono, sem retryStrategy) e vazaria timer/handle
+// no Jest. Mockamos para degradar — o middleware já trata redis ausente como
+// "fail open" (rate limit pula), preservando as asserções de fail-closed.
+jest.mock('../../src/lib/redis', () => ({ getRedis: jest.fn().mockReturnValue(null) }));
 
 const { createServerClient } = jest.requireMock('@supabase/ssr');
 const { createServiceRoleClient } = jest.requireMock('../../src/lib/supabase/server');

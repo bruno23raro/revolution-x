@@ -18,6 +18,7 @@ import {
   type CreatePagePostSpec,
 } from '@/integrations/meta/facebookPublisher';
 import { resolveTenantFacebookPageAccess } from '@/integrations/meta/resolveAccess';
+import { demoModeEnabled, DEMO_IDENTITIES } from '@/lib/demoMode';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,17 @@ export async function POST(req: NextRequest) {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+  }
+
+  // DEMO MODE — verificar ANTES de resolver acesso de tenant, para que um
+  // usuário não-autenticado não consiga forçar organizationId/account no body
+  // e ler dados de outra organização. Só serve dados demo para a identidade
+  // demo pinada; usuários reais jamais recebem simulação.
+  if (demoModeEnabled() && user.id === DEMO_IDENTITIES.USER_ID) {
+    return NextResponse.json(
+      { ok: true, postId: 'demo-post', scheduled: false, _demo: true },
+      { status: 200, headers: { 'x-demo-mode': 'true' } },
+    );
   }
 
   const { spec, sourceError } = parsePagePost(body);

@@ -18,6 +18,7 @@ import {
   type IgMediaType,
 } from '@/integrations/meta/instagramPublisher';
 import { resolveTenantPublisherAccess } from '@/integrations/meta/resolveAccess';
+import { demoModeEnabled, DEMO_IDENTITIES } from '@/lib/demoMode';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,16 @@ export async function POST(req: NextRequest) {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+  }
+
+  // DEMO MODE — verificar ANTES de resolver acesso de tenant, para que um
+  // usuário não-autenticado não consiga forçar organizationId/account no body
+  // e ler dados de outra organização. Só serve demo à identidade demo pinada.
+  if (demoModeEnabled() && user.id === DEMO_IDENTITIES.USER_ID) {
+    return NextResponse.json(
+      { ok: true, mediaId: 'demo-media', containerId: 'demo-container', scheduled: false, _demo: true },
+      { status: 200, headers: { 'x-demo-mode': 'true' } },
+    );
   }
 
   const { spec, sourceError } = parseMedia(body);

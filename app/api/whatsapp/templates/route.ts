@@ -82,6 +82,11 @@ export async function POST(req: NextRequest) {
 
   const name = String(body.name ?? '').trim();
   if (!name) return NextResponse.json({ ok: false, error: 'name_vazio' }, { status: 400 });
+  // Meta exige nomes de template: apenas letras minúsculas (a-z), números e underscore.
+  // Máximo 512 caracteres. Nomes com letras maiúsculas ou caracteres especiais são rejeitados.
+  if (!/^[a-z0-9_]+$/.test(name) || name.length > 512) {
+    return NextResponse.json({ ok: false, error: 'name_invalido', detail: 'Nome do template deve conter apenas letras minúsculas, números e underscore (máx 512 caracteres)' }, { status: 400 });
+  }
   const category = (CATEGORIES as readonly string[]).includes(body.category)
     ? (body.category as TemplateCreateSpec['category'])
     : undefined;
@@ -91,6 +96,21 @@ export async function POST(req: NextRequest) {
     category,
     language: typeof body.language === 'string' && body.language.trim() ? body.language : undefined,
     body: typeof body.body === 'string' ? body.body : undefined,
+    header:
+      body.header &&
+      typeof body.header === 'object' &&
+      body.header.type === 'TEXT' &&
+      typeof body.header.text === 'string'
+        ? { type: 'TEXT', text: body.header.text }
+        : undefined,
+    footer:
+      body.footer && typeof body.footer === 'object' && typeof body.footer.text === 'string'
+        ? { text: body.footer.text }
+        : undefined,
+    buttons:
+      Array.isArray(body.buttons) && body.buttons.length > 0
+        ? body.buttons
+        : undefined,
   };
 
   // MULTICONTAS — `account` (row id) ancora o número; ausente → padrão.
@@ -110,7 +130,7 @@ export async function POST(req: NextRequest) {
   const result = await createWhatsAppTemplate(resolved.access, spec);
   const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : 502;
   return NextResponse.json(
-    { ok: result.ok, name: result.name, error: result.error, detail: result.errorDetail },
+    { ok: result.ok, name: result.name, templateId: result.templateId, error: result.error, detail: result.errorDetail },
     { status },
   );
 }

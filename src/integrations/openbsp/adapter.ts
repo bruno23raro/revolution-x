@@ -781,14 +781,15 @@ export class OfficialWhatsAppAdapter implements IntegrationAdapter {
   private async logEvent(
     integrationId: string,
     workspaceId: string,
-    event: string,
+    eventType: string,
     payload: Record<string, unknown>,
   ) {
     try {
       await this.client.from('integration_events').insert({
         integration_id: integrationId,
         workspace_id: workspaceId,
-        event,
+        event_type: eventType,
+        user_id: workspaceId,
         payload,
       });
     } catch {

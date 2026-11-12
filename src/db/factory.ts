@@ -5,18 +5,25 @@ import type { DatabaseAdapter, TenantContext } from './types';
 import { createPrismaClient } from '../lib/prisma';
 
 /**
- * 创建 DatabaseAdapter 实例。
+ * Factory para criar instâncias de DatabaseAdapter com contexto de tenant seguro.
  *
- * @param source - 数据库连接字符串或 pg.Pool，测试时可注入自定义 pool
- * @param defaultTenant - 默认租户上下文，用于无需显式传入 tenant 的方法
- * @returns DatabaseAdapter 实现
+ * @param source - String de conexão ou pool PostgreSQL existente
+ * @param defaultTenant - Contexto de tenant obrigatório (org ou user). NÃO pode ser undefined ou vazio.
+ * @returns DatabaseAdapter configurado com tenant válido
+ * @throws Error se defaultTenant.id for vazio ou inválido
  */
 export function createDatabaseAdapter(
   source: string | Pool = process.env.DATABASE_URL ?? '',
-  defaultTenant?: TenantContext,
+  defaultTenant: TenantContext,
 ): DatabaseAdapter {
+  if (!defaultTenant?.id) {
+    throw new Error(
+      'createDatabaseAdapter: defaultTenant.id é obrigatório para segurança RLS. ' +
+      'O tenant contexto deve ser resolvido a partir do usuário autenticado.'
+    );
+  }
   const client = createPrismaClient(source);
-  return new PrismaDatabaseAdapter(client, defaultTenant ?? { type: 'org', id: '' });
+  return new PrismaDatabaseAdapter(client, defaultTenant);
 }
 
 // Export Pool type for convenience

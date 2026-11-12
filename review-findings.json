@@ -1,0 +1,26 @@
+[
+  {
+    "path": "app/api/whatsapp/templates/route.ts",
+    "line": 113,
+    "body": "Changed `name: result.name` to `name: result.templateName, templateId: result.templateId`",
+    "severity": "High"
+  },
+  {
+    "path": "src/tests/whatsapp-templates-api.test.ts",
+    "line": 181,
+    "body": "expect(data.name).toBe('promocao_boleto') needs to change to expect(data.templateName).toBe('promocao_boleto') — route now returns templateName instead of name",
+    "severity": "High"
+  },
+  {
+    "path": "src/tests/whatsapp-templates-api.test.ts",
+    "line": 177,
+    "body": "expect(data.name).toBe('promocao_boleto') in the template creation success test — must update to data.templateName to match route response",
+    "severity": "High"
+  },
+  {
+    "path": "app/api/whatsapp/templates/route.test.ts",
+    "line": "N/A",
+    "body": "New test file created — no SYNC import error. Properly structured with mocks for auth, prisma, meta integrations. Contains 10 regression tests for connect endpoint and template API tests.",
+    "severity": "Low"
+  }
+]

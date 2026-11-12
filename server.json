@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.bruno23raro/revolution-x",
+  "description": "SaaS Omnichannel multi-tenant — FASE 2: Auth + Multi-tenant",
+  "repository": {
+    "url": "https://github.com/bruno23raro/revolution-x",
+    "source": "github",
+    "id": "1395440301"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "revolution-x-saas",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your API key for the service",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "YOUR_API_KEY"
+        }
+      ]
+    }
+  ]
+}

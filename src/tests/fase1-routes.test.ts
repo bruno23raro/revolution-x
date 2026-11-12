@@ -316,7 +316,12 @@ describe('POST /api/integrations/meta/refresh-token', () => {
     const res = await refreshPOST(req('/api/integrations/meta/refresh-token', { method: 'POST' }));
     expect(res.status).toBe(200);
     expect((await res.json())).toEqual({ ok: true, expiresIn: 3600 });
-    expect(refreshMetaAccessToken).toHaveBeenCalledWith({ appId: '', appSecret: '' }, 'TOK');
+    // A rota propaga as credenciais da app lidas do env do host para a troca.
+    // Nunca assertar o valor do secret em si — apenas que ele repassa o env.
+    expect(refreshMetaAccessToken).toHaveBeenCalledWith(
+      { appId: process.env.META_APP_ID ?? '', appSecret: process.env.META_APP_SECRET ?? '' },
+      'TOK',
+    );
     expect(encryptToken).toHaveBeenCalledWith('NEW');
     expect(sr.update.mock.calls[0][0].encrypted_access_token).toBe('ENC');
     expect(sr.q.eq).toHaveBeenCalledWith('id', 'row-1');

@@ -175,3 +175,90 @@ export async function requireMembershipIn(
     role: membership.role,
   };
 }
+
+// ============================================================
+// Owner-only authorization (proper RBAC)
+// ============================================================
+
+/**
+ * @deprecated Use requireRole(['owner']) instead. Kept for backward compatibility.
+ * Legacy: checks if email matches the hardcoded owner email.
+ * This is a legacy bypass that will be removed in a future version.
+ */
+export function isOwnerEmail(email: string | null): boolean {
+  return email === 'brunoalmeida23111996@gmail.com';
+}
+
+/**
+ * Validates that the authenticated user has 'owner' role IN THE TARGET ORGANIZATION.
+ * Uses requireRole internally with target organization resolution.
+ * Replaces the legacy email-based check with proper RBAC.
+ */
+export async function requireOwner(
+  req: NextRequest
+): Promise<{ isOwner: boolean; user: AuthenticatedUser | null }> {
+  const user = await requireRole(req, ['owner']);
+  return { isOwner: !!user, user };
+}
+
+/**
+ * Extract target organization from request context.
+ * Priority: query param > header > body > primary organization
+ */
+async function getTargetOrganization(req: NextRequest, user: AuthenticatedUser): Promise<string> {
+  // Check query param first
+  const queryOrg = req.nextUrl?.searchParams?.get('organizationId');
+  if (queryOrg) return queryOrg;
+
+  // Check header
+  const headerOrg = req.headers.get('x-organization-id');
+  if (headerOrg) return headerOrg;
+
+  // Check body (for POST/PUT/PATCH)
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    try {
+      const body = await req.clone().json();
+      if (body?.organizationId) return body.organizationId;
+    } catch {
+      // Body not JSON or empty, ignore
+    }
+  }
+
+  // Fallback to primary organization
+  return user.organizationId;
+}
+
+// ============================================================
+// Role-based authorization helper
+// ============================================================
+
+/**
+ * Validates that the authenticated user has one of the required roles IN THE TARGET ORGANIZATION.
+ *
+ * The target organization is determined from request context (query, body, header) or falls back to primary.
+ * Authorization is STRICTLY per-organization: a role in org-A does NOT grant access in org-B.
+ *
+ * Returns the user with target organization context if authorized, null otherwise.
+ */
+export async function requireRole(
+  req: NextRequest,
+  allowedRoles: string[]
+): Promise<AuthenticatedUser | null> {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return null;
+
+  // Determine target organization from request context
+  const targetOrgId = await getTargetOrganization(req, user);
+
+  // Validate membership AND role in the target organization
+  const membershipUser = await requireMembershipIn(req, targetOrgId);
+  if (!membershipUser) return null;
+
+  // Check if the role in the target organization is allowed
+  if (!allowedRoles.includes(membershipUser.role)) {
+    return null;
+  }
+
+  // Return user with target organization context
+  return membershipUser;
+}

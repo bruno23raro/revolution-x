@@ -1,6 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/jest.setup.js'],
   roots: ['<rootDir>/src', '<rootDir>/app'],
   testMatch: ['**/*.test.ts'],
   moduleNameMapper: {
@@ -10,6 +11,8 @@ module.exports = {
     '^@/services/(.*)$': '<rootDir>/src/services/$1',
     '^@/repositories/(.*)$': '<rootDir>/src/repositories/$1',
     '^@/jobs/(.*)$': '<rootDir>/src/jobs/$1',
+    '^@/middleware/(.*)$': '<rootDir>/src/middleware/$1',
+    '^@/middleware$': '<rootDir>/src/middleware/index',
     '^@/ai$': '<rootDir>/src/ai/index',
     '^@/ai/(.*)$': '<rootDir>/src/ai/$1',
   },

@@ -100,21 +100,3 @@ jobs:
             repo: context.repo.repo,
             body: comment
           });
-
-  deploy:
-    name: Deploy to Hostinger
-    needs: monitor
-    if: success() && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Deploy to Hostinger
-      uses: hostinger/hostinger-deploy@v1
-      with:
-        domain: revolutionx.com.br
-        directory: /var/www/html
-        git_branch: main

@@ -77,12 +77,10 @@ export async function POST(req: NextRequest) {
       verifyToken,
       callbackUrl,
       onboardingTokenId: mint.tokenId,
-      channel,
-      accountName: body.accountName,
     });
   } catch (e) {
     console.error('[connect] Erro ao pré-provisionar canal:', e);
-    return NextResponse.json({ error: 'db_error', channel }, { status: 500 });
+    return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 
   console.info('[connect] onboarding iniciado', { org: user.organizationId, channel, tokenId: mint.tokenId });

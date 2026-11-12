@@ -8,7 +8,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { resolveTenantOpenBSPAccess } from '@/integrations/openbsp/client';
+
+type Provider = 'openbsp';
+interface ResolvedAccount {
+  ok: true;
+  provider: Provider;
+  accessToken: string;
+  phoneNumberId: string;
+  row: Record<string, unknown>;
+}
+interface ResolveFailure {
+  ok: false;
+  reason: 'not_connected' | 'no_token' | 'account_not_found';
+}
+
+/** Resolve conta OpenBSP para sync-contacts (versão local). */
+async function resolveTenantOpenBSPAccess(
+  organizationId: string,
+  accountId?: string,
+): Promise<ResolvedAccount | ResolveFailure> {
+  const service = createServiceRoleClient();
+  let q = service
+    .from('whatsapp_channels')
+    .select('id, provider, status, wabaId, phoneNumberId, phoneNumber, verifiedName, accessTokenEnc, lastError, tierLimitPer24h, sentWindow24h, windowStartedAt')
+    .eq('organizationId', organizationId)
+    .eq('provider', 'openbsp')
+    .neq('status', 'DISCONNECTED');
+
+  if (accountId) q = q.eq('id', accountId);
+  const { data: channelData, error: channelError } = await q.limit(1).maybeSingle();
+
+  if (channelError || !channelData) {
+    return { ok: false, reason: accountId ? 'account_not_found' : 'not_connected' };
+  }
+
+  const channel = channelData as Record<string, unknown>;
+  const accessToken = channel.accessTokenEnc as string || '';
+
+  return {
+    ok: true,
+    provider: 'openbsp',
+    accessToken,
+    phoneNumberId: channel.phoneNumberId as string || '',
+    row: channel,
+  };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -103,6 +147,7 @@ async function upsertContacts(organizationId: string, contacts: any[]) {
   const service = createServiceRoleClient();
 
   let upserted = 0;
+  let total = contacts.length;
   for (const contact of contacts) {
     const phone = Array.isArray(contact.phone_numbers)
       ? contact.phone_numbers[0]
@@ -127,5 +172,5 @@ async function upsertContacts(organizationId: string, contacts: any[]) {
     if (!error) upserted++;
   }
 
-  return { upserted };
+  return { synced: total, upserted, total };
 }

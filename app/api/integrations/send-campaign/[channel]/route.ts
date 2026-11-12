@@ -126,10 +126,14 @@ export async function POST(req: NextRequest) {
     .update({ status: 'sending', sent_count: 0, failed_count: 0 })
     .eq('id', body.campaignId);
 
-  // Preparar template
+  // Preparar template - OpenBSP usa array de strings para variáveis
+  const templateVars = body.templateVariables || camp.template_variables || {};
+  const variablesArray = Array.isArray(templateVars)
+    ? templateVars
+    : Object.values(templateVars as Record<string, unknown>).filter(v => v !== undefined && v !== null);
   const template = {
     name: body.templateName || camp.template_name || 'default',
-    variables: body.templateVariables || camp.template_variables || {},
+    variables: variablesArray.map(v => String(v)),
     language: body.templateVariables?.language || 'pt_BR',
   };
 
@@ -159,7 +163,6 @@ export async function POST(req: NextRequest) {
       total: result.total,
       sent: result.sent,
       failed: result.failed,
-      taskId: result.taskId,
       results: result.results,
     }, { status: 200 });
 

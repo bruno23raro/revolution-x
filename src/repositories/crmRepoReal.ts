@@ -107,7 +107,7 @@ export const pipelineRepoReal: PipelineRepo = {
       });
       return rows.map((r) => ({
         ...r,
-        stages: (r.stages as string[] | null) ?? [],
+        stages: normalizeStages(r.stages),
       })) as Pipeline[];
     });
   },
@@ -122,8 +122,23 @@ export const pipelineRepoReal: PipelineRepo = {
       });
       return {
         ...row,
-        stages: (row.stages as string[] | null) ?? [],
+        stages: normalizeStages(row.stages),
       } as Pipeline;
     });
   },
 };
+
+// O Json do Prisma devolve `stages` como string codificada quando gravado via
+// JSON.stringify; normaliza para array de strings sempre.
+function normalizeStages(stages: unknown): string[] {
+  if (Array.isArray(stages)) return stages.map((s) => String(s));
+  if (typeof stages === 'string') {
+    try {
+      const parsed = JSON.parse(stages);
+      return Array.isArray(parsed) ? parsed.map((s) => String(s)) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}

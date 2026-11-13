@@ -70,11 +70,11 @@ function req(url, { method = 'GET', body, headers } = {}) {
 }
 
 function asUser() {
-  getAuth.mockResolvedValue(USER);
+  getAuth.mockResolvedValue({ user: USER, hasSession: true });
 }
 
 function asNoUser() {
-  getAuth.mockResolvedValue(null);
+  getAuth.mockResolvedValue({ user: null, hasSession: false });
 }
 
 function campaignFixture(over = {}) {

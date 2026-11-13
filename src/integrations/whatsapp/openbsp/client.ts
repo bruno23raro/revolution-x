@@ -1,18 +1,9 @@
-// Cliente OpenBSP (PostgREST) — NUNCA lança; sempre `{ok, error, errorDetail}`.
-//
-// Contrato (docs/RX_OPENBSP_CONTRACT_SUMMARY.md, de open-bsp-api/INTEGRATING.md
-// e AUTH.md lidos 2026-10-29):
-//  * REST: headers `apikey: <publishable>` + `api-key: <OPENBSP_API_KEY>` em
-//    TODA chamada. NUNCA `Authorization: Bearer <api-key>` no REST (PGRST301).
-//  * Edge functions: `Authorization: Bearer <api-key>` (sem apikey).
-//  * `Prefer: return=representation` para receber a linha criada.
-
-import type { ChannelAccess, ProviderCallOpts } from '../types';
+import type { ProviderCallOpts } from '../types';
 
 export const OPENBSP_TIMEOUT_MS = 15_000;
 
 export interface OpenbspConfig {
-  base: string; // ex. https://<ref>.supabase.co/rest/v1
+  base: string;
   publishableKey: string;
   apiKey: string;
   orgId?: string;
@@ -28,6 +19,13 @@ export interface OpenbspResult<T = unknown> {
   errorDetail?: string;
 }
 
+/** Credenciais mínimas para OpenBSP - apenas phoneNumberId é obrigatório */
+export type OpenbspChannelAccess = {
+  phoneNumberId: string;
+  accessToken?: string;
+  wabaId?: string | null;
+};
+
 export function openbspConfig(): OpenbspConfig | null {
   const base = (process.env.OPENBSP_BASE_URL || '').replace(/\/+$/, '');
   const publishableKey = process.env.OPENBSP_PUBLISHABLE_KEY || '';
@@ -37,11 +35,9 @@ export function openbspConfig(): OpenbspConfig | null {
 }
 
 function resolveFetch(opts: ProviderCallOpts): typeof fetch | null {
-  const f = opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : null);
-  return f;
+  return opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : null);
 }
 
-/** POST genérico no PostgREST do OpenBSP. Nunca lança. */
 export async function openbspPost<T = unknown>(
   cfg: OpenbspConfig,
   table: string,
@@ -53,7 +49,6 @@ export async function openbspPost<T = unknown>(
   const url = `${cfg.base}/${table}${opts.select ? `?select=${encodeURIComponent(opts.select)}` : ''}`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
-  // signal externo (timeout global da conexao) aborta junto com o timer interno
   if (opts.signal) {
     if (opts.signal.aborted) ctrl.abort();
     else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
@@ -93,22 +88,15 @@ export async function openbspPost<T = unknown>(
 export interface MintTokenResult {
   ok: boolean;
   tokenId?: string;
-  /** URL do popup Embedded Signup (web.openbsp.dev). */
   popupUrl?: string;
   error?: OpenbspError | 'http_error' | 'provider_error';
   errorDetail?: string;
 }
 
-/**
- * Mint de onboarding token (chave owner; `organization_id` OBRIGATÓRIO senão
- * RLS 42501). `callback_url`/`verify_token` únicos por tenant — é por eles que
- * correlacionamos a linha `organizations_addresses` de volta ao tenant
- * (o id do token NÃO aparece na linha).
- */
 export async function mintOnboardingToken(
   input: {
     name: string;
-    orgId: string; // organização OpenBSP (OPENBSP_ORG_ID)
+    orgId: string;
     callbackUrl: string;
     verifyToken: string;
     expiresInDays?: number;
@@ -139,10 +127,18 @@ export async function mintOnboardingToken(
   return { ok: true, tokenId: id, popupUrl: `${ui}/onboard/whatsapp/${id}` };
 }
 
-/**
- * Polling `organizations_addresses` por tenant: casa a linha `connected` cujo
- * `extra.verify_token` bate com o esperado. Retorna as credenciais do plano.
- */
+export interface OpenbspAddressRow {
+  address: string;
+  extra: {
+    waba_id?: string;
+    access_token?: string;
+    phone_number?: string;
+    verified_name?: string;
+    callback_url?: string;
+    verify_token?: string;
+  } | null;
+}
+
 export async function fetchConnectedAddress(
   expectedVerifyToken: string,
   opts: ProviderCallOpts = {},
@@ -182,39 +178,24 @@ export async function fetchConnectedAddress(
   }
 }
 
-export interface OpenbspAddressRow {
-  address: string; // = phone_number_id
-  extra: {
-    waba_id?: string;
-    access_token?: string;
-    phone_number?: string;
-    verified_name?: string;
-    callback_url?: string;
-    verify_token?: string;
-  } | null;
-}
+// ── Envio via OpenBSP ────────────────────────────────────────────────────────
 
-// ── Envio via OpenBSP (fallback) ─────────────────────────────────────────────
-
-/**
- * Insert em `messages` (forma confirmada no INTEGRATING/MIGRATING_FROM_TWILIO):
- * `conversation_address` é E164 SEM '+'. Status chega async no JSONB `status`
- * (`pending→sent→delivered→read` | `failed` + `errors:[{code,title}]`).
- */
 export async function sendViaOpenbsp(
-  access: ChannelAccess,
+  access: OpenbspChannelAccess,
   to: string,
   content: Record<string, unknown>,
-  opts: ProviderCallOpts = {},
+  opts: ProviderCallOpts & { select?: string; orgId?: string } = {},
 ): Promise<OpenbspResult<{ id?: string }>> {
   const cfg = openbspConfig();
   if (!cfg) return { ok: false, error: 'openbsp_not_configured' };
   if (!cfg.orgId) return { ok: false, error: 'openbsp_not_configured', errorDetail: 'OPENBSP_ORG_ID ausente' };
+
+  const orgId = opts.orgId ?? cfg.orgId;
   const r = await openbspPost<Array<{ id: string }>>(
     cfg,
     'messages',
     {
-      organization_id: cfg.orgId,
+      organization_id: orgId,
       organization_address: access.phoneNumberId,
       conversation_address: to.replace(/^\+/, ''),
       service: 'whatsapp',
@@ -231,11 +212,7 @@ export function textContent(text: string): Record<string, unknown> {
   return { version: '1', type: 'text', kind: 'text', text };
 }
 
-export function templateContent(
-  name: string,
-  language: string,
-  variables: string[],
-): Record<string, unknown> {
+export function templateContent(name: string, language: string, variables: string[]): Record<string, unknown> {
   return {
     version: '1',
     type: 'data',

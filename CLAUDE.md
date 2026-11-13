@@ -77,3 +77,21 @@ control that refused, an unfamiliar widget or a slow page is NOT running out of 
   git clone https://github.com/Riaan-Fourie/chrome-mcp-stealth vendor/chrome-mcp-stealth
   cd vendor/chrome-mcp-stealth; npm install
 #<<< VENDOR
+
+<!-- REGRAS-PUBLIC-APIS -->
+## APIs externas (fonte: vendor/public-apis)
+- Necessidade de API nova: consultar o indice com `python scripts\api_find.py "<termo>"`.
+- Preferencia obrigatoria: auth=No > apiKey > OAuth; https=True; cors=True.
+- Provar com `python scripts\probe_http.py` antes de escrever codigo.
+- Registrar em docs\apis-escolhidas.md. Chave em .env via Set-EnvVar.
+- Indice desatualizado: `python scripts\api_index.py` (apos `git -C vendor/public-apis pull`).
+<!-- /REGRAS-PUBLIC-APIS -->
+
+<!-- CREDENCIAIS-CHAT -->
+## Credenciais
+- Listar credenciais no chat sempre: nome, valor completo, arquivo, linha.
+- Nunca mascarar por padrao; mascarar so com `-Masked`.
+- Mostrar nao autoriza sobrescrever: so adiciona o que falta.
+- Ausente = FALTANDO + URL da fonte. Nunca omitir.
+- Script: `powershell -File scripts\credenciais.ps1` (ou `-Masked`).
+<!-- /CREDENCIAIS-CHAT -->

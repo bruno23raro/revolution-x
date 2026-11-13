@@ -1,0 +1,41 @@
+# Inventario de integracoes
+
+| tipo | rota | metodos | auth | publico | externo |
+|---|---|---|---|---|---|
+| api | `/api/auth/callback/meta` | GET | NAO | sim | graph.facebook.com |
+| api | `/api/auth/callback/tiktok` | GET | sim | sim | - |
+| api | `/api/auth/forgot-password` | POST | NAO | - | - |
+| api | `/api/auth/login` | POST | NAO | - | - |
+| api | `/api/auth/logout` | POST | NAO | - | - |
+| api | `/api/auth/meta` | GET | sim | sim | - |
+| api | `/api/auth/register` | POST | NAO | sim | - |
+| api | `/api/auth/resend-verification` | POST | NAO | - | - |
+| api | `/api/auth/reset-password` | POST | NAO | - | - |
+| api | `/api/auth/session` | GET | sim | - | - |
+| api | `/api/auth/tiktok` | GET | sim | sim | - |
+| api | `/api/auth/verify-email` | POST | NAO | - | - |
+| api | `/api/integrations/config` | GET,POST,DELETE | sim | - | - |
+| api | `/api/integrations/connect/[channel]` | POST,GET | sim | sim | openbsp |
+| api | `/api/integrations/disconnect` | POST | sim | - | graph.facebook.com |
+| api | `/api/integrations/execute` | POST | sim | sim | - |
+| api | `/api/integrations/health` | GET | sim | - | - |
+| api | `/api/integrations/manual` | GET | sim | - | - |
+| api | `/api/integrations/manual/connect` | POST | sim | - | - |
+| api | `/api/integrations/manual/verify` | POST | sim | - | - |
+| api | `/api/integrations/meta` | GET,DELETE | sim | - | - |
+| api | `/api/integrations/meta/refresh-token` | POST | sim | - | - |
+| api | `/api/integrations/openbsp/callback` | GET | sim | sim | openbsp |
+| api | `/api/integrations/openbsp/connect` | POST | sim | sim | openbsp |
+| api | `/api/integrations/openbsp/incoming` | GET,POST | NAO | sim | openbsp |
+| api | `/api/integrations/openbsp/refresh-token` | POST | sim | - | openbsp |
+| api | `/api/integrations/openbsp/status` | POST | sim | sim | openbsp |
+| api | `/api/integrations/send-campaign/[channel]` | POST,GET | sim | - | openbsp |
+| api | `/api/integrations/status` | GET | sim | - | openbsp |
+| api | `/api/integrations/sync-contacts/[channel]` | POST | sim | - | openbsp |
+| api | `/api/integrations/tiktok` | GET | sim | - | - |
+| api | `/api/integrations/tiktok/refresh-token` | POST | sim | - | - |
+| api | `/api/integrations/whatsapp-official/disconnect` | POST | sim | - | openbsp |
+| api | `/api/integrations/whatsapp-official/status` | GET | sim | - | - |
+| api | `/api/integrations/whatsapp-official/templates` | GET,POST | sim | - | openbsp |
+| api | `/api/oauth/callback/whatsapp-qr` | GET,POST | sim | sim | - |
+| page | `/integracoes` | - | NAO | - | openbsp |

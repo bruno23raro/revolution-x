@@ -5,6 +5,7 @@
  * 1. Firecrawl (authenticated, best results) — tried first
  * 2. free-search (keyless multi-engine fallback)
  * 3. Context7 (library/docs queries)
+ * 4. Exa (high-quality search, requires API key)
  *
  * Results are cached per query to avoid redundant calls.
  */
@@ -26,7 +27,7 @@ export interface SearchOptions {
  * Interface for a search result from any source
  */
 export interface SearchResult {
-  source: 'firecrawl' | 'free-search' | 'context7';
+  source: 'firecrawl' | 'free-search' | 'context7' | 'exa';
   title: string;
   url: string;
   name?: string | undefined;
@@ -131,6 +132,27 @@ export async function searchWeb(
     }
   }
 
+  // 4. Use Exa for high-quality search (requires API key)
+  // Falls through if Exa key is available; if not, returns empty and continues
+  try {
+    const exaResults = await invokeExaSearch(query, prefs);
+    if (exaResults && exaResults.length > 0) {
+      for (const r of exaResults) {
+        results.push({
+          source: 'exa',
+          title: r.title || query,
+          url: r.url || '',
+          snippet: r.snippet,
+          highlights: r.highlights,
+        });
+      }
+      return results.slice(0, prefs.maxResults || 10);
+    }
+  } catch (exaError) {
+    // Exa failed — log and return whatever we gathered so far
+    // console.error('Exa search error:', exaError);
+  }
+
   // Return whatever we gathered (could be empty if all failed)
   return results;
 }
@@ -197,6 +219,21 @@ async function invokeContext7Search(
   // In practice, Claude Code would call: mcp__context7__query-docs
   // with the selected library ID and documentation query
   throw new Error('Context7 MCP call not resolved at this level — delegate to Claude Code tool invocation');
+}
+
+/**
+ * Invoke Exa high-quality search
+ * This is a placeholder — Claude Code resolves the actual MCP tool call
+ */
+async function invokeExaSearch(
+  query: string,
+  prefs: SearchOptions
+): Promise<{ title: string; url: string; snippet?: string; highlights?: string[] }[]> {
+  // The actual MCP call will be handled by Claude Code's tool invocation system
+  // We return a placeholder that indicates the tool should be called
+  // In practice, Claude Code would call: mcp__exa__web_search_exa
+  // with the appropriate parameters
+  throw new Error('Exa MCP call not resolved at this level — delegate to Claude Code tool invocation');
 }
 
 /**

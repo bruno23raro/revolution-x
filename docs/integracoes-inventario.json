@@ -1,0 +1,515 @@
+[
+ {
+  "file": "app/api/auth/callback/meta/route.ts",
+  "url": "/api/auth/callback/meta",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": false,
+  "publico": true,
+  "externo": [
+   "graph.facebook.com"
+  ],
+  "envs": [
+   "META_APP_ID",
+   "META_APP_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/auth/callback/tiktok/route.ts",
+  "url": "/api/auth/callback/tiktok",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [],
+  "envs": [
+   "TIKTOK_CLIENT_KEY",
+   "TIKTOK_CLIENT_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/auth/forgot-password/route.ts",
+  "url": "/api/auth/forgot-password",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/login/route.ts",
+  "url": "/api/auth/login",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/logout/route.ts",
+  "url": "/api/auth/logout",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/meta/route.ts",
+  "url": "/api/auth/meta",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [],
+  "envs": [
+   "META_APP_ID",
+   "META_APP_SECRET",
+   "NODE_ENV"
+  ]
+ },
+ {
+  "file": "app/api/auth/register/route.ts",
+  "url": "/api/auth/register",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": true,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/resend-verification/route.ts",
+  "url": "/api/auth/resend-verification",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/reset-password/route.ts",
+  "url": "/api/auth/reset-password",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/session/route.ts",
+  "url": "/api/auth/session",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/auth/tiktok/route.ts",
+  "url": "/api/auth/tiktok",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [],
+  "envs": [
+   "NODE_ENV",
+   "TIKTOK_CLIENT_KEY",
+   "TIKTOK_CLIENT_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/auth/verify-email/route.ts",
+  "url": "/api/auth/verify-email",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": false,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/config/route.ts",
+  "url": "/api/integrations/config",
+  "kind": "api",
+  "methods": [
+   "GET",
+   "POST",
+   "DELETE"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/connect/[channel]/route.ts",
+  "url": "/api/integrations/connect/[channel]",
+  "kind": "api",
+  "methods": [
+   "POST",
+   "GET"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": [
+   "NEXT_PUBLIC_APP_URL",
+   "OPENBSP_ORG_ID"
+  ]
+ },
+ {
+  "file": "app/api/integrations/disconnect/route.ts",
+  "url": "/api/integrations/disconnect",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "graph.facebook.com"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/execute/route.ts",
+  "url": "/api/integrations/execute",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/health/route.ts",
+  "url": "/api/integrations/health",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/manual/route.ts",
+  "url": "/api/integrations/manual",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/manual/connect/route.ts",
+  "url": "/api/integrations/manual/connect",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/manual/verify/route.ts",
+  "url": "/api/integrations/manual/verify",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/meta/route.ts",
+  "url": "/api/integrations/meta",
+  "kind": "api",
+  "methods": [
+   "GET",
+   "DELETE"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/meta/refresh-token/route.ts",
+  "url": "/api/integrations/meta/refresh-token",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": [
+   "META_APP_ID",
+   "META_APP_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/integrations/openbsp/callback/route.ts",
+  "url": "/api/integrations/openbsp/callback",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/openbsp/connect/route.ts",
+  "url": "/api/integrations/openbsp/connect",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": [
+   "NEXT_PUBLIC_APP_URL",
+   "OPENBSP_ORG_ID"
+  ]
+ },
+ {
+  "file": "app/api/integrations/openbsp/incoming/route.ts",
+  "url": "/api/integrations/openbsp/incoming",
+  "kind": "api",
+  "methods": [
+   "GET",
+   "POST"
+  ],
+  "auth": false,
+  "publico": true,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": [
+   "META_APP_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/integrations/openbsp/refresh-token/route.ts",
+  "url": "/api/integrations/openbsp/refresh-token",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/openbsp/status/route.ts",
+  "url": "/api/integrations/openbsp/status",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": [
+   "OPENBSP_API_KEY",
+   "OPENBSP_BASE_URL",
+   "OPENBSP_ORG_ID",
+   "OPENBSP_PUBLISHABLE_KEY"
+  ]
+ },
+ {
+  "file": "app/api/integrations/send-campaign/[channel]/route.ts",
+  "url": "/api/integrations/send-campaign/[channel]",
+  "kind": "api",
+  "methods": [
+   "POST",
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/status/route.ts",
+  "url": "/api/integrations/status",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/sync-contacts/[channel]/route.ts",
+  "url": "/api/integrations/sync-contacts/[channel]",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": [
+   "NEXT_PUBLIC_SUPABASE_URL"
+  ]
+ },
+ {
+  "file": "app/api/integrations/tiktok/route.ts",
+  "url": "/api/integrations/tiktok",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/tiktok/refresh-token/route.ts",
+  "url": "/api/integrations/tiktok/refresh-token",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": [
+   "TIKTOK_CLIENT_KEY",
+   "TIKTOK_CLIENT_SECRET"
+  ]
+ },
+ {
+  "file": "app/api/integrations/whatsapp-official/disconnect/route.ts",
+  "url": "/api/integrations/whatsapp-official/disconnect",
+  "kind": "api",
+  "methods": [
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/whatsapp-official/status/route.ts",
+  "url": "/api/integrations/whatsapp-official/status",
+  "kind": "api",
+  "methods": [
+   "GET"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/api/integrations/whatsapp-official/templates/route.ts",
+  "url": "/api/integrations/whatsapp-official/templates",
+  "kind": "api",
+  "methods": [
+   "GET",
+   "POST"
+  ],
+  "auth": true,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ },
+ {
+  "file": "app/api/oauth/callback/whatsapp-qr/route.ts",
+  "url": "/api/oauth/callback/whatsapp-qr",
+  "kind": "api",
+  "methods": [
+   "GET",
+   "POST"
+  ],
+  "auth": true,
+  "publico": true,
+  "externo": [],
+  "envs": []
+ },
+ {
+  "file": "app/integracoes/page.tsx",
+  "url": "/integracoes",
+  "kind": "page",
+  "methods": [],
+  "auth": false,
+  "publico": false,
+  "externo": [
+   "openbsp"
+  ],
+  "envs": []
+ }
+]

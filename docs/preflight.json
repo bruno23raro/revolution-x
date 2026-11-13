@@ -1,0 +1,81 @@
+{
+  "ts": "2026-11-12T23:13:49.481398",
+  "bins": {
+    "docker": "C:\\Users\\Bruno\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe",
+    "curl": "C:\\Windows\\System32\\curl.exe",
+    "gh": "C:\\Program Files\\GitHub CLI\\gh.exe",
+    "psql": "C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe",
+    "node": "C:\\Program Files\\nodejs\\node.EXE",
+    "npx": "C:\\Program Files\\nodejs\\npx.CMD",
+    "uvx": "C:\\Users\\Bruno\\.local\\bin\\uvx.EXE",
+    "python": "C:\\Python314\\python.EXE",
+    "git": "C:\\Program Files\\Git\\cmd\\git.EXE"
+  },
+  "pipe": {
+    "dockerDesktopLinuxEngine": false,
+    "docker_engine": false
+  },
+  "ports": {
+    "5432": true,
+    "55432": true,
+    "54321": true,
+    "54320": true,
+    "27123": true,
+    "27124": true,
+    "5678": true,
+    "3001": true
+  },
+  "env": {
+    "total_bytes": 6194,
+    "limit": 32767,
+    "top": [
+      "PATH",
+      "PSMODULEPATH",
+      "VSCODE_NLS_CONFIG",
+      "VSCODE_NODE_COMPILE_CACHE_ROOT",
+      "VSCODE_CODE_CACHE_PATH",
+      "VERCEL_PLUGIN_BOOTSTRAP_HINTS",
+      "CLAUDE_CODE_MESSAGING_SOCKET",
+      "ZERNIO_API_KEY",
+      "ANTHROPIC_AUTH_TOKEN",
+      "FREELLMAPI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "PATHEXT",
+      "PLAYWRIGHT_MCP_EXTENSION_TOKEN",
+      "PROJ_LIB",
+      "PROCESSOR_IDENTIFIER"
+    ]
+  },
+  "envfiles": {
+    ".env": [],
+    ".env.local": [
+      {
+        "line": 38,
+        "key": "DATABASE_URL",
+        "why": "localhost:5432"
+      },
+      {
+        "line": 39,
+        "key": "DIRECT_URL",
+        "why": "localhost:5432"
+      }
+    ],
+    ".env.production": [
+      {
+        "line": 31,
+        "key": "EMAIL_FROM",
+        "why": "placeholder"
+      },
+      {
+        "line": 43,
+        "key": "DATABASE_URL",
+        "why": "localhost:5432"
+      },
+      {
+        "line": 45,
+        "key": "DIRECT_URL",
+        "why": "localhost:5432"
+      }
+    ]
+  }
+}

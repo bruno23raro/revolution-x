@@ -107,3 +107,5 @@ test-results/
 .venv/
 __pycache__/
 vendor/chrome-mcp-stealth/
+
+vendor/public-apis/

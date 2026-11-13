@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe('rotas whatsapp oficial — autenticacao', () => {
   it.each(Object.keys(ROUTES))('%s devolve 401 sem sessao', async (name) => {
-    getAuth.mockResolvedValue(null);
+    getAuth.mockResolvedValue({ user: null, hasSession: false });
     const handler = ROUTES[name]();
     const res = await handler(req('/x', name === 'connect' || name === 'disconnect' ? { method: 'POST' } : undefined));
     expect(res.status).toBe(401);
@@ -61,7 +61,7 @@ describe('rotas whatsapp oficial — autenticacao', () => {
 
 describe('connect', () => {
   it('503 honesto sem OPENBSP_ORG_ID (nao finge popup)', async () => {
-    getAuth.mockResolvedValue(USER);
+    getAuth.mockResolvedValue({ user: USER, hasSession: true });
     const res = await ROUTES.connect()(req('/x', { method: 'POST' }));
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({ error: 'openbsp_not_configured' });
@@ -70,7 +70,7 @@ describe('connect', () => {
 
 describe('disconnect', () => {
   it('404 quando o tenant nunca teve canal', async () => {
-    getAuth.mockResolvedValue(USER);
+    getAuth.mockResolvedValue({ user: USER, hasSession: true });
     getChannelDecrypted.mockResolvedValue(null);
     const res = await ROUTES.disconnect()(req('/x', { method: 'POST' }));
     expect(res.status).toBe(404);

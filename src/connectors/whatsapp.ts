@@ -1,33 +1,29 @@
-// FASE 7/1 — WhatsApp Connector (adapter REAL, delega à Cloud API oficial da Meta)
+// FASE 7/1 — WhatsApp Connector (OpenBSP puro)
 //
-// Antes: stub "BLOQUEADO — credencial Meta não fornecida". Agora: delega ao
-// `whatsappSender`, então envia de verdade quando `config.apiKey` (= access
-// token já descriptografado) e `config.phoneNumberId` estão presentes; senão
-// degrada honestamente para `meta_not_configured` (nada de fingir).
+// MIGRAÇÃO COMPLETA: agora usa apenas OpenBSP como provedor.
+// Substitui o código que caía no Meta WhatsApp Sender.
 //
-// Mantém as exportações da Fase 7 (`WhatsAppConfig`, `WhatsAppMessage`,
-// `sendWhatsAppMessage`) para não quebrar a interface — apenas agora funciona.
+// Credenciais: orgId, apiKey, publishableKey, baseUrl, phoneNumberId
+// vêm do painel OpenBSP (variáveis de ambiente).
 
-import {
-  sendWhatsAppText,
-  sendWhatsAppTemplate,
-  type MetaWABAccess,
-  type SendOptions,
-} from '../integrations/meta/whatsappSender';
+import { openbspSender } from '@/integrations/whatsapp/openbsp/sender';
 
 export interface WhatsAppConfig {
-  /** Access token da Meta (já descriptografado). Em produção, decifrado de `meta_integrations`. */
-  apiKey?: string;
-  phoneNumberId?: string;
-  businessAccountId?: string;
-  apiBase?: string;
-  version?: string;
+  /** Organization ID do OpenBSP */
+  orgId: string;
+  /** API Key do OpenBSP */
+  apiKey: string;
+  /** Publishable Key do OpenBSP */
+  publishableKey: string;
+  /** Base URL do OpenBSP (https://<ref>.supabase.co/rest/v1) */
+  baseUrl: string;
+  /** Phone Number ID do OpenBSP */
+  phoneNumberId: string;
 }
 
 export interface WhatsAppMessage {
   to: string; // telefone com DDI, ex.: 5511999999999
   body: string;
-  messageId?: string;
   /** Se definido, envia template oficial em vez de `body`. */
   template?: string;
   templateVariables?: string[];
@@ -40,26 +36,42 @@ export interface WhatsAppSendResult {
   error?: string;
 }
 
+export interface SendOptions {
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+}
+
+/** Normaliza número para E164 */
+function toE164(to: string): string {
+  return to.replace(/^\+/, '').replace(/[^0-9]/g, '');
+}
+
 export async function sendWhatsAppMessage(
   config: WhatsAppConfig,
   msg: WhatsAppMessage,
   opts: SendOptions = {},
 ): Promise<WhatsAppSendResult> {
-  const access: MetaWABAccess = {
-    accessToken: config?.apiKey ?? '',
-    phoneNumberId: config?.phoneNumberId ?? '',
-    apiBase: config?.apiBase,
-    version: config?.version,
+  const input = {
+    config: {
+      orgId: config?.orgId ?? '',
+      apiKey: config?.apiKey ?? '',
+      publishableKey: config?.publishableKey ?? '',
+      baseUrl: config?.baseUrl ?? 'https://nheelwshzbgenpavwhcy.supabase.co/rest/v1',
+      phoneNumberId: config?.phoneNumberId ?? '',
+    },
+    to: toE164(msg.to),
+    body: msg.body ?? '',
+    template: msg.template
+      ? {
+          name: msg.template,
+          language: msg.language ?? 'en',
+          variables: msg.templateVariables ?? [],
+        }
+      : undefined,
   };
 
-  if (msg.template) {
-    const r = await sendWhatsAppTemplate(access, msg.to, msg.template, msg.templateVariables ?? [], {
-      ...opts,
-      language: msg.language,
-    });
-    return r.ok ? { success: true, messageId: r.messageId } : { success: false, error: r.error ?? r.errorDetail };
-  }
-
-  const r = await sendWhatsAppText(access, msg.to, msg.body ?? '', opts);
-  return r.ok ? { success: true, messageId: r.messageId } : { success: false, error: r.error ?? r.errorDetail };
+  const r = await openbspSender.send(input);
+  return r.ok
+    ? { success: true, messageId: r.messageId }
+    : { success: false, error: r.error ?? r.errorDetail };
 }

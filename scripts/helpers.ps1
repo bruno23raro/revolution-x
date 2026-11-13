@@ -71,3 +71,18 @@ function Set-EnvVar {
         ($raw -replace "(?m)^$([regex]::Escape($Name))=.*$", "$Name=$Value") | Set-Content $File -Encoding utf8
     } else { Add-Content $File "`r`n$Name=$Value" -Encoding utf8 }
 }
+
+function Set-TextBlock {
+    param([string]$Path,[string]$Marker,[string]$Content)
+    New-FileIfMissing -Path $Path
+    $raw = Get-Content $Path -Raw
+    $pattern = "(?s)#>>> $([regex]::Escape($Marker)).*?#<<< $([regex]::Escape($Marker))"
+    $block = "#>>> $Marker`r`n$Content`r`n#<<< $Marker"
+    if ($raw -match $pattern) {
+        Copy-Item $Path "$Path.bak" -Force
+        ($raw -replace $pattern, $block) | Set-Content $Path -Encoding utf8
+    } else {
+        Add-Content $Path "`r`n$block" -Encoding utf8
+    }
+    Write-Host "bloco '$Marker' aplicado em $Path" -ForegroundColor Green
+}

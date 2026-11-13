@@ -109,3 +109,5 @@ __pycache__/
 vendor/chrome-mcp-stealth/
 
 vendor/public-apis/
+.next.backup-*
+.next.bak-*

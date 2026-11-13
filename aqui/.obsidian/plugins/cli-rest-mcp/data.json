@@ -1,0 +1,14 @@
+{
+  "autoStart": true,
+  "port": 27124,
+  "bindAddress": "127.0.0.1",
+  "apiKeySecretName": "cli-rest-mcp-api-key",
+  "legacySecretMigratedAt": "",
+  "requestTimeout": 30000,
+  "enableRestApi": true,
+  "enableMcp": true,
+  "allowDangerousCommands": true,
+  "blockedCommands": [],
+  "enableCors": true,
+  "defaultVault": ""
+}

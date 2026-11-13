@@ -1,0 +1,2 @@
+param([string]$Dir = "C:\Users\Bruno\.claude\Revolution\X")
+Start-Process powershell -Verb RunAs -ArgumentList "-NoExit","-Command","Set-Location '$Dir'; `$Host.UI.RawUI.WindowTitle='RX ADMIN'; if (Test-Path .\scripts\helpers.ps1) { . .\scripts\helpers.ps1 }"

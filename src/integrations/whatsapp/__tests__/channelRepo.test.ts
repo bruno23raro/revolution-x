@@ -1,4 +1,4 @@
-import { deleteAllChannels, ChannelDecrypted, getChannelDecrypted, markChannelConnected } from '../channelRepo';
+import { deleteAllChannels, ChannelDecrypted, getChannelDecrypted, getChannelByPhoneNumberId, markChannelConnected } from '../channelRepo';
 
 describe('channelRepo', () => {
   const mockEq = jest.fn().mockResolvedValue({ data: null, error: null });

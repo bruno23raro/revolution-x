@@ -1,5 +1,0 @@
-{
-  "hermes.baseUrl": "http://127.0.0.1:3001/v1",
-  "hermes.model": "freellmapi/auto",
-  "hermes.apiKey": "freellmapi-06d1aefc468d62eed400b7d0bd48bf0accb578e8cc789478"
-}

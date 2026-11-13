@@ -43,7 +43,7 @@ jobs:
       if: failure()
       run: |
         echo "Fixes detected - attempting automatic resolution"
-        npm run fix || echo "Fix script not available"
+        node agents/autonomous-monitor.js --fix || echo "Fix script not available"
 
     - name: Run TypeScript check
       run: npx tsc --noEmit

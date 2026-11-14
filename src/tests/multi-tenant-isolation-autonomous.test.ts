@@ -76,7 +76,7 @@ async function executeWithTenant(
  * Helper: cria usuário e organização de teste
  */
 async function createTestUserAndOrg(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   prefix: string
 ): Promise<{ userId: string; orgId: string }> {
   // Gerar IDs únicos
@@ -137,9 +137,9 @@ async function createTestUserAndOrg(
 // ============================================================================
 
 describe('Isolamento Multi-Tenant — RLS 100%', () => {
-  let supabaseAdmin: ReturnType<typeof createClient>;
-  let supabaseUser1: ReturnType<typeof createClient>;
-  let supabaseUser2: ReturnType<typeof createClient>;
+  let supabaseAdmin: any;
+  let supabaseUser1: any;
+  let supabaseUser2: any;
 
   beforeAll(async () => {
     // Verificar se variáveis de ambiente estão configuradas

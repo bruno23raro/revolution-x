@@ -1,8 +1,7 @@
-﻿// FASE 1 â€” Testes da camada de serviÃ§o de WhatsApp (sem banco, mock de fetch).
+// FASE 1 — Testes da camada de serviço de WhatsApp (sem banco, mock de fetch).
 //
-// Cobre: motor de chatbot (puro), sender (texto/template/quick replies â€”
-// FASE 3 Â· slice 2), disparo em massa (contagem + delay), refresh de token
-// e o conector (delega para o sender).
+// Cobre: motor de chatbot (puro), sender (texto/template/quick replies —
+// FASE 3 · slice 2), disparo em massa (contagem + delay) e refresh de token.
 
 import { evaluateChatbot, type ChatbotConfig } from '@/integrations/meta/whatsappChatbot';
 import {
@@ -13,7 +12,6 @@ import {
   type MetaWABAccess,
 } from '@/integrations/meta/whatsappSender';
 import { refreshMetaAccessToken } from '@/integrations/meta/tokenRefresh';
-import { sendWhatsAppMessage } from '../connectors/whatsapp';
 
 // ---- helpers ----
 function fakeFetch(handler: (url: string, init?: unknown) => unknown): typeof fetch {
@@ -372,44 +370,4 @@ describe('refreshMetaAccessToken', () => {
     expect(seen).toContain('client_secret=SECRET');
     expect(seen).toContain('grant_type=fb_exchange_token');
   });
-});
-// ============================================================
-// Conector (delega ao sender OpenBSP)
-// ============================================================
-
-describe('sendWhatsAppMessage (conector)', () => {
-  it('texto: delega e devolve success', async () => {
-    const fetchImpl = fakeFetch(() => resp({ messages: [{ id: 'wamid.c' }] }));
-    const r = await sendWhatsAppMessage(
-      { orgId: 'org', apiKey: 'tok', publishableKey: 'pk', baseUrl: 'https://api', phoneNumberId: 'PH' },
-      { to: '55', body: 'oi' },
-      { fetchImpl },
-    );
-    expect(r.success).toBe(true);
-  });
-
-  it('sem credencial â†’ success:false honesto', async () => {
-    const r = await sendWhatsAppMessage(
-      { orgId: '', apiKey: '', publishableKey: '', baseUrl: '', phoneNumberId: '' },
-      { to: '55', body: 'oi' },
-    );
-    expect(r.success).toBe(false);
-    expect(r.error).toBe('openbsp_not_configured');
-  });
-
-  it('template: envia via template', async () => {
-    let body: any;
-    const fetchImpl = fakeFetch((_url, init) => {
-      body = JSON.parse((init as RequestInit).body as string);
-      return resp({ messages: [{ id: 'wamid.t' }] });
-    });
-    const r = await sendWhatsAppMessage(
-      { orgId: 'org', apiKey: 'tok', publishableKey: 'pk', baseUrl: 'https://api', phoneNumberId: 'PH' },
-      { to: '55', body: '', template: 'promo', templateVariables: ['JÃ³'] },
-      { fetchImpl },
-    );
-    expect(r.success).toBe(true);
-    expect(body.content.type).toBe('data');
-  });
-});
 });

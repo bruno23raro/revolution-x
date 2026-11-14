@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 // ── auth ──────────────────────────────────────────────────────────────────────
 jest.mock('@/lib/auth', () => ({
   getAuth: jest.fn(),
+  getAuthenticatedUser: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 
@@ -89,7 +90,7 @@ const { GET: tplGET, POST: tplPOST } = require('../../app/api/whatsapp/templates
 const { GET: botGET, POST: botPOST, DELETE: botDELETE } = require('../../app/api/whatsapp/chatbot/route');
 const { POST: inboundPOST } = require('../../app/api/webhooks/inbound/route');
 
-const { getAuth, getAllOrganizationMemberships } = require('@/lib/auth');
+const { getAuth, getAuthenticatedUser, getAllOrganizationMemberships } = require('@/lib/auth');
 const { prisma } = require('@/lib/prisma');
 const {
   TaskQueueUnavailableError,
@@ -113,13 +114,13 @@ const { sendMassViaOpenBSP } = require('@/integrations/openbsp/send');
 const ADMIN = { id: 'user-admin', role: 'admin', organizationId: 'org-admin', email: 'a@x.com' };
 
 function asAdmin() {
-  getAuth.mockResolvedValue(ADMIN);
-  getAllOrganizationMemberships.mockResolvedValue([]);
+  getAuth.mockResolvedValue({ user: ADMIN, hasSession: true });
+  getAuthenticatedUser.mockResolvedValue(ADMIN);
 }
 function asNoUser() {
-  getAuth.mockResolvedValue(null);
+  getAuth.mockResolvedValue({ user: null, hasSession: false });
+  getAuthenticatedUser.mockResolvedValue(null);
 }
-
 function req(url, { method = 'GET', body, headers } = {}) {
   const init = { method, headers };
   if (body !== undefined) {

@@ -336,7 +336,7 @@ describe('integration_events RLS (multi-tenant isolation)', () => {
 
     // Criar uma integração de teste
     await adminQ(admin, `INSERT INTO "Integration" (id, "userId", "channel", "provider", "connectionMode", "status")
-      VALUES ($1, $2, 'whatsapp', 'openbsp', 'official', 'connected)
+      VALUES ($1, $2, 'whatsapp', 'openbsp', 'official', 'connected')
       ON CONFLICT (id) DO NOTHING`, [
       integrationId, orgA
     ]);

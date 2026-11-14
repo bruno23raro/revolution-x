@@ -1,4 +1,5 @@
 import { deleteAllChannels, ChannelDecrypted, getChannelDecrypted, getChannelByPhoneNumberId, markChannelConnected } from '../channelRepo';
+jest.mock('@/lib/encryption', () => ({ encryptToken: jest.fn((t: string) => 'enc:' + t), decryptToken: jest.fn() }));
 
 describe('channelRepo', () => {
   const mockEq = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -29,7 +30,7 @@ describe('channelRepo', () => {
     it('remove canais para organizationId específico', async () => {
       await deleteAllChannels(mockClient as any, 'org-123');
 
-      expect(mockFrom).toHaveBeenCalledWith('whatsapp_channels');
+      expect(mockClient.from).toHaveBeenCalledWith('whatsapp_channels');
       expect(mockDelete).toHaveBeenCalled();
       expect(mockEq).toHaveBeenCalledWith('organizationId', 'org-123');
     });
@@ -80,7 +81,7 @@ describe('channelRepo', () => {
 
       mockClient.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: mockRow, error: null }),
+          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: mockRow, error: null }) }),
         }),
       });
 
@@ -115,7 +116,7 @@ describe('channelRepo', () => {
 
       mockClient.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: mockRow, error: null }),
+          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: mockRow, error: null }) }),
         }),
       });
 
@@ -127,7 +128,7 @@ describe('channelRepo', () => {
     it('retorna null quando canal não existe', async () => {
       mockClient.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
+          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: null, error: { code: 'PGRST116' } }) }),
         }),
       });
 
@@ -143,7 +144,7 @@ describe('channelRepo', () => {
             // O código deve filtrar por organizationId, não user_id
             expect(col).toBe('organizationId');
             expect(val).toBe('org-isolated');
-            return Promise.resolve({ data: null, error: null });
+            return { maybeSingle: () => Promise.resolve({ data: null, error: null }) };
           }),
         }),
       });
@@ -190,7 +191,7 @@ describe('channelRepo', () => {
           eq: jest.fn().mockImplementation((col, val) => {
             expect(col).toBe('phoneNumberId');
             expect(val).toBe('phone-number-123');
-            return Promise.resolve({ data: { id: 'chan-1' }, error: null });
+            return { maybeSingle: () => Promise.resolve({ data: { id: 'chan-1' }, error: null }) };
           }),
         }),
       });
@@ -204,7 +205,7 @@ describe('channelRepo', () => {
       mockClient.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockImplementation(() =>
-            Promise.resolve({ data: null, error: { code: 'PGRST116' } })
+            ({ maybeSingle: () => Promise.resolve({ data: null, error: { code: 'PGRST116' } }) })
           ),
         }),
       });

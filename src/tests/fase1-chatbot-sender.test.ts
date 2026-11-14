@@ -38,10 +38,10 @@ describe('evaluateChatbot (motor de regras)', () => {
   const base: ChatbotConfig = {
     enabled: true,
     rules: [
-      { id: 'r1', matchType: 'keyword', pattern: 'preÃ§o', response: 'Nossos planos: R$99' },
-      { id: 'r2', matchType: 'regex', pattern: '^(ola|oi)$', flags: 'i', response: 'OlÃ¡! Como posso ajudar?' },
+      { id: 'r1', matchType: 'keyword', pattern: 'preço', response: 'Nossos planos: R$99' },
+      { id: 'r2', matchType: 'regex', pattern: '^(ola|oi)$', flags: 'i', response: 'Olá! Como posso ajudar?' },
     ],
-    fallback: 'Um atendente vai te chamar ðŸ‘€',
+    fallback: 'Um atendente vai te chamar 🤝',
   };
 
   it('desligado â†’ nÃ£o responde', async () => {
@@ -55,7 +55,7 @@ describe('evaluateChatbot (motor de regras)', () => {
   });
 
   it('casca com regra keyword (case-insensitive)', async () => {
-    const d = await evaluateChatbot(base, { text: 'Qual o PREÃ‡O do plano?' });
+    const d = await evaluateChatbot(base, { text: 'Qual o PREÇO do plano?' });
     expect(d.source).toBe('rule');
     expect(d.matchedRuleId).toBe('r1');
     expect(d.text).toBe('Nossos planos: R$99');
@@ -67,23 +67,23 @@ describe('evaluateChatbot (motor de regras)', () => {
     expect(d.matchedRuleId).toBe('r2');
   });
 
-  it('saudaÃ§Ã£o no primeiro contato', async () => {
+  it('saudação no primeiro contato', async () => {
     const d = await evaluateChatbot({ ...base, greeting: 'Bem-vindo(a)!' }, { text: 'oi', firstContact: true });
     expect(d.source).toBe('greeting');
     expect(d.text).toBe('Bem-vindo(a)!');
   });
 
-  it('fallback quando nÃ£o casa com regra', async () => {
-    const d = await evaluateChatbot(base, { text: 'qualquer coisa aleatÃ³ria' });
+  it('fallback quando não casa com regra', async () => {
+    const d = await evaluateChatbot(base, { text: 'qualquer coisa aleatória' });
     expect(d.source).toBe('fallback');
     expect(d.text).toBe(base.fallback);
   });
 
-  it('fora da janela de horas â†’ apenas fallback', async () => {
-    const cfg: ChatbotConfig = { enabled: true, activeFromHour: 9, activeToHour: 18, rules: [], fallback: 'Falemos amanhÃ£ ðŸ˜‰' };
-    const d = await evaluateChatbot(cfg, { text: 'preÃ§o', now: new Date('2026-10-18T02:00:00Z') }, { nowOverride: new Date('2026-10-18T02:00:00Z') });
+  it('fora da janela de horas → apenas fallback', async () => {
+    const cfg: ChatbotConfig = { enabled: true, activeFromHour: 9, activeToHour: 18, rules: [], fallback: 'Falemos amanhã 😊' };
+    const d = await evaluateChatbot(cfg, { text: 'preço', now: new Date('2026-10-18T02:00:00Z') }, { nowOverride: new Date('2026-10-18T02:00:00Z') });
     expect(d.source).toBe('fallback');
-    expect(d.text).toBe('Falemos amanhÃ£ ðŸ˜‰');
+    expect(d.text).toBe('Falemos amanhã 😊');
   });
 
   it('IA usada quando useAI e sem regra', async () => {

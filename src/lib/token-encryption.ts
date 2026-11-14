@@ -71,14 +71,13 @@ export async function encryptToken(token: string, userId: string): Promise<strin
   const key = await deriveKey(userId, salt);
 
   // Convert string to Uint8Array using Buffer for compatibility
-  const nodeCrypto = require('crypto');
-  const tokenBytes = nodeCrypto.Buffer.from(token, 'utf-8');
+  const tokenBytes = Buffer.from(token, 'utf-8');
 
   // Web Crypto retorna ArrayBuffer diretamente
   const encryptedArrayBuffer = await webcrypto.subtle.encrypt({ name: ALGORITHM, iv } as any, key, tokenBytes as any);
 
   // Converter ArrayBuffer para Buffer e extrair ciphertext e authTag
-  const encryptedBuffer = nodeCrypto.Buffer.from(encryptedArrayBuffer);
+  const encryptedBuffer = Buffer.from(encryptedArrayBuffer);
   // O Web Crypto coloca o authTag (16 bytes) ao final do ciphertext
   const ciphertext = encryptedBuffer.subarray(0, -TAG_BYTES);
   const authTag = encryptedBuffer.subarray(-TAG_BYTES);
@@ -108,8 +107,7 @@ export async function decryptToken(encrypted: string, userId: string): Promise<s
   const key = await deriveKey(userId, salt);
 
   // Rejunta ciphertext + authTag para o Web Crypto
-  const nodeCrypto = require('crypto');
-  const combined = Buffer.concat([Buffer.from(ciphertext), Buffer.from(authTag)]);
+  const combined = Buffer.concat([ciphertext, authTag]);
 
   let plain: ArrayBuffer;
   try {

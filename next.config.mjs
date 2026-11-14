@@ -8,15 +8,12 @@ const __dirname = dirname(__filename);
 const nextConfig = {
   poweredByHeader: false,
   // Deploy Hostinger: output standalone reduz drasticamente o tamanho do
-  // artefato (apenas .next/standalone) e inclui só as deps de runtime.
+  // artefato (apenas .next/standalone) e inclui sÃ³ as deps de runtime.
   // Evita node_modules ausente/completa no servidor. `npm start` via PM2.
   output: 'standalone',
   webpack: (config, { isServer }) => {
-    config.resolve.alias['@'] = __dirname;
-
-    // ioredis só é usado no servidor (APIs de rota). Impedir que o webpack
-    // tente empacotá-lo no cliente, onde `node:diagnostics_channel` não existe
-    // no webpack 5 do Next.js 14 (Node.js 24 incompatível).
+    // O alias @/* Ã© resolvido pelo tsconfig paths (./src/*). NÃ£o sobrescrevemos
+    // o alias '@' com a raiz aqui, pois isso quebrava @/components e @/lib.
     config.externals = config.externals || [];
     config.externals.push({
       ioredis: 'commonjs ioredis',

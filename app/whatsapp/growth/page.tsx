@@ -6,14 +6,15 @@ import { createBrowserClient } from '@supabase/ssr';
 import { formatE164, EvolutionService, SendMessagePayload } from '@/services/evolution/EvolutionService';
 
 // Supabase client via browser (padrão do app Next.js SSR)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
-const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export default function WhatsAppGrowthPage() {
   // Autenticação - padrão do app Revolution X
@@ -45,7 +46,7 @@ export default function WhatsAppGrowthPage() {
 
   const loadInstances = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('whatsapp_instances')
         .select('*')
         .eq('organizationId', organizationId);
@@ -69,7 +70,7 @@ export default function WhatsAppGrowthPage() {
       setQrCode(code);
 
       // Atualizar status no banco via RLS
-      const { error: dbError } = await supabase
+      const { error: dbError } = await getSupabase()
         .from('whatsapp_instances')
         .upsert({
           id: crypto.randomUUID(),
@@ -98,7 +99,7 @@ export default function WhatsAppGrowthPage() {
     try {
       if (currentInstance) {
         // Atualizar status no banco
-        await supabase
+        await getSupabase()
           .from('whatsapp_instances')
           .update({ status: 'DISCONNECTED', qrCode: null, updatedAt: new Date().toISOString() })
           .eq('organizationId', organizationId)
@@ -180,7 +181,7 @@ export default function WhatsAppGrowthPage() {
 
       // Inserir no banco
       if (newLeads.length > 0) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await getSupabase()
           .from('growth_leads')
           .insert(newLeads);
 
@@ -241,7 +242,7 @@ export default function WhatsAppGrowthPage() {
 
             // Salvar no growth_leads se enviar com sucesso
             if (result.success) {
-              await supabase.from('growth_leads').insert({
+              await getSupabase().from('growth_leads').insert({
                 id: crypto.randomUUID(),
                 organizationId,
                 source: 'evolution_direct',

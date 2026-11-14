@@ -5,14 +5,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { formatE164, EvolutionService } from '@/services/evolution/EvolutionService';
 
 // Supabase client via browser (padrão do app Next.js SSR)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  return (global as any).supabase || require('@supabase/ssr').createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
-const supabase = (global as any).supabase || require('@supabase/ssr').createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export default function SocialGrowthPage() {
   // Autenticação - padrão do app Revolution X
@@ -41,7 +42,7 @@ export default function SocialGrowthPage() {
 
   const loadLeads = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('growth_leads')
         .select('*')
         .eq('organizationId', organizationId)
@@ -103,7 +104,7 @@ export default function SocialGrowthPage() {
 
       // Inserir leads no banco
       if (newLeads.length > 0) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await getSupabase()
           .from('growth_leads')
           .insert(newLeads.map((lead: any) => ({
             id: crypto.randomUUID(),
@@ -186,7 +187,7 @@ export default function SocialGrowthPage() {
 
             if (result.success) {
               // Atualizar status do lead
-              await supabase
+              await getSupabase()
                 .from('growth_leads')
                 .update({ status: 'sent' })
                 .eq('organizationId', organizationId)

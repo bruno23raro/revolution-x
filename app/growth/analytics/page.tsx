@@ -3,14 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }
 
-const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 const FUNNEL_STAGES = [
   { key: 'pending', label: 'Extraído', color: 'bg-gray-100', icon: '📥' },
@@ -27,7 +28,7 @@ export default function GrowthAnalyticsPage() {
 
   const loadAnalytics = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await getSupabase().auth.getSession();
       if (!session) {
         window.location.href = '/login';
         return;

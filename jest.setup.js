@@ -47,13 +47,14 @@ Object.defineProperty(global, 'matchMedia', {
 });
 
 // Mock para clipboard API
-Object.assign(navigator, {
-  clipboard: {
-    writeText: jest.fn().mockResolvedValue(undefined),
-    readText: jest.fn().mockResolvedValue(''),
-  },
-});
-
+if (typeof navigator !== 'undefined') {
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: jest.fn().mockResolvedValue(undefined),
+      readText: jest.fn().mockResolvedValue(''),
+    },
+  });
+}
 // Mock para ResizeObserver (necessário para alguns componentes)
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

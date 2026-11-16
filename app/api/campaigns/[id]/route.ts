@@ -30,7 +30,7 @@ import {
 } from '@/services/campaignService';
 import { executeCampaignBatch, mergeCounts } from '@/services/campaignExecutor';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { sendWhatsAppText } from '@/integrations/meta/whatsappSender';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { getChannelDecrypted, buildOfficialSender, checkTier } from '@/integrations/whatsapp';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
@@ -257,8 +257,9 @@ async function doStart(
   }
 
   // ── Executa UM lote (fila persistente: o resto continua pendente) ──────
+  const provider = getWhatsAppProvider();
   const sender = async (cid: string, to: string, text: string) => {
-    const r = await sendWhatsAppText(access, to, text);
+    const r = await provider.send(access, to, { kind: 'text', text }, {});
     if (r.ok) return { ok: true, externalMessageId: r.messageId };
     return { ok: false, error: r.errorDetail ? `${r.error}: ${r.errorDetail}` : r.error ?? 'send_failed' };
   };

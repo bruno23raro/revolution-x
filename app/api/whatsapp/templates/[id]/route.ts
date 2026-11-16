@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { getWhatsAppTemplate } from '@/integrations/meta/whatsappTemplates';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { rateLimit } from '@/middleware/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -74,10 +74,8 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     if (resolved.ok && resolved.access) {
       try {
         // Usar o metaTemplateId se disponível, senão tentar buscar pelo nome
-        const metaResult = await getWhatsAppTemplate(
-          resolved.access,
-          localTemplate.metaTemplateId || localTemplate.name
-        );
+        const provider = getWhatsAppProvider();
+          const metaResult = await provider.getTemplateStatus(resolved.access, localTemplate.metaTemplateId || localTemplate.name, 'en_US', {});
         if (metaResult.ok && metaResult.template) {
           // Atualizar com dados da Meta
           template.componentsJson = metaResult.template.components || template.componentsJson;

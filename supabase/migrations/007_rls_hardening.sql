@@ -79,29 +79,42 @@ $$;
 -- ============================================================
 -- 007b — Meta integrations & webhook events tenant policies
 -- ============================================================
--- meta_integrations uses snake_case columns (legacy from 005).
--- webhook_events has NO organization_id column — it must be referenced
--- via integration_id → meta_integrations.organization_id.
+-- meta_integrations uses camelCase column organizationId (REVX standard).
+-- webhook_events has NO organizationId column — it must be referenced
+-- via integration_id → meta_integrations.organizationId.
 --
 -- Both tables have RLS ENABLED but lack hardened policies.
 -- ============================================================
 
 DO $$
 BEGIN
-  -- meta_integrations: hardened policy (snake_case column)
+  -- meta_integrations: hardened policy (camelCase column organizationId)
   IF to_regclass('meta_integrations') IS NOT NULL THEN
+    -- Normalize tenant column to REVX standard camelCase if it still uses legacy snake_case
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'meta_integrations' AND column_name = 'organization_id'
+    ) AND NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'meta_integrations' AND column_name = 'organizationId'
+    ) THEN
+      ALTER TABLE meta_integrations RENAME COLUMN organization_id TO "organizationId";
+    END IF;
+
+    ALTER TABLE meta_integrations ENABLE ROW LEVEL SECURITY;
     ALTER TABLE meta_integrations FORCE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS meta_integrations_tenant ON meta_integrations;
     CREATE POLICY meta_integrations_tenant ON meta_integrations
       FOR ALL
-      USING (organization_id = NULLIF(current_setting('app.current_org', TRUE), '')::uuid)
-      WITH CHECK (organization_id = NULLIF(current_setting('app.current_org', TRUE), '')::uuid);
+      USING ("organizationId" = NULLIF(current_setting('app.current_org', TRUE), '')::uuid)
+      WITH CHECK ("organizationId" = NULLIF(current_setting('app.current_org', TRUE), '')::uuid);
   END IF;
 
   -- webhook_events: policy via integration_id subquery
   -- The organization is resolved by joining through meta_integrations.
   -- Note: this requires meta_integrations_tenant to be active first.
   IF to_regclass('webhook_events') IS NOT NULL THEN
+    ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
     ALTER TABLE webhook_events FORCE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS webhook_events_tenant ON webhook_events;
     CREATE POLICY webhook_events_tenant ON webhook_events
@@ -110,14 +123,14 @@ BEGIN
         integration_id IS NULL
         OR integration_id IN (
           SELECT mi.id FROM meta_integrations mi
-          WHERE mi.organization_id = NULLIF(current_setting('app.current_org', TRUE), '')::uuid
+          WHERE mi."organizationId" = NULLIF(current_setting('app.current_org', TRUE), '')::uuid
         )
       )
       WITH CHECK (
         integration_id IS NULL
         OR integration_id IN (
           SELECT mi.id FROM meta_integrations mi
-          WHERE mi.organization_id = NULLIF(current_setting('app.current_org', TRUE), '')::uuid
+          WHERE mi."organizationId" = NULLIF(current_setting('app.current_org', TRUE), '')::uuid
         )
       );
   END IF;

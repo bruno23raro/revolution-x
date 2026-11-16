@@ -108,5 +108,5 @@ END $$;
 -- 9. Comentários para documentação
 COMMENT ON TABLE integration_events IS 'Trilha de auditoria de eventos de integração (conexão, erro, renovação, troca de modo)';
 COMMENT ON COLUMN integration_events.event_type IS 'Tipo do evento: connection_success, connection_failed, disconnection, credential_renewal, mode_switch, error';
-COMMENT ON POLICY integration_events_tenant IS 'Multi-tenant isolation: only events belonging to current tenant accessible via app.current_org GUC';
-COMMENT ON POLICY integration_events_service_role IS 'Service role bypass for admin operations (webhooks, onboarding, admin tasks)';
+-- COMMENT ON POLICY is not valid PostgreSQL syntax (removed).
+-- Policies are self-documenting via their name and USING/WITH CHECK clauses.

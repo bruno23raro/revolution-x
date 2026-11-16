@@ -15,6 +15,15 @@
 // is later switched to a restricted non-BYPASSRLS user.
 import type { Prisma } from '@prisma/client';
 
+/** Palavras-chave de opt-out (case-insensitive) */
+const OPT_OUT_KEYWORDS = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'PARAR', 'SAIR'];
+
+/** Detecta se o texto contém opt-out */
+function isOptOut(text: string): boolean {
+  const normalized = text.trim().toUpperCase();
+  return OPT_OUT_KEYWORDS.some((kw) => normalized === kw || normalized.includes(kw));
+}
+
 export interface WhatsAppMessageResult {
   success: boolean;
   error?: string;
@@ -26,6 +35,8 @@ export interface WhatsAppMessageResult {
   text?: string;
   /** Verdadeiro quando o Contact foi criado nesta chegada (1º contato). */
   firstContact?: boolean;
+  /** Verdadeiro quando opt-out foi detectado e processado. */
+  optOutDetected?: boolean;
 }
 
 /**
@@ -83,6 +94,35 @@ export async function processWhatsAppPayload(
           ? new Date(parseInt(msg.timestamp as string, 10) * 1000)
           : new Date();
         const wamid: string | undefined = msg.id as string | undefined;
+
+        // --- DETECÇÃO DE OPT-OUT (PROCESSAR ANTES DE TUDO) ---
+        if (isOptOut(textBody)) {
+          try {
+            await tx.contact.updateMany({
+              where: {
+                organizationId,
+                waId,
+              },
+              data: {
+                optOut: true,
+                consentMarketing: false,
+              },
+            });
+            console.log(`[whatsapp-processor] opt-out detectado para ${waId} (org: ${organizationId})`);
+
+            // Responder ao usuário confirmando opt-out
+            results.push({
+              success: true,
+              contactId: undefined, // não criamos contactId aqui
+              waId,
+              text: textBody,
+              optOutDetected: true,
+            });
+          } catch (err) {
+            console.error('[whatsapp-processor] opt-out update failed:', (err as Error).message);
+          }
+          continue; // Pular para próxima mensagem após opt-out
+        }
 
         // --- Localizar ou criar Contact (sempre dentro do tenant) ---
         let contactId: string | null = null;

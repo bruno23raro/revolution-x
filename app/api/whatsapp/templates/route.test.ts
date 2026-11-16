@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
 
 // Mock dos módulos de autenticação e integrações
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 
@@ -71,11 +71,11 @@ describe('/api/whatsapp/templates', () => {
 
   describe('GET /api/whatsapp/templates', () => {
     it('retorna templates com sucesso para membro autenticado', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
       const { listWhatsAppTemplates } = require('@/integrations/meta/whatsappTemplates');
 
-      getAuthenticatedUser.mockResolvedValue(mockUser);
+      getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
       resolveTenantMetaAccess.mockResolvedValue({ ok: true, access: mockResolvedAccess });
       listWhatsAppTemplates.mockResolvedValue({
         ok: true,
@@ -94,8 +94,8 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 401 para usuário não autenticado', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
-      getAuthenticatedUser.mockResolvedValue(null);
+      const { getAuth } = require('@/lib/auth');
+      getAuth.mockResolvedValue({ user: null, hasSession: false });
 
       const req = new NextRequest('http://localhost/api/whatsapp/templates');
       const res = await GET(req);
@@ -107,10 +107,10 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 409 quando conta Meta não encontrada', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
 
-      getAuthenticatedUser.mockResolvedValue(mockUser);
+      getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
       resolveTenantMetaAccess.mockResolvedValue({
         ok: false,
         reason: 'account_not_found',
@@ -125,10 +125,10 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 503 quando Meta não configurado', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
 
-      getAuthenticatedUser.mockResolvedValue(mockUser);
+      getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
       resolveTenantMetaAccess.mockResolvedValue({
         ok: false,
         reason: 'not_connected',
@@ -143,12 +143,12 @@ describe('/api/whatsapp/templates', () => {
 
   describe('POST /api/whatsapp/templates', () => {
     it('cria template com sucesso', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
       const { createWhatsAppTemplate } = require('@/integrations/meta/whatsappTemplates');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
       resolveTenantMetaAccess.mockResolvedValue({ ok: true, access: mockResolvedAccess });
       createWhatsAppTemplate.mockResolvedValue({
@@ -207,12 +207,12 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('cria template com body e linguagem', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
       const { createWhatsAppTemplate } = require('@/integrations/meta/whatsappTemplates');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
       resolveTenantMetaAccess.mockResolvedValue({ ok: true, access: mockResolvedAccess });
       createWhatsAppTemplate.mockResolvedValue({
@@ -245,10 +245,10 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 400 para nome com letra maiúscula', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
 
       const req = new NextRequest('http://localhost/api/whatsapp/templates', {
@@ -267,10 +267,10 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 400 para nome com caractere especial', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
 
       const req = new NextRequest('http://localhost/api/whatsapp/templates', {
@@ -288,12 +288,12 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('aceita nome começando com número (regra Meta: a-z, 0-9, underscore)', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
       const { createWhatsAppTemplate } = require('@/integrations/meta/whatsappTemplates');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
       resolveTenantMetaAccess.mockResolvedValue({ ok: true, access: mockResolvedAccess });
       createWhatsAppTemplate.mockResolvedValue({
@@ -318,11 +318,11 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 409 quando Meta não configurado (not_connected)', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
       const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
 
-      getAuthenticatedUser.mockResolvedValue(mockAdmin);
+      getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'admin' }]);
       resolveTenantMetaAccess.mockResolvedValue({
         ok: false,
@@ -359,10 +359,10 @@ describe('/api/whatsapp/templates', () => {
     });
 
     it('retorna 401 para membro não-admin em POST', async () => {
-      const { getAuthenticatedUser } = require('@/lib/auth');
+      const { getAuth } = require('@/lib/auth');
       const { getAllOrganizationMemberships } = require('@/lib/auth');
 
-      getAuthenticatedUser.mockResolvedValue(mockUser);
+      getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
       getAllOrganizationMemberships.mockResolvedValue([{ role: 'member' }]);
 
       const req = new NextRequest('http://localhost/api/whatsapp/templates', {

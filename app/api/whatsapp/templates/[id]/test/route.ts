@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { sendTestMessage } from '@/integrations/meta/whatsappTemplates';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { rateLimit } from '@/middleware/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -102,18 +102,13 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     response.headers.set('X-RateLimit-Remaining', String(rateResult.remaining));
     return response;
   }
-  const result = await sendTestMessage(
-    resolved.access,
-    template.name,
-    body.to,
-    variables,
-    { language: language || 'en_US' },
-  );
+  const provider = getWhatsAppProvider();
+  const result = await provider.sendTestMessage?.(resolved.access, template.name, body.to, variables, { language: language || 'en_US' } as any) ?? { ok: false, error: 'sendTestMessage_not_supported' } as const;
 
   const response = NextResponse.json(
     {
       ok: result.ok,
-      messageId: result.messageId,
+      messageId: result.ok ? result.messageId : undefined,
       error: result.error,
       errorDetail: result.errorDetail,
       detail: result.ok ? 'Mensagem de teste enviada com sucesso' : result.errorDetail,

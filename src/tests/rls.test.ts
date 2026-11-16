@@ -335,35 +335,35 @@ describe('integration_events RLS (multi-tenant isolation)', () => {
     ]);
 
     // Criar uma integração de teste
-    await adminQ(admin, `INSERT INTO "Integration" (id, "userId", "channel", "provider", "connectionMode", "status")
-      VALUES ($1, $2, 'whatsapp', 'openbsp', 'official', 'connected')
+    await adminQ(admin, `INSERT INTO integrations (id, organization_id, provider, connection_mode, status)
+      VALUES ($1, $2, 'openbsp', 'official', 'connected')
       ON CONFLICT (id) DO NOTHING`, [
       integrationId, orgA
     ]);
   });
 
   afterAll(async () => {
-    await adminQ(admin, 'DELETE FROM "integration_events" WHERE "integrationId" = $1', [integrationId]);
-    await adminQ(admin, 'DELETE FROM "Integration" WHERE id = $1', [integrationId]);
+    await adminQ(admin, 'DELETE FROM integration_events WHERE integration_id = $1', [integrationId]);
+    await adminQ(admin, 'DELETE FROM integrations WHERE id = $1', [integrationId]);
     await adminQ(admin, 'DELETE FROM "Organization" WHERE id IN ($1, $2)', [orgA, orgB]);
   });
 
   it('org A can read its own integration_events', async () => {
     eventId = uuidv4();
     await adminQ(admin,
-      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+      `INSERT INTO integration_events (id, integration_id, workspace_id, event_type, "payload", created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [eventId, integrationId, orgA, 'connection_success', {}]
     );
 
     const rows = await withCtx({ kind: 'org', org: orgA }, async (q) => {
-      const { rows } = await q('SELECT id, "eventType" FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      const { rows } = await q('SELECT id, event_type FROM "integration_events" WHERE workspace_id = $1', [orgA]);
       return rows;
     });
 
     expect(rows.length).toBe(1);
     expect(rows[0].id).toBe(eventId);
-    expect(rows[0].eventType).toBe('connection_success');
+    expect(rows[0].event_type).toBe('connection_success');
 
     await adminQ(admin, 'DELETE FROM "integration_events" WHERE id = $1', [eventId]);
   });
@@ -371,13 +371,13 @@ describe('integration_events RLS (multi-tenant isolation)', () => {
   it('org B cannot read org A integration_events', async () => {
     eventId = uuidv4();
     await adminQ(admin,
-      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+      `INSERT INTO integration_events (id, integration_id, workspace_id, event_type, "payload", created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [eventId, integrationId, orgA, 'connection_success', {}]
     );
 
     const rows = await withCtx({ kind: 'org', org: orgB }, async (q) => {
-      const { rows } = await q('SELECT id FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      const { rows } = await q('SELECT id FROM "integration_events" WHERE workspace_id = $1', [orgA]);
       return rows;
     });
 
@@ -389,7 +389,7 @@ describe('integration_events RLS (multi-tenant isolation)', () => {
     await expect(
       withCtx({ kind: 'org', org: orgA }, async (q) => {
         await q(
-          `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload")
+          `INSERT INTO integration_events (id, integration_id, workspace_id, event_type, "payload")
            VALUES ($1, $2, $3, $4, $5)`,
           [uuidv4(), integrationId, orgB, 'connection_success', {}]
         );
@@ -400,13 +400,13 @@ describe('integration_events RLS (multi-tenant isolation)', () => {
   it('empty tenant context grants no access to integration_events', async () => {
     eventId = uuidv4();
     await adminQ(admin,
-      `INSERT INTO "integration_events" (id, "integrationId", "workspaceId", "eventType", "payload", "createdAt")
+      `INSERT INTO integration_events (id, integration_id, workspace_id, event_type, "payload", created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [eventId, integrationId, orgA, 'connection_success', {}]
     );
 
     const rows = await withCtx({ kind: 'empty' }, async (q) => {
-      const { rows } = await q('SELECT id FROM "integration_events" WHERE "workspaceId" = $1', [orgA]);
+      const { rows } = await q('SELECT id FROM "integration_events" WHERE workspace_id = $1', [orgA]);
       return rows;
     });
 

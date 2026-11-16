@@ -4,18 +4,20 @@
 
 import { maybeAutoReply } from '@/integrations/meta/chatbotAutoReply';
 import type { ChatbotConfig } from '@/integrations/meta/whatsappChatbot';
-import type { SendTextResult } from '@/integrations/meta/whatsappSender';
+import type { OfficialSendResult } from '@/integrations/whatsapp/types';
 
 const CFG: ChatbotConfig = {
   enabled: true,
   rules: [{ matchType: 'keyword', pattern: 'preço', response: 'Planos a partir de R$99' }],
 };
 
-const okSend = async (to: string): Promise<SendTextResult> => ({
+const okSend = async (to: string): Promise<OfficialSendResult> => ({
   ok: true,
   to,
-  status: 'sent',
   messageId: 'wamid.1',
+  via: 'meta_direct',
+  error: undefined,
+  errorDetail: undefined,
 });
 
 describe('maybeAutoReply', () => {
@@ -78,7 +80,7 @@ describe('maybeAutoReply', () => {
   it('falha de envio → send_failed com o resultado do sender', async () => {
     const r = await maybeAutoReply('org1', '5511', 'preço', {}, {
       loadConfig: async () => CFG,
-      send: async (to) => ({ ok: false, to, error: 'meta_not_configured', status: 'failed' }),
+      send: async (to: string): Promise<OfficialSendResult> => ({ ok: false, to, error: 'meta_not_configured', errorDetail: 'meta not configured' }),
     });
     expect(r.replied).toBe(false);
     expect(r.skipReason).toBe('send_failed');

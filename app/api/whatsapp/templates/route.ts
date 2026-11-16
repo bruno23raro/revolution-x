@@ -11,11 +11,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import {
-  listWhatsAppTemplates,
-  createWhatsAppTemplate,
-  type TemplateCreateSpec,
-} from '@/integrations/meta/whatsappTemplates';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
+import type { OfficialTemplateSpec, TemplateCreateSpec } from '@/integrations/whatsapp/types';
 import { saveTemplateSnapshot } from '@/integrations/configStore';
 
 export const dynamic = 'force-dynamic';
@@ -49,7 +46,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: resolved.reason }, { status });
   }
 
-  const result = await listWhatsAppTemplates(resolved.access);
+  const provider = getWhatsAppProvider();
+  const result = await provider.listTemplates(resolved.access, {});
   if (result.ok) {
     const scope = { organizationId: user.organizationId, userId: user.id };
     try {
@@ -62,7 +60,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : 502;
+  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : result.error ? 502 : 500;
   return NextResponse.json(
     { ok: result.ok, templates: result.templates, error: result.error, detail: result.errorDetail },
     { status },
@@ -127,8 +125,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: resolved.reason }, { status });
   }
 
-  const result = await createWhatsAppTemplate(resolved.access, spec);
-  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : 502;
+  const provider = getWhatsAppProvider();
+  const result = await provider.createTemplate(resolved.access, spec);
+  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : result.error ? 502 : 500;
   return NextResponse.json(
     { ok: result.ok, name: result.name, templateId: result.templateId, error: result.error, detail: result.errorDetail },
     { status },

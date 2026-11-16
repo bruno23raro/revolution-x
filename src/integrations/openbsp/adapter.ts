@@ -220,8 +220,8 @@ export interface OpenBspAdapterDeps {
   mint?: typeof mintOnboardingToken;
   fetchAddress?: typeof fetchConnectedAddress;
   send?: (access: ChannelAccess, to: string, content: Record<string, unknown>, opts: { signal?: AbortSignal }) => Promise<OpenBspSendResult>;
-  /** Lista templates aprovados (nome+language) no WABA. */
-  listTemplates?: (access: ChannelAccess, opts: { signal?: AbortSignal }) => Promise<{ ok: boolean; templates: Array<{ name: string; language?: string }>; errorDetail?: string }>;
+  /** Lista templates aprovados (nome+language+status) no WABA. */
+  listTemplates?: (access: ChannelAccess, opts: { signal?: AbortSignal }) => Promise<{ ok: boolean; templates: Array<{ name: string; language?: string; status?: string }>; errorDetail?: string }>;
   /** Desativa webhook no provedor. */
   deactivateWebhook?: (access: ChannelAccess) => Promise<{ ok: boolean; errorDetail?: string }>;
   sleepFn?: (ms: number) => Promise<void>;
@@ -681,20 +681,39 @@ export class OfficialWhatsAppAdapter implements IntegrationAdapter {
     } as ChannelAccess;
 
     // template inexistente → erro ANTES da chamada (T41)
+    // Fail-closed: se listTemplates falhar, NÃO pular validação
     const language = data.language ?? 'pt_BR';
     const known = await this.deps.listTemplates!(access, {});
-    if (known.ok) {
-      const hit = known.templates.find(
-        (t) => t.name === data.template && (t.language === undefined || t.language === language),
-      );
-      if (!hit) {
-        const err = new OpenBspTemplateError(data.template, 'template_not_found');
-        await this.logEvent(row.id, organizationId, 'error', {
-          reason: 'template_not_found',
-          template: data.template,
-        });
-        return { success: false, error: err.message };
-      }
+    if (!known.ok) {
+      // Falha fechada: não conseguimos validar → erro 502
+      const err = new Error(`Falha ao validar template "${data.template}": ${known.errorDetail ?? 'listTemplates retornou ok:false'}`);
+      await this.logEvent(row.id, organizationId, 'error', {
+        reason: 'template_validation_failed',
+        template: data.template,
+        detail: known.errorDetail ?? 'unavailable',
+      });
+      return { success: false, error: err.message };
+    }
+    const hit = known.templates.find(
+      (t) => t.name === data.template && (t.language === undefined || t.language === language),
+    );
+    if (!hit) {
+      const err = new OpenBspTemplateError(data.template, 'template_not_found');
+      await this.logEvent(row.id, organizationId, 'error', {
+        reason: 'template_not_found',
+        template: data.template,
+      });
+      return { success: false, error: err.message };
+    }
+    // Fail-closed: somente template APPROVED pode ser enviado (regra de envio HSM).
+    if (hit.status && hit.status !== 'APPROVED') {
+      const err = new Error(`Template "${data.template}" nao aprovado para envio (status=${hit.status}).`);
+      await this.logEvent(row.id, organizationId, 'error', {
+        reason: 'template_not_approved',
+        template: data.template,
+        status: hit.status,
+      });
+      return { success: false, error: err.message };
     }
 
     try {
@@ -931,7 +950,7 @@ export function createOfficialWhatsAppAdapter(
 async function defaultListTemplates(
   _access: ChannelAccess,
   _opts: { signal?: AbortSignal },
-): Promise<{ ok: boolean; templates: Array<{ name: string; language?: string }>; errorDetail?: string }> {
+): Promise<{ ok: boolean; templates: Array<{ name: string; language?: string; status?: string }>; errorDetail?: string }> {
   // shortcut: sem WABA/token suficiente em sandbox, assumimos "desconhecido" (ok:false)
   // e deixamos o provedor validar. TODO(real): listar templates do WABA via Graph
   // quando o acesso ao token do tenant estiver disponível fora do sandbox.

@@ -3,7 +3,7 @@
 import { POST } from './route';
 import { NextRequest } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { getAuthenticatedUser, getAllOrganizationMemberships } from '@/lib/auth';
+import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { openbspConfig, fetchConnectedAddress } from '@/integrations/whatsapp/openbsp/client';
 
 // Mocks escopo módulo - chamados TOP-LEVEL
@@ -13,7 +13,7 @@ jest.mock('@/integrations/whatsapp/openbsp/client');
 
 // Instâncias mocking
 const mockCreateServiceRoleClient = createServiceRoleClient as jest.MockedFunction<typeof createServiceRoleClient>;
-const mockGetAuthenticatedUser = getAuthenticatedUser as jest.MockedFunction<typeof getAuthenticatedUser>;
+const mockGetAuth = getAuth as jest.MockedFunction<typeof getAuth>;
 const mockGetAllOrganizationMemberships = getAllOrganizationMemberships as jest.MockedFunction<typeof getAllOrganizationMemberships>;
 const mockOpenbspConfig = openbspConfig as jest.MockedFunction<typeof openbspConfig>;
 const mockFetchConnectedAddress = fetchConnectedAddress as jest.MockedFunction<typeof fetchConnectedAddress>;
@@ -76,7 +76,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
     process.env.CRON_SECRET = 'test-secret';
 
     // Defaults
-    mockGetAuthenticatedUser.mockImplementation(() => Promise.resolve(null));
+    mockGetAuth.mockImplementation(() => Promise.resolve({ user: null, hasSession: false }));
     mockGetAllOrganizationMemberships.mockImplementation(() => Promise.resolve([{ organizationId: 'org-123', role: 'admin' }]));
     mockOpenbspConfig.mockReturnValue({
       base: 'https://api.openbsp.com',
@@ -100,14 +100,14 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   }
 
   it('401 quando usuário não autenticado', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(null);
+    mockGetAuth.mockResolvedValueOnce({ user: null, hasSession: false });
     const res = await POST(req());
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Unauthorized' });
   });
 
   it('409 quando canal não conectado', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     makeChain([]);
     const res = await POST(req());
     expect(res.status).toBe(409);
@@ -115,7 +115,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('503 quando config OpenBSP ausente', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     mockOpenbspConfig.mockReturnValueOnce(null);
     const res = await POST(req());
     expect(res.status).toBe(503);
@@ -123,7 +123,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('200 com sucesso - token verificado', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     makeChain([mockChannel]);
     const res = await POST(req());
     expect(res.status).toBe(200);
@@ -133,7 +133,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('409 quando token expirado', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     const expired = { ...mockChannel, expires_at: new Date(Date.now() - 1000).toISOString() };
     makeChain([expired]);
     const res = await POST(req());
@@ -142,7 +142,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('502 quando fetch OpenBSP falha', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     makeChain([mockChannel]);
     mockFetchConnectedAddress.mockResolvedValueOnce({ ok: false, errorDetail: 'API error' });
     const res = await POST(req());
@@ -151,7 +151,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('409 quando access_token ausente no provedor', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     makeChain([mockChannel]);
     mockFetchConnectedAddress.mockResolvedValueOnce({
       ok: true,
@@ -163,7 +163,7 @@ describe('POST /api/integrations/openbsp/refresh-token', () => {
   });
 
   it('500 quando erro no banco de dados', async () => {
-    mockGetAuthenticatedUser.mockResolvedValueOnce(mockUser);
+    mockGetAuth.mockResolvedValueOnce({ user: mockUser, hasSession: true });
     makeChain([mockChannel], { message: 'DB connection failed' });
     const res = await POST(req());
     expect(res.status).toBe(500);

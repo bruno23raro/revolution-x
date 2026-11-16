@@ -1,0 +1,12 @@
+diff --git a/app/integracoes/page.tsx b/app/integracoes/page.tsx
+--- a/app/integracoes/page.tsx
++++ b/app/integracoes/page.tsx
+@@ -248,7 +248,7 @@
+               </div>
+               <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 auto-rows-fr">
+                 <WhatsAppOfficialCard
+-                  onConnected={() => handleConnected('whatsapp')}
++                  onConnected={() => toast('WhatsApp oficial conectado', 'success')}
+                   accounts={cardAccounts('whatsapp')}
+                   onRemoveAccount={(id) => {
+                     const a = forChannel('whatsapp').find((x) => x.id === id);

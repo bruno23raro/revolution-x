@@ -7,5 +7,9 @@ import { metaDirectProvider } from './meta_direct/reserved';
 
 export function getWhatsAppProvider(): IWhatsAppProvider {
   const name = (process.env.WHATSAPP_PROVIDER || 'openbsp').trim() as ProviderName;
-  return name === 'meta_direct' ? metaDirectProvider : openbspProvider;
+  if (name === 'meta_direct') {
+    console.warn('[WhatsApp Provider] WHATSAPP_PROVIDER=meta_direct solicitado, mas provider meta_direct está reservado (App Review pendente). Usando openbsp como fallback.');
+    return openbspProvider;
+  }
+  return openbspProvider;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '../lib/logger';
-import { getRedisConnection, isRedisAvailable } from '../lib/redis';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -17,8 +18,25 @@ const defaultConfig: Record<string, RateLimitConfig> = {
   'default': { windowMs: 60 * 1000, max: 100, message: 'Rate limit excedido' },
 };
 
+// Upstash Redis client
+const upstashRedis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
+
+// Ratelimit instances for each config
+const ratelimitInstances: Record<string, Ratelimit> = {};
+for (const [key, config] of Object.entries(defaultConfig)) {
+  const windowSec = Math.ceil(config.windowMs / 1000);
+  ratelimitInstances[key] = new Ratelimit({
+    redis: upstashRedis,
+    limiter: Ratelimit.slidingWindow(config.max, `${windowSec} s`),
+    prefix: '@upstash/ratelimit',
+  });
+}
+
 /**
- * Rate limiting middleware usando Redis
+ * Rate limiting middleware usando Upstash Redis
  */
 export async function rateLimit(
   request: NextRequest,
@@ -32,35 +50,25 @@ export async function rateLimit(
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || request.headers.get('x-real-ip')
     || 'unknown';
-  const rateKey = `rate-limit:${key}:${ip}:${url.pathname}`;
+  const identifier = `rate:${key}:${ip}:${url.pathname}`;
 
   try {
-    const redis = await getRedisConnection();
+    // Use specific instance or default
+    const ratelimit = ratelimitInstances[key] || ratelimitInstances.default;
+    const { success, remaining, reset } = await ratelimit.limit(identifier);
 
-    // Increment counter
-    const current = await redis.incr(rateKey);
+    const resetIn = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
 
-    // Get TTL for window
-    const ttl = await redis.ttl(rateKey);
-
-    // Set expiry if this is a new key
-    if (current === 1) {
-      await redis.expire(rateKey, Math.floor(finalConfig.windowMs / 1000));
-    }
-
-    const remaining = Math.max(0, finalConfig.max - current + 1);
-    const resetIn = ttl;
-
-    if (current > finalConfig.max) {
-      logger.warn({ ip, key, path: url.pathname, current }, 'Rate limit exceeded');
+    if (!success) {
+      logger.warn({ ip, key, path: url.pathname }, 'Rate limit exceeded');
       return { limited: true, remaining: 0, resetIn };
     }
 
     return { limited: false, remaining, resetIn };
   } catch (err) {
-    // Redis unavailable - fail open (don't block requests)
-    logger.error({ err, ip }, 'Redis rate limit check failed');
-    return { limited: false, remaining: finalConfig.max, resetIn: 0 };
+    // Fail-closed: if Redis is unavailable, block the request
+    logger.error({ err, ip }, 'Upstash Redis rate limit check failed - failing closed');
+    return { limited: true, remaining: 0, resetIn: Math.ceil(finalConfig.windowMs / 1000) };
   }
 }
 

@@ -5,7 +5,7 @@
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
   getAllOrganizationMemberships: jest.fn(),
 }));
 
@@ -22,7 +22,7 @@ jest.mock('@/lib/supabase/server', () => ({
 }));
 
 const { GET: accountsGET, POST: accountsPOST, DELETE: accountsDELETE } = require('./route');
-const { getAuthenticatedUser, getAllOrganizationMemberships } = require('@/lib/auth');
+const { getAuth, getAllOrganizationMemberships } = require('@/lib/auth');
 const { listTenantWhatsAppAccounts } = require('@/integrations/meta/accounts');
 const { deleteAllChannels } = require('@/integrations/whatsapp/channelRepo');
 const { createServiceRoleClient } = require('@/lib/supabase/server');
@@ -36,20 +36,24 @@ function req(path: string, cookie?: string) {
 }
 
 const USER = { id: 'u1', organizationId: 'org1', role: 'member' };
-const ADMIN = { id: 'u2', organizationId: 'org1', role: 'admin' };
+const ADMIN = { id: 'user-123', organizationId: 'org1', role: 'admin' };
 const OWNER = { id: 'u3', organizationId: 'org1', role: 'owner' };
 
 describe('GET /api/whatsapp/accounts', () => {
   afterEach(() => jest.resetAllMocks());
 
-  it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+  it('200 sem sessão retorna available=false (lazy auth)', async () => {
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await accountsGET(req('/api/whatsapp/accounts'));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.available).toBe(false);
+    expect(data.accounts).toEqual([]);
+    expect(data.reason).toBe('no_session');
   });
 
   it('devolve metadados SEM segredos (nada de tokens/chaves)', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (listTenantWhatsAppAccounts as jest.Mock).mockResolvedValue({
       ok: true,
       accounts: [
@@ -77,7 +81,7 @@ describe('GET /api/whatsapp/accounts', () => {
   });
 
   it('degradação honesta: sem clientes Supabase → available=false', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (listTenantWhatsAppAccounts as jest.Mock).mockResolvedValue({
       ok: false,
       reason: 'client_unavailable',
@@ -95,13 +99,13 @@ describe('DELETE /api/whatsapp/accounts', () => {
   afterEach(() => jest.resetAllMocks());
 
   it('401 sem sessão', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await accountsDELETE(req('/api/whatsapp/accounts'));
     expect(res.status).toBe(401);
   });
 
   it('401 para membro não-admin', async () => {
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+    (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'member' }]);
 
     const res = await accountsDELETE(req('/api/whatsapp/accounts'));
@@ -110,7 +114,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
 
   it('200 para admin mesmo sem memberships (role=admin no user)', async () => {
     // Quando o user tem role='admin', é considerado admin independente das memberships
-    (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+    (getAuth as jest.Mock).mockResolvedValue({ user: ADMIN, hasSession: true });
     (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([]);
 
     const mockEq = jest.fn().mockReturnThis();
@@ -142,25 +146,32 @@ describe('DELETE /api/whatsapp/accounts', () => {
       // Simula admin do tenant org1 tentando deletar integrações
       // A tabela integrations é user-scoped, NÃO tenant-scoped
       // O DELETE deve apenas afetar integrações do usuário autenticado
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
-      (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
+      (getAuth as jest.Mock).mockResolvedValue({ user: ADMIN, hasSession: true });
+      (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ organizationId: 'org1', role: 'admin' }]);
 
       const capturedCalls: any[] = [];
 
-      const mockEq = jest.fn().mockImplementation((col, val) => {
-        capturedCalls.push({ method: 'eq', col, val });
-        return {
-          in: jest.fn().mockReturnThis(),
-        };
-      });
-      const mockDelete = jest.fn().mockReturnValue({ eq: mockEq });
-      const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq });
+      // Create a proper chain that returns the same builder
+      const chain = { eq: jest.fn(), in: jest.fn() };
+      chain.eq.mockReturnValue(chain);
+      chain.in.mockReturnValue(chain);
+
+      const mockDelete = jest.fn().mockReturnValue(chain);
+      const mockUpdate = jest.fn().mockReturnValue(chain);
       const mockFrom = jest.fn().mockImplementation((table) => {
         if (table === 'whatsapp_channels') return { delete: mockDelete };
         if (table === 'meta_integrations') return { update: mockUpdate };
         if (table === 'integrations') return { delete: mockDelete };
         return { delete: mockDelete };
       });
+
+      // Capture the eq calls from the chain
+      const originalEq = chain.eq;
+      chain.eq = jest.fn().mockImplementation((col, val) => {
+        capturedCalls.push({ method: 'eq', col, val });
+        return chain;
+      });
+      chain.in = jest.fn().mockImplementation(() => chain);
 
       (createServiceRoleClient as jest.Mock).mockReturnValue({
         from: mockFrom,
@@ -169,50 +180,48 @@ describe('DELETE /api/whatsapp/accounts', () => {
       const res = await accountsDELETE(req('/api/whatsapp/accounts'));
       expect(res.status).toBe(200);
 
-      // Verifica que o DELETE foi chamado com user_id do admin, não com organizationId
-      // Isso garante que apenas as integrações do usuário autenticado são removidas
       const eqCalls = capturedCalls.filter(c => c.method === 'eq');
 
-      // O primeiro delete deve ser para whatsapp_channels com organizationId
+      // Verifica que o DELETE foi chamado com user_id do admin, não com organizationId
+      // Isso garante que apenas as integrações do usuário autenticado são removidas
+      // O primeiro delete deve ser para whatsapp_channels com organization_id
       // O segundo delete deve ser para integrations com user_id (NÃO organizationId)
-      expect(eqCalls.some(c => c.col === 'organizationId' && c.val === 'org1')).toBe(true);
+      expect(eqCalls.some(c => c.col === 'organization_id' && c.val === ADMIN.organizationId)).toBe(true);
 
-      // CRUCIAL: O DELETE das integrações usa user_id, não organizationId
+      // CRUCIAL: O DELETE das integrações usa organization_id, não organizationId
       // Isso previne que admin de org1 delete integrações de usuário de org2
       const userIdCalls = eqCalls.filter(c => c.col === 'user_id');
       expect(userIdCalls.length).toBeGreaterThan(0);
-      expect(userIdCalls.some(c => c.val === 'u2')).toBe(true);
+      expect(userIdCalls.some(c => c.val === ADMIN.id)).toBe(true);
     });
 
     it('PROTECTED: Soft delete de integrations usa user_id autenticado', async () => {
       // Verifica que a integração é deletada apenas para o usuário atual
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue({ id: 'user-123', organizationId: 'org-x', role: 'admin' });
-      (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
+      (getAuth as jest.Mock).mockResolvedValue({ user: { id: 'user-123', organizationId: 'org-x', role: 'admin' }, hasSession: true });
+      (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ organizationId: 'org-x', role: 'admin' }]);
 
-      const capturedQueries: any = {
-        channels: [],
-        meta: [],
-        integrations: [],
-      };
+      const capturedCalls: any[] = [];
 
-      const mockEq = jest.fn().mockImplementation((col, val) => {
-        if (this?.mockThisTable) {
-          capturedQueries[this.mockThisTable].push({ col, val });
-        }
-        return {
-          in: jest.fn().mockReturnThis(),
-        };
-      });
-      const mockDelete = jest.fn().mockReturnValue({ eq: mockEq });
-      const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq });
+      // Create a proper chain that returns the same builder
+      const chain = { eq: jest.fn(), in: jest.fn() };
+      chain.eq.mockReturnValue(chain);
+      chain.in.mockReturnValue(chain);
+
+      const mockDelete = jest.fn().mockReturnValue(chain);
+      const mockUpdate = jest.fn().mockReturnValue(chain);
       const mockFrom = jest.fn().mockImplementation((table) => {
-        if (table === 'integrations') {
-          mockEq.mockThisTable = 'integrations';
-        }
         if (table === 'whatsapp_channels') return { delete: mockDelete };
         if (table === 'meta_integrations') return { update: mockUpdate };
+        if (table === 'integrations') return { delete: mockDelete };
         return { delete: mockDelete };
       });
+
+      // Capture the eq calls from the chain
+      chain.eq = jest.fn().mockImplementation((col, val) => {
+        capturedCalls.push({ col, val });
+        return chain;
+      });
+      chain.in = jest.fn().mockImplementation(() => chain);
 
       (createServiceRoleClient as jest.Mock).mockReturnValue({
         from: mockFrom,
@@ -221,9 +230,9 @@ describe('DELETE /api/whatsapp/accounts', () => {
       await accountsDELETE(req('/api/whatsapp/accounts'));
 
       // Verifica que integrations foi deletado com user_id do usuário autenticado
-      expect(capturedQueries.integrations).toHaveLength(1);
-      expect(capturedQueries.integrations[0].col).toBe('user_id');
-      expect(capturedQueries.integrations[0].val).toBe('user-123');
+      const userIdCalls = capturedCalls.filter(c => c.col === 'user_id');
+      expect(userIdCalls.length).toBeGreaterThan(0);
+      expect(userIdCalls.some(c => c.val === 'user-123')).toBe(true);
     });
   });
 
@@ -233,7 +242,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
 
     it('plano: 1. Listar contas -> 2. Remover -> 3. Verificar vazio', async () => {
       // Passo 1: Listar contas existentes
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+      (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
       (listTenantWhatsAppAccounts as jest.Mock).mockResolvedValue({
         ok: true,
         accounts: [
@@ -264,7 +273,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
       expect(listData.accounts).toHaveLength(2);
 
       // Passo 2: Remover todas as contas
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(ADMIN);
+      (getAuth as jest.Mock).mockResolvedValue({ user: ADMIN, hasSession: true });
       (getAllOrganizationMemberships as jest.Mock).mockResolvedValue([{ role: 'admin' }]);
 
       const mockEq = jest.fn().mockReturnThis();
@@ -303,10 +312,14 @@ describe('DELETE /api/whatsapp/accounts', () => {
   describe('POST /api/whatsapp/accounts', () => {
     afterEach(() => jest.resetAllMocks());
 
-    it('401 sem sessão', async () => {
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(null);
+    it('200 sem sessão retorna authUrl com needsAuth=true (lazy auth)', async () => {
+      (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
       const res = await accountsPOST(req('/api/whatsapp/accounts'));
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.authUrl).toBeDefined();
+      expect(data.needsAuth).toBe(true);
     });
 
     it('200 retorna authUrl para OAuth', async () => {
@@ -314,7 +327,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
       process.env.META_APP_ID = 'test-app-id';
       process.env.META_APP_SECRET = 'test-app-secret';
 
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+      (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
       const res = await accountsPOST(req('/api/whatsapp/accounts'));
       expect(res.status).toBe(200);
 
@@ -330,7 +343,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
       process.env.META_APP_ID = 'test-app-id';
       process.env.META_APP_SECRET = 'test-app-secret';
 
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+      (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
       const res = await accountsPOST(req('/api/whatsapp/accounts'));
 
       const cookies = res.headers.get('set-cookie') || '';
@@ -348,7 +361,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
       process.env.META_APP_ID = 'test-app-id';
       process.env.META_APP_SECRET = 'test-app-secret';
 
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+      (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
       const res = await accountsPOST(req('/api/whatsapp/accounts'));
       const data = await res.json();
 
@@ -363,7 +376,7 @@ describe('DELETE /api/whatsapp/accounts', () => {
       process.env.META_APP_ID = 'test-app-id';
       process.env.META_APP_SECRET = 'test-app-secret';
 
-      (getAuthenticatedUser as jest.Mock).mockResolvedValue(USER);
+      (getAuth as jest.Mock).mockResolvedValue({ user: USER, hasSession: true });
       const res = await accountsPOST(req('/api/whatsapp/accounts'));
       const data = await res.json();
 

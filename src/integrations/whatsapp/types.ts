@@ -28,7 +28,8 @@ export type OfficialSendError =
   | 'network_error'
   | 'provider_error'
   | 'invalid_message'
-  | 'tier_limit_reached';
+  | 'tier_limit_reached'
+  | 'meta_not_configured';
 
 export interface OfficialSendResult {
   ok: boolean;
@@ -62,6 +63,15 @@ export interface OfficialTemplateInfo {
   /** PENDING | APPROVED | REJECTED | PAUSED | DISABLED */
   status?: string;
   rejectionReason?: string;
+  rejection_reason?: string;
+  components?: Array<{
+    type: string;
+    text?: string;
+    format?: string;
+    buttons?: Array<{ type: string; text: string; sub_type?: string; url?: string }>;
+    parameters?: Array<{ type: string; text: string }>;
+  }>;
+  quality_score?: number;
 }
 
 export interface ProviderCallOpts {
@@ -69,12 +79,17 @@ export interface ProviderCallOpts {
   timeoutMs?: number;
   /** AbortController externo — aborta o fetch em voo (timeout global da conexão). */
   signal?: AbortSignal;
+  language?: string;
 }
 
 export interface TemplateOpResult {
   ok: boolean;
   error?: OfficialSendError;
   errorDetail?: string;
+  /** Nome do template criado (quando ok=true). */
+  name?: string;
+  /** ID do template criado no provedor (quando ok=true). */
+  templateId?: string;
 }
 
 export interface ListTemplatesResult extends TemplateOpResult {
@@ -89,7 +104,13 @@ export type DispatchPayload =
 export interface IWhatsAppProvider {
   readonly name: ProviderName;
   send(access: ChannelAccess, to: string, payload: DispatchPayload, opts?: ProviderCallOpts): Promise<OfficialSendResult>;
+  /** Envia mensagem interativa com botões de resposta rápida (quick replies). */
+  sendButton?(access: ChannelAccess, to: string, body: string, buttons: string[], opts?: ProviderCallOpts): Promise<OfficialSendResult>;
+  /** Envio em massa com delay entre envios. */
+  runMassSend?(access: ChannelAccess, recipients: Array<{ to: string; text?: string }>, opts?: ProviderCallOpts & { delayMs?: number; template?: { name: string; variables: string[]; language?: string } }): Promise<{ total: number; sent: number; failed: number; results: OfficialSendResult[] }>;
   createTemplate(access: ChannelAccess, spec: OfficialTemplateSpec, opts?: ProviderCallOpts): Promise<TemplateOpResult>;
   listTemplates(access: ChannelAccess, opts?: ProviderCallOpts): Promise<ListTemplatesResult>;
   getTemplateStatus(access: ChannelAccess, name: string, language: string, opts?: ProviderCallOpts): Promise<TemplateOpResult & { template?: OfficialTemplateInfo }>;
+  /** Envia mensagem de teste de template. */
+  sendTestMessage?(access: ChannelAccess, templateName: string, to: string, variables?: string[], opts?: ProviderCallOpts): Promise<{ ok: boolean; messageId?: string; error?: OfficialSendError; errorDetail?: string }>;
 }

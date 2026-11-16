@@ -45,15 +45,13 @@ describe('GET /api/ai/models', () => {
   afterEach(() => setTestProviders(undefined));
 
   it('401 sem sessão', async () => {
-    (getAuth as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await modelsGET(req('/api/ai/models'));
     expect(res.status).toBe(401);
   });
 
   it('devolve provedores sem segredos (configured booleano, sem apiKey/baseUrl)', async () => {
-    (getAuth as jest.Mock).mockResolvedValue({
-      id: 'u', organizationId: 'o', role: 'member',
-    });
+    (getAuth as jest.Mock).mockResolvedValue({ user: { id: 'u', organizationId: 'o', role: 'member' }, hasSession: true });
     setTestProviders([fakeProvider()]);
     const res = await modelsGET(req('/api/ai/models'));
     expect(res.status).toBe(200);
@@ -74,7 +72,7 @@ describe('POST /api/ai/generate', () => {
   afterEach(() => setTestProviders(undefined));
 
   it('401 sem sessão', async () => {
-    (getAuth as jest.Mock).mockResolvedValue(null);
+    (getAuth as jest.Mock).mockResolvedValue({ user: null, hasSession: false });
     const res = await generatePOST(req('/api/ai/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -84,9 +82,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('prompt vazio → 400', async () => {
-    (getAuth as jest.Mock).mockResolvedValue({
-      id: 'u', organizationId: 'o', role: 'member',
-    });
+    (getAuth as jest.Mock).mockResolvedValue({ user: { id: 'u', organizationId: 'o', role: 'member' }, hasSession: true });
     setTestProviders([fakeProvider()]);
     const res = await generatePOST(req('/api/ai/generate', {
       method: 'POST',
@@ -97,9 +93,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('provedor ok devolve texto real do provedor fake', async () => {
-    (getAuth as jest.Mock).mockResolvedValue({
-      id: 'u', organizationId: 'o', role: 'member',
-    });
+    (getAuth as jest.Mock).mockResolvedValue({ user: { id: 'u', organizationId: 'o', role: 'member' }, hasSession: true });
     setTestProviders([fakeProvider()]);
     const res = await generatePOST(req('/api/ai/generate', {
       method: 'POST',
@@ -114,9 +108,7 @@ describe('POST /api/ai/generate', () => {
   });
 
   it('sem provedor configurado → BLOQUEADO honesto (nunca inventa)', async () => {
-    (getAuth as jest.Mock).mockResolvedValue({
-      id: 'u', organizationId: 'o', role: 'member',
-    });
+    (getAuth as jest.Mock).mockResolvedValue({ user: { id: 'u', organizationId: 'o', role: 'member' }, hasSession: true });
     setTestProviders([{ ...fakeProvider(), configured: false, generate: async () => { throw new Error('sem chave'); } }]);
     const res = await generatePOST(req('/api/ai/generate', {
       method: 'POST',

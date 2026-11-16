@@ -4,7 +4,7 @@ import { GET, DELETE } from './route';
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 
 jest.mock('@/lib/prisma', () => ({
@@ -48,8 +48,8 @@ describe('GET /api/whatsapp/templates/[id]', () => {
   });
 
   it('401 sem sessão', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
-    getAuthenticatedUser.mockResolvedValue(null);
+    const { getAuth } = require('@/lib/auth');
+    getAuth.mockResolvedValue({ user: null, hasSession: false });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123');
     const res = await GET(req, { params: { id: 't-123' } });
@@ -60,10 +60,10 @@ describe('GET /api/whatsapp/templates/[id]', () => {
   });
 
   it('404 para template não encontrado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(null);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/nonexistent');
@@ -75,7 +75,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
   });
 
   it('retorna template com sucesso', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
     const mockTemplate = {
@@ -94,7 +94,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
       lastCheckedAt: new Date('2024-01-02'),
     };
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123');
@@ -109,7 +109,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
   });
 
   it('atualiza status da Meta para templates pendentes', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { getWhatsAppTemplate } = require('@/integrations/meta/whatsappTemplates');
@@ -125,7 +125,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
       updatedAt: new Date(),
     };
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockLocalTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: true,
@@ -149,7 +149,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
   });
 
   it('status REJECTED mostra rejectionReason', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
     const rejectedTemplate = {
@@ -165,7 +165,7 @@ describe('GET /api/whatsapp/templates/[id]', () => {
       updatedAt: new Date(),
     };
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(rejectedTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-rejected');
@@ -187,8 +187,8 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('401 sem sessão', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
-    getAuthenticatedUser.mockResolvedValue(null);
+    const { getAuth } = require('@/lib/auth');
+    getAuth.mockResolvedValue({ user: null, hasSession: false });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123');
     const res = await DELETE(req, { params: { id: 't-123' } });
@@ -197,10 +197,10 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('404 para template não encontrado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockAdmin);
+    getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(null);
     prisma.whatsappTemplate.delete.mockResolvedValue({});
 
@@ -211,10 +211,10 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('exclui template com sucesso (admin)', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockAdmin);
+    getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue({
       id: 't-123',
       name: 'test_template',
@@ -232,8 +232,8 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('401 para membro não-admin', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    const { getAuth } = require('@/lib/auth');
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123');
     const res = await DELETE(req, { params: { id: 't-123' } });
@@ -242,10 +242,10 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('404 para template de outra organização (isolamento multi-tenant)', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockAdmin);
+    getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(null);
     prisma.whatsappTemplate.delete.mockResolvedValue({});
 
@@ -264,11 +264,11 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('rate limiting excedido retorna 429', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { rateLimit } = require('@/middleware/rate-limit');
 
     rateLimit.mockResolvedValue({ limited: true, remaining: 0, resetIn: 60000 });
-    getAuthenticatedUser.mockResolvedValue(mockAdmin);
+    getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123');
     const res = await DELETE(req, { params: { id: 't-123' } });
@@ -280,10 +280,10 @@ describe('DELETE /api/whatsapp/templates/[id]', () => {
   });
 
   it('retorna header X-RateLimit-Remaining na resposta', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockAdmin);
+    getAuth.mockResolvedValue({ user: mockAdmin, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue({
       id: 't-123',
       name: 'test',

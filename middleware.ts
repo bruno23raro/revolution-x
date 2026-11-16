@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServiceRoleClient } from './src/lib/supabase/server';
 import { applySecurityHeaders, withCors } from './src/middleware/helmet';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   '/api/auth': { windowMs: 60_000, max: 30 },
@@ -12,33 +14,42 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   'default': { windowMs: 60_000, max: 100 },
 };
 
-const rateStore = new Map<string, { count: number; resetAt: number }>();
+// Upstash Redis client - usa variáveis de ambiente UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN
+const upstashRedis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
+
+// Ratelimit instances para cada configuração
+const ratelimitInstances: Record<string, Ratelimit> = {};
+for (const [key, config] of Object.entries(RATE_LIMITS)) {
+  const windowSec = Math.ceil(config.windowMs / 1000);
+  ratelimitInstances[key] = new Ratelimit({
+    redis: upstashRedis,
+    limiter: Ratelimit.slidingWindow(config.max, `${windowSec} s`),
+    prefix: '@upstash/ratelimit',
+  });
+}
 
 async function checkRateLimit(
   key: string,
   config: { windowMs: number; max: number }
 ): Promise<{ limited: boolean; remaining: number; resetIn: number } | undefined> {
-  const now = Date.now();
-  const resetAt = now + config.windowMs;
-  const entry = rateStore.get(key);
-if (!entry || entry.resetAt <= now) {
-  rateStore.set(key, { count: 1, resetAt });
-  return { limited: false, remaining: Math.max(0, config.max - 1), resetIn: Math.floor(config.windowMs / 1000) };
-}
-entry.count += 1;
-if (entry.count > config.max) {
-  return { limited: true, remaining: 0, resetIn: Math.max(0, Math.ceil((entry.resetAt - now) / 1000)) };
-}
-return { limited: false, remaining: Math.max(0, config.max - entry.count), resetIn: Math.max(0, Math.ceil((entry.resetAt - now) / 1000)) };
-}
+  const ratelimit = ratelimitInstances[key] || ratelimitInstances.default;
 
-function getRateLimitKey(request: NextRequest, key: string): string {
-  const ip = (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  )!.replace(/\D/g, '');
-  return `rate:${key}:${ip}:${new URL(request.url).pathname}`;
+  try {
+    const { success, remaining, reset } = await ratelimit.limit(key);
+    const resetIn = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
+
+    if (!success) {
+      return { limited: true, remaining: 0, resetIn };
+    }
+    return { limited: false, remaining, resetIn };
+  } catch (err) {
+    // Fail-closed: se Redis indisponível, negar requisição (não fail-open)
+    console.error('[RateLimit] Upstash Redis error, failing closed:', err);
+    return { limited: true, remaining: 0, resetIn: Math.ceil(config.windowMs / 1000) };
+  }
 }
 
 export async function middleware(request: NextRequest) {
@@ -62,8 +73,7 @@ export async function middleware(request: NextRequest) {
       if (path !== 'default' && pathname.startsWith(path)) { config = limit; break; }
     }
     if (!config) config = RATE_LIMITS.default;
-    const rateKey = getRateLimitKey(request, pathname);
-    const result = await checkRateLimit(rateKey, config);
+    const result = await checkRateLimit(pathname, config);
     if (result?.limited) {
       const r = NextResponse.json({ error: 'Rate limit exceeded', retryAfter: result.resetIn }, { status: 429 });
       r.headers.set('X-RateLimit-Remaining', '0');

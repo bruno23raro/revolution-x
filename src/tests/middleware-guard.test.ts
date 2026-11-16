@@ -17,6 +17,31 @@
 
 import { NextRequest } from 'next/server';
 
+// Mock dos módulos Upstash (necessários porque o middleware real tenta conectar Redis)
+jest.mock('@upstash/ratelimit', () => {
+  class MockRatelimit {
+    constructor(_config: any) {}
+    async limit(_key: string) {
+      return { success: true, limit: 100, remaining: 100, reset: Date.now() + 60000 };
+    }
+    static slidingWindow = jest.fn(() => 'mock-limiter');
+    static fixedWindow = jest.fn(() => 'mock-limiter');
+  }
+  return { Ratelimit: MockRatelimit };
+});
+
+jest.mock('@upstash/redis', () => {
+  class MockRedis {
+    constructor() {}
+    get = jest.fn().mockResolvedValue(null);
+    set = jest.fn().mockResolvedValue('OK');
+    del = jest.fn().mockResolvedValue(1);
+    exists = jest.fn().mockResolvedValue(0);
+    static fromEnv = jest.fn(() => new MockRedis());
+  }
+  return { Redis: MockRedis };
+});
+
 // Mockamos os dois módulos de auth/DB para que o caminho de "env ausente" rode
 // SEM tocar Supabase/Prisma, e para inspecionar o caminho saudável de forma isolada.
 jest.mock('@supabase/ssr', () => ({ createServerClient: jest.fn() }));

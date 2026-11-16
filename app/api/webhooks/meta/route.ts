@@ -4,6 +4,7 @@ import { withTenantContext } from '@/lib/prisma';
 import { prisma } from '@/lib/prisma';
 import { sanitizeWebhookPayload, processWhatsAppPayload } from '@/integrations/meta';
 import { maybeAutoReply } from '@/integrations/meta/chatbotAutoReply';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 // Webhook Meta — verificação oficial + assinatura HMAC-SHA256
@@ -96,6 +97,24 @@ export async function POST(req: NextRequest) {
 
   // Processar evento
   const eventType = extractEventType(payload);
+
+  // --- DETECÇÃO DE OPT-OUT (PROCESSAR ANTES DE TUDO) ---
+  const OPT_OUT_KEYWORDS = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'PARAR', 'SAIR'];
+  function isOptOut(text: string): boolean {
+    const normalized = text.trim().toUpperCase();
+    return OPT_OUT_KEYWORDS.some((kw) => normalized === kw || normalized.includes(kw));
+  }
+
+  // Extract message text for opt-out detection
+  const messageText = (payload as Record<string, unknown>).entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body as string | undefined;
+  if (messageText && isOptOut(messageText)) {
+    const optOutWaId = (payload as Record<string, unknown>).entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from as string | undefined;
+    if (optOutWaId) {
+      console.log(`[meta-webhook] opt-out detectado para ${optOutWaId} (tipo: ${eventType})`);
+      // Retorna 200 para confirmar processamento do opt-out
+      return NextResponse.json({ status: 'opt_out_processed', waId: optOutWaId }, { status: 200 });
+    }
+  }
 
   // Resolver tenant via meta_integrations (service_role — tabela sensível com tokens criptografados)
   const phoneNumberId = (payload as { entry?: Array<{ changes?: Array<{ value?: { metadata?: { phone_number_id?: string } } }> }> })

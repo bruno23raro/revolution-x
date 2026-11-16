@@ -14,11 +14,8 @@
 import type { PrismaClient } from '@prisma/client';
 import { getChatbotConfigForOrg } from '@/integrations/configStore';
 import { resolveTenantMetaAccess, type ResolveDeps } from './resolveAccess';
-import {
-  sendWhatsAppButton,
-  sendWhatsAppText,
-  type SendTextResult,
-} from './whatsappSender';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
+import type { OfficialSendResult } from '@/integrations/whatsapp/types';
 import {
   evaluateChatbot,
   type AiFn,
@@ -32,8 +29,8 @@ export interface AutoReplyDeps {
   client?: PrismaClient;
   /** Injetável (testes): carrega a config do tenant. */
   loadConfig?: (organizationId: string) => Promise<ChatbotConfig | null>;
-  /** Injetável (testes): sender final. Padrão: Cloud API oficial. */
-  send?: (to: string, body: string, quickReplies?: string[]) => Promise<SendTextResult>;
+  /** Injetável (testes): sender final. Padrão: factory oficial. */
+  send?: (to: string, body: string, quickReplies?: string[]) => Promise<OfficialSendResult>;
   /** Deps do `resolveTenantMetaAccess` (ex.: serviceRole fake em teste). */
   resolveAccessDeps?: ResolveDeps;
   ai?: AiFn;
@@ -51,7 +48,7 @@ export interface AutoReplyOutcome {
   replied: boolean;
   source?: DecisionSource;
   decision?: ChatbotDecision;
-  send?: SendTextResult;
+  send?: OfficialSendResult;
   skipReason?: AutoReplySkip;
 }
 
@@ -112,14 +109,14 @@ export async function maybeAutoReply(
 
 /**
  * Sender padrão: resolve a credencial Meta do tenant (`meta_integrations`,
- * descriptografada) e usa a Cloud API oficial — botões quando há quick
+ * descriptografada) e usa a Cloud API oficial via factory — botões quando há quick
  * replies, texto simples senão. Falha de credencial vira `meta_not_configured`
  * com o motivo no detalhe (nunca segredo).
  */
 function defaultSender(
   organizationId: string,
   resolveAccessDeps: ResolveDeps,
-): (to: string, body: string, quickReplies?: string[]) => Promise<SendTextResult> {
+): (to: string, body: string, quickReplies?: string[]) => Promise<OfficialSendResult> {
   return async (to, body, quickReplies) => {
     const resolved = await resolveTenantMetaAccess(organizationId, resolveAccessDeps);
     if (!resolved.ok) {
@@ -127,13 +124,14 @@ function defaultSender(
         ok: false,
         to,
         error: 'meta_not_configured',
-        status: 'failed',
         errorDetail: `meta access: ${resolved.reason}`,
       };
     }
+    const provider = getWhatsAppProvider();
     if (quickReplies && quickReplies.length > 0) {
-      return sendWhatsAppButton(resolved.access, to, body, quickReplies, {});
+      return provider.sendButton?.(resolved.access, to, body, quickReplies, {}) ??
+        provider.send(resolved.access, to, { kind: 'text', text: body }, {});
     }
-    return sendWhatsAppText(resolved.access, to, body, {});
+    return provider.send(resolved.access, to, { kind: 'text', text: body }, {});
   };
 }

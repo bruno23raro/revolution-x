@@ -17,6 +17,7 @@ import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
   getAuth: jest.fn(),
+  getAuthenticatedUser: jest.fn(),
 }));
 
 jest.mock('@/services/crmService', () => ({
@@ -41,7 +42,7 @@ jest.mock('@/repositories/productRepoReal', () => ({
   productRepoReal: { create: jest.fn().mockResolvedValue({ id: 'pr-1' }), findByOrganization: jest.fn() },
 }));
 
-const { getAuth } = require('@/lib/auth');
+const { getAuth, getAuthenticatedUser } = require('@/lib/auth');
 const {
   contactRepoReal,
   leadRepoReal,
@@ -70,7 +71,8 @@ function post(url, body) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  getAuth.mockResolvedValue(USER);
+  getAuth.mockResolvedValue({ user: USER, hasSession: true });
+  getAuthenticatedUser.mockResolvedValue(USER);
 });
 
 describe('isolamento multi-tenant em rotas de escrita (POST)', () => {
@@ -113,7 +115,7 @@ describe('isolamento multi-tenant em rotas de escrita (POST)', () => {
   });
 
   it('sem usuário autenticado → 401 e nenhuma escrita', async () => {
-    getAuth.mockResolvedValue(null);
+    getAuth.mockResolvedValue({ user: null, hasSession: false });
     const res = await contactPOST(post('/api/crm/contacts', { name: 'Ana', email: 'ana@x.com' }));
     expect(res.status).toBe(401);
     expect(contactRepoReal.create).not.toHaveBeenCalled();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { withUserContext } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   let body;
@@ -34,21 +35,19 @@ export async function POST(request: NextRequest) {
 
     const userId = validToken.userId;
 
-    // Mark email as verified in our User table
-    const { error: userErr } = await svc
-      .from('User')
-      .update({ emailVerified: true })
-      .eq('id', userId);
+    // Update user email verification status and mark token as used
+    // respecting RLS via withUserContext (app.current_user_id context)
+    await withUserContext(userId, async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { emailVerified: true },
+      });
 
-    if (userErr) {
-      console.error('[verify-email] User update failed:', userErr);
-      return NextResponse.json({ error: 'verification_failed' }, { status: 500 });
-    }
-
-    // Mark token as used
-    await svc.from('EmailVerificationToken')
-      .update({ usedAt: now })
-      .eq('id', validToken.id);
+      await tx.emailVerificationToken.update({
+        where: { id: validToken.id },
+        data: { usedAt: now },
+      });
+    });
 
     // Also confirm email in Supabase Auth (admin operation — service role)
     try {

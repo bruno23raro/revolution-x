@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { getWhatsAppTemplate, type TemplatesAccess } from '@/integrations/meta/whatsappTemplates';
+import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { rateLimit } from '@/middleware/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     return NextResponse.json({ ok: false, error: resolved.reason }, { status });
   }
 
-  const result = await getWhatsAppTemplate(resolved.access, templateId);
+  const provider = getWhatsAppProvider();
+  const result = await provider.getTemplateStatus(resolved.access, templateId, 'en_US', {});
 
   const response = NextResponse.json(
     { ok: result.ok, template: result.template, error: result.error, errorDetail: result.errorDetail },

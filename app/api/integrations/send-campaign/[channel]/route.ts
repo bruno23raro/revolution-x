@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendMassViaOpenBSP } from '@/integrations/openbsp/send';
+import { isMarketingEligible, type ContactLike } from '@/services/campaignService';
+import type { WhatsappChannelRow } from '@/integrations/whatsapp/channelRepo';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,9 +47,9 @@ export async function POST(req: NextRequest) {
   }
 
   const url = new URL(req.url);
-  const channel = url.searchParams.get('channel') || url.pathname.split('/').pop();
+  const channelType = url.searchParams.get('channel') || url.pathname.split('/').pop();
 
-  if (channel !== 'whatsapp') {
+  if (channelType !== 'whatsapp') {
     return NextResponse.json({
       error: 'Channel não suportado para campanhas',
       supported: ['whatsapp']
@@ -86,43 +88,57 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
-  // Buscar contatos destinatários
-  let recipients: string[] = [];
+  // Buscar contatos candidatos com os campos de consentimento (LGPD §11).
+  // Fonte: tabela Contact (única com consentMarketing/optOut).
+  const CONTACT_COLS = 'id, phone, name, email, consentMarketing, optOut';
+  let candidates: ContactLike[] = [];
 
   if (body.recipients && body.recipients.length > 0) {
-    recipients = body.recipients;
+    // recipients = telefones ou IDs de contatos
+    const { data } = await service
+      .from('Contact')
+      .select(CONTACT_COLS)
+      .eq('organizationId', user.organizationId)
+      .in('phone', body.recipients);
+    candidates = (data ?? []) as ContactLike[];
   } else if (body.segment) {
-    // Buscar contatos pelo segmento
-    const { data: segContacts, error: segErr } = await service
+    const { data: segRows } = await service
       .from('crm_contacts_subsegments')
-      .select('contact_id, contact:contacts(phone)')
+      .select('contact_id')
       .eq('organization_id', user.organizationId)
       .eq('segment', body.segment);
-
-    if (!segErr && segContacts) {
-      recipients = segContacts
-        .map((s: any) => s.contact?.phone || s.contact?.[0]?.phone)
-        .filter(Boolean);
+    const ids = (segRows ?? []).map((s: any) => s.contact_id).filter(Boolean);
+    if (ids.length > 0) {
+      const { data } = await service
+        .from('Contact')
+        .select(CONTACT_COLS)
+        .eq('organizationId', user.organizationId)
+        .in('id', ids);
+      candidates = (data ?? []) as ContactLike[];
     }
   } else {
-    // Buscar todos contatos da organização
-    const { data: allContacts, error: allErr } = await service
-      .from('crm_contacts')
-      .select('phone_number')
-      .eq('organization_id', user.organizationId);
-
-    if (!allErr && allContacts) {
-      recipients = allContacts.map((c: any) => c.phone_number).filter(Boolean);
-    }
+    const { data } = await service
+      .from('Contact')
+      .select(CONTACT_COLS)
+      .eq('organizationId', user.organizationId);
+    candidates = (data ?? []) as ContactLike[];
   }
 
-  if (recipients.length === 0) {
+  // Filtro de elegibilidade: remove optOut === true e consentMarketing !== true.
+  const eligibleContacts = candidates.filter(
+    (c) => isMarketingEligible(c, { channel: 'whatsapp' }).eligible,
+  );
+
+  if (eligibleContacts.length === 0) {
     return NextResponse.json({
-      error: 'Nenhum destinatário encontrado',
+      error: 'no_eligible_recipients',
+      message: 'Nenhum contato elegível para marketing (consentimento ausente ou opt-out).',
       segment: body.segment,
       campaignId: body.campaignId
-    }, { status: 404 });
+    }, { status: 400 });
   }
+
+  const recipients = eligibleContacts.map((c) => (c.phone || '').trim()).filter(Boolean);
 
   // Atualizar status da campanha para 'sending'
   await service
@@ -141,10 +157,28 @@ export async function POST(req: NextRequest) {
     language: body.templateVariables?.language || 'pt_BR',
   };
 
+  // Buscar canal WhatsApp para obter phoneNumberId (obrigatório para sendMassViaOpenBSP)
+  const { data: whatsappChannel, error: channelErr } = await service
+    .from('whatsapp_channels')
+    .select('phoneNumberId, provider, accessTokenEnc')
+    .eq('organizationId', user.organizationId)
+    .eq('provider', 'openbsp')
+    .neq('status', 'DISCONNECTED')
+    .single();
+
+  if (channelErr || !whatsappChannel?.phoneNumberId) {
+    return NextResponse.json({
+      error: 'Canal WhatsApp OpenBSP não encontrado ou desconectado',
+      organizationId: user.organizationId
+    }, { status: 404 });
+  }
+
+  const channelData = whatsappChannel as WhatsappChannelRow;
+
   try {
-    // Enviar via OpenBSP
+    // Enviar via OpenBSP - passar phoneNumberId no objeto do canal
     const result = await sendMassViaOpenBSP(
-      { organizationId: user.organizationId },
+      { row: { phoneNumberId: channelData.phoneNumberId } },
       recipients.map(phone => ({ to: phone })),
       { template }
     );
@@ -163,7 +197,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       campaignId: body.campaignId,
-      channel,
+      channel: channelType,
       total: result.total,
       sent: result.sent,
       failed: result.failed,

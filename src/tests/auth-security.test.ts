@@ -47,6 +47,9 @@ jest.mock('@/lib/prisma', () => ({
         create: jest.fn().mockResolvedValue({}),
         update: jest.fn().mockResolvedValue({}),
       },
+      emailVerificationToken: {
+        update: jest.fn().mockResolvedValue({}),
+      },
       user: {
         update: jest.fn().mockResolvedValue({}),
       },

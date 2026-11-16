@@ -4,7 +4,7 @@ import { POST } from './route';
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/auth', () => ({
-  getAuthenticatedUser: jest.fn(),
+  getAuth: jest.fn(),
 }));
 
 jest.mock('@/lib/prisma', () => ({
@@ -46,12 +46,12 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('envia mensagem de teste com sucesso', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: true,
@@ -84,8 +84,8 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 401 para usuário não autenticado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
-    getAuthenticatedUser.mockResolvedValue(null);
+    const { getAuth } = require('@/lib/auth');
+    getAuth.mockResolvedValue({ user: null, hasSession: false });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
       method: 'POST',
@@ -101,8 +101,8 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 401 para membro tentando enviar teste', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
-    getAuthenticatedUser.mockResolvedValue({ id: 'user-member', organizationId: 'org-456', role: 'member' });
+    const { getAuth } = require('@/lib/auth');
+    getAuth.mockResolvedValue({ id: 'user-member', organizationId: 'org-456', role: 'member' });
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
       method: 'POST',
@@ -118,10 +118,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 404 para template não encontrado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(null);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/nonexistent/test', {
@@ -138,10 +138,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 400 para template não aprovado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue({
       id: 't-123',
       name: 'pending_template',
@@ -164,10 +164,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 400 para campo "to" vazio', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
@@ -184,10 +184,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 400 para JSON inválido', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
@@ -204,12 +204,12 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('suporta idioma customizado', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: true,
@@ -240,10 +240,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 400 para idioma inválido', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
@@ -264,12 +264,12 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 500 para erro no envio', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: true,
@@ -299,10 +299,10 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('não permite teste para template REJECTED', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
 
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue({
       id: 't-rejected',
       name: 'rejected_template',
@@ -325,12 +325,12 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('rate limiting excedido retorna 429', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { rateLimit } = require('@/middleware/rate-limit');
 
     rateLimit.mockResolvedValue({ limited: true, remaining: 0, resetIn: 30000 });
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
 
     const req = new NextRequest('http://localhost/api/whatsapp/templates/t-123/test', {
@@ -347,13 +347,13 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('retorna 503 quando Meta não está conectada', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { rateLimit } = require('@/middleware/rate-limit');
 
     rateLimit.mockResolvedValue({ limited: false, remaining: 10, resetIn: 0 });
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: false,
@@ -374,14 +374,14 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('envia teste com múltiplas variáveis', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
     const { rateLimit } = require('@/middleware/rate-limit');
 
     rateLimit.mockResolvedValue({ limited: false, remaining: 5, resetIn: 0 });
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue(mockTemplate);
     resolveTenantMetaAccess.mockResolvedValue({
       ok: true,
@@ -413,14 +413,14 @@ describe('POST /api/whatsapp/templates/[id]/test', () => {
   });
 
   it('usa variáveis vazias quando body não fornece', async () => {
-    const { getAuthenticatedUser } = require('@/lib/auth');
+    const { getAuth } = require('@/lib/auth');
     const { prisma } = require('@/lib/prisma');
     const { resolveTenantMetaAccess } = require('@/integrations/meta/resolveAccess');
     const { sendTestMessage } = require('@/integrations/meta/whatsappTemplates');
     const { rateLimit } = require('@/middleware/rate-limit');
 
     rateLimit.mockResolvedValue({ limited: false, remaining: 5, resetIn: 0 });
-    getAuthenticatedUser.mockResolvedValue(mockUser);
+    getAuth.mockResolvedValue({ user: mockUser, hasSession: true });
     prisma.whatsappTemplate.findFirst.mockResolvedValue({
       id: 't-simple',
       name: 'simple_template',

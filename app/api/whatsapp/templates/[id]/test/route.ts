@@ -103,7 +103,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     return response;
   }
   const provider = getWhatsAppProvider();
-  const result = await provider.sendTestMessage?.(resolved.access, template.name, body.to, variables, { language: language || 'en_US' } as any) ?? { ok: false, error: 'sendTestMessage_not_supported' } as const;
+  const result = await provider.sendTestMessage?.(resolved.access, template.name, body.to, variables, { language: language || 'en_US' } as any) ?? { ok: false, error: 'sendTestMessage_not_supported', errorDetail: 'sendTestMessage_not_supported' } as const;
 
   const response = NextResponse.json(
     {

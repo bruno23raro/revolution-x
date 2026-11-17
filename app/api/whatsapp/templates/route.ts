@@ -12,7 +12,7 @@ import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
 import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
-import type { OfficialTemplateSpec, TemplateCreateSpec } from '@/integrations/whatsapp/types';
+import type { OfficialTemplateSpec } from '@/integrations/whatsapp/types';
 import { saveTemplateSnapshot } from '@/integrations/configStore';
 
 export const dynamic = 'force-dynamic';
@@ -86,29 +86,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'name_invalido', detail: 'Nome do template deve conter apenas letras minúsculas, números e underscore (máx 512 caracteres)' }, { status: 400 });
   }
   const category = (CATEGORIES as readonly string[]).includes(body.category)
-    ? (body.category as TemplateCreateSpec['category'])
+    ? (body.category as 'MARKETING' | 'UTILITY' | 'AUTHENTICATION')
     : undefined;
 
-  const spec: TemplateCreateSpec = {
+  const spec: OfficialTemplateSpec = {
     name,
-    category,
-    language: typeof body.language === 'string' && body.language.trim() ? body.language : undefined,
-    body: typeof body.body === 'string' ? body.body : undefined,
-    header:
-      body.header &&
-      typeof body.header === 'object' &&
-      body.header.type === 'TEXT' &&
-      typeof body.header.text === 'string'
-        ? { type: 'TEXT', text: body.header.text }
-        : undefined,
-    footer:
-      body.footer && typeof body.footer === 'object' && typeof body.footer.text === 'string'
-        ? { text: body.footer.text }
-        : undefined,
-    buttons:
-      Array.isArray(body.buttons) && body.buttons.length > 0
-        ? body.buttons
-        : undefined,
+    language: body.language && typeof body.language === 'string' ? body.language!.trim() : '',
+    body: typeof body.body === 'string' ? body.body : '',
+    ...(body.category && { category: body.category as 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' }),
   };
 
   // MULTICONTAS — `account` (row id) ancora o número; ausente → padrão.

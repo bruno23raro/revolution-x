@@ -14,7 +14,7 @@
 // GET  /api/admin/chat → status de configuração (sempre seguro, sem segredos).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../../../src/lib/prisma';
 import { getAuth, getAllOrganizationMemberships } from '../../../../src/lib/auth';
 import { prisma } from '../../../../src/lib/prisma';
 import {
@@ -247,14 +247,14 @@ export async function POST(req: NextRequest) {
           await safe(async () => {
             const p2 = await markStep(prisma, scope, taskId, 1, 'done', {
               model: modelUsed,
-              usage: usage ? (JSON.parse(JSON.stringify(usage)) as Prisma.JsonValue) : undefined,
+              usage: usage ? JSON.parse(JSON.stringify(usage)) : undefined,
             });
             emit({ type: 'progress', pct: p2.progress, step: 1, total: STEPS.length });
             const p3 = await markStep(prisma, scope, taskId, 2, 'done');
             emit({ type: 'progress', pct: p3.progress, step: 2, total: STEPS.length });
             await completeTask(prisma, scope, taskId, {
               result: { textLength: text.length, model: modelUsed, routerConfigured: cfg !== null },
-              usage: usage === null ? undefined : (JSON.parse(JSON.stringify(usage)) as Prisma.JsonValue),
+              usage: usage === null ? undefined : JSON.parse(JSON.stringify(usage)),
               modelUsed: modelUsed ?? undefined,
             });
           });

@@ -2,6 +2,9 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Pool } from 'pg';
 
+// Re-export Prisma namespace for use in other files (JsonValue, TransactionClient, etc.)
+export { Prisma };
+
 // Builds a Prisma client over a pg connection. Accepts either a connection
 // string (a pool is created internally) or a caller-owned Pool, so tests can
 // control the pool's lifecycle and avoid leaked open handles.

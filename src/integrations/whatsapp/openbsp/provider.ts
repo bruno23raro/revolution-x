@@ -60,12 +60,12 @@ async function runMassSend(
   recipients: Array<{ to: string; text?: string }>,
   opts: { delayMs?: number; template?: { name: string; variables: string[]; language?: string } } = {}
 ): Promise<{ total: number; sent: number; failed: number; results: OfficialSendResult[] }> {
-  const results = [];
+  const results: Array<{ ok: boolean; to: string; messageId?: string; via?: 'openbsp' | 'meta_direct'; error?: OfficialSendError; errorDetail?: string }> = [];
   let sent = 0;
   let failed = 0;
 
   for (const recipient of recipients) {
-    const r = await send(access, recipient.to, { kind: 'text', text: recipient.text ?? '' }, opts);
+    const r = await send(access, recipient.to, { kind: 'text', text: recipient.text ?? '' }, opts as ProviderCallOpts);
     results.push({ ok: r.ok, to: recipient.to, messageId: r.messageId, via: r.via, error: r.error, errorDetail: r.errorDetail });
     if (r.ok) sent++; else failed++;
     if (opts.delayMs && recipients.length > 1) {
@@ -87,84 +87,25 @@ async function sendTestMessage(
   return { ok: false, error: 'provider_error', errorDetail: 'envio de template de teste requer Meta Graph API' };
 }
 
-async function sendButton(access: OpenbspChannelAccess, to: string, body: string, buttons: string[], opts: ProviderCallOpts = {}): Promise<OfficialSendResult> {
-  // OpenBSP não suporta botões interativos nativamente via API simplificada
-  // Envia como texto com botões numerados
-  const buttonText = buttons.map((b, i) => `${i + 1}. ${b}`).join('\n');
-  const bodyWithButtons = `${body}\n\n${buttonText}`;
-  return send(access, to, { kind: 'text', text: bodyWithButtons }, opts);
-}
-
-async function runMassSend(
+async function createTemplate(
   access: OpenbspChannelAccess,
-  recipients: Array<{ to: string; text?: string }>,
-  opts: { delayMs?: number; template?: { name: string; variables: string[]; language?: string } } = {}
-): Promise<{ total: number; sent: number; failed: number; results: OfficialSendResult[] }> {
-  const results = [];
-  let sent = 0;
-  let failed = 0;
-
-  for (const recipient of recipients) {
-    const r = await send(access, recipient.to, { kind: 'text', text: recipient.text ?? '' }, opts);
-    results.push({ ok: r.ok, to: recipient.to, messageId: r.messageId, via: r.via, error: r.error, errorDetail: r.errorDetail });
-    if (r.ok) sent++; else failed++;
-    if (opts.delayMs && recipients.length > 1) {
-      await new Promise(r => setTimeout(r, opts.delayMs));
-    }
-  }
-
-  return { total: recipients.length, sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results: results.map(r => ({ ok: r.ok, to: '', messageId: r.messageId, via: r.via, error: r.error, errorDetail: r.errorDetail })) };
+  spec: OfficialTemplateSpec,
+  opts?: ProviderCallOpts,
+): Promise<TemplateOpResult> {
+  return { ok: false, error: 'provider_error', errorDetail: 'criacao de templates requer Meta Graph API' };
 }
 
-async function sendTestMessage(
+async function listTemplates(access: OpenbspChannelAccess): Promise<ListTemplatesResult> {
+  return { ok: true, templates: [] };
+}
+
+async function getTemplateStatus(
   access: OpenbspChannelAccess,
-  templateName: string,
-  to: string,
-  variables?: string[],
-  opts: ProviderCallOpts = {},
-): Promise<{ ok: boolean; messageId?: string; error?: OfficialSendError; errorDetail?: string }> {
-  // OpenBSP não suporta envio de template de teste via Graph API
-  return { ok: false, error: 'provider_error', errorDetail: 'envio de template de teste requer Meta Graph API' };
-}
-
-async function sendButton(access: OpenbspChannelAccess, to: string, body: string, buttons: string[], opts: ProviderCallOpts = {}): Promise<OfficialSendResult> {
-  // OpenBSP não suporta botões interativos nativamente via API simplificada
-  // Envia como texto com botões numerados
-  const buttonText = buttons.map((b, i) => `${i + 1}. ${b}`).join('\n');
-  const bodyWithButtons = `${body}\n\n${buttonText}`;
-  return send(access, to, { kind: 'text', text: bodyWithButtons }, opts);
-}
-
-async function runMassSend(
-  access: OpenbspChannelAccess,
-  recipients: Array<{ to: string; text?: string }>,
-  opts: { delayMs?: number; template?: { name: string; variables: string[]; language?: string } } = {}
-): Promise<{ total: number; sent: number; failed: number; results: OfficialSendResult[] }> {
-  const results = [];
-  let sent = 0;
-  let failed = 0;
-
-  for (const recipient of recipients) {
-    const r = await send(access, recipient.to, { kind: 'text', text: recipient.text ?? '' }, opts);
-    results.push({ ok: r.ok, to: recipient.to, messageId: r.messageId, via: r.via, error: r.error, errorDetail: r.errorDetail });
-    if (r.ok) sent++; else failed++;
-    if (opts.delayMs && recipients.length > 1) {
-      await new Promise(r => setTimeout(r, opts.delayMs));
-    }
-  }
-
-  return { total: recipients.length, sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results: results.map(r => ({ ok: r.ok, to: '', messageId: r.messageId, via: r.via, error: r.error, errorDetail: r.errorDetail })) };
-}
-
-async function sendTestMessage(
-  access: OpenbspChannelAccess,
-  templateName: string,
-  to: string,
-  variables?: string[],
-  opts: ProviderCallOpts = {},
-): Promise<{ ok: boolean; messageId?: string; error?: OfficialSendError; errorDetail?: string }> {
-  // OpenBSP não suporta envio de template de teste via Graph API
-  return { ok: false, error: 'provider_error', errorDetail: 'envio de template de teste requer Meta Graph API' };
+  name: string,
+  language: string,
+  opts?: ProviderCallOpts,
+): Promise<TemplateOpResult & { template?: import('../types').OfficialTemplateInfo }> {
+  return { ok: true, name, template: { name, status: 'UNKNOWN', language } };
 }
 
 export const openbspProvider: IWhatsAppProvider = {

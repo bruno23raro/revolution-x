@@ -2,7 +2,7 @@
 // GET /api/admin/schema/diff — Comparar schema local vs produção
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/prisma';
 import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { verifyAdminBearer } from '@/lib/admin-bearer';
 import { prisma } from '@/lib/prisma';

@@ -3,7 +3,6 @@
 // GET /api/admin/alerts — Listar alertas recentes (opcional)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { getAuth, getAllOrganizationMemberships } from '../../../../src/lib/auth';
 import { prisma } from '../../../../src/lib/prisma';
 

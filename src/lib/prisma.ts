@@ -12,7 +12,14 @@ export function createPrismaClient(
   source: string | Pool,
   opts: { log?: Prisma.LogLevel[] } = {}
 ): PrismaClient {
-  const pool = typeof source === 'string' ? new Pool({ connectionString: source }) : source;
+  let pool: Pool;
+  if (typeof source === 'string') {
+    const url = new URL(source);
+    url.searchParams.set('options', '-c search_path=public');
+    pool = new Pool({ connectionString: url.toString() });
+  } else {
+    pool = source;
+  }
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter, log: opts.log });
 }
@@ -61,7 +68,9 @@ let prismaInstance: PrismaClient | null = null;
 export function getPrismaClient(): PrismaClient {
   if (!prismaInstance) {
     const connectionString = process.env.DATABASE_URL ?? '';
-    const pool = new Pool({ connectionString });
+    const url = new URL(connectionString);
+    url.searchParams.set('options', '-c search_path=public');
+    const pool = new Pool({ connectionString: url.toString() });
     const adapter = new PrismaPg(pool);
     prismaInstance = new PrismaClient({
       adapter,

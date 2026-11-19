@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { hashPassword, isPasswordStrong, verifyPassword, generateToken } from '../lib/auth';
+import { hashPassword, isPasswordStrong, verifyPassword, generateAccessToken } from '@/lib/auth';
 import { userRepo } from '../repositories/userRepo';
 
 export type PublicUser = { id: string; email: string; name: string; email_verified: boolean };
@@ -32,14 +32,14 @@ export async function registerUser(name: string, email: string, password: string
   });
   if (!user) throw new Error('database_not_configured');
   if (!tokenSecret()) throw new Error('jwt_secret_not_configured');
-  return { user: publicUser(user), token: generateToken({ sub: user.id }, tokenSecret()) };
+  return { user: publicUser(user), token: generateAccessToken({ sub: user.id }) };
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResult> {
   const user = await userRepo.findByEmail(email.trim().toLowerCase());
   if (!user || !(await verifyPassword(password, user.password_hash))) throw new Error('invalid_credentials');
   if (!tokenSecret()) throw new Error('jwt_secret_not_configured');
-  return { user: publicUser(user), token: generateToken({ sub: user.id }, tokenSecret()) };
+  return { user: publicUser(user), token: generateAccessToken({ sub: user.id }) };
 }
 
 export function createRecoveryToken(): string { return randomBytes(32).toString('hex'); }

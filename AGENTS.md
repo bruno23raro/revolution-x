@@ -67,3 +67,16 @@ control that refused, an unfamiliar widget or a slow page is NOT running out of 
   WebSocket or iframes. Clear the rules when the check is done; a forgotten mock outlives the
   reason for it and the next thing you measure is a lie.
 <!-- qiksy-bridge:end -->
+
+## Leitura econômica de contexto (obrigatório)
+
+Nunca leia arquivo inteiro com Read quando ele passar de 300 linhas.
+- Buscar símbolo: `rg -n "termo" caminho`
+- Trecho por linha: `sed -n '120,180p' arquivo` ou `Get-Content arquivo | Select-Object -Skip 119 -First 61`
+- Estrutura: `head -40`, `rg --files`, `git ls-files`
+- `package-lock.json`: só com `rg -n "nome-do-pacote" package-lock.json`
+- JSON grande: `jq '.chave | keys'` ou `jq '.[0:5]'`
+- Listar diretório sem recursão profunda: `ls`, nunca `tree` completo
+- Imagem e PDF: só quando o visual for indispensável
+
+Ao terminar um bloco, resuma em 5 linhas e siga. Não repita conteúdo já lido.

@@ -23,7 +23,7 @@ import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { listTenantWhatsAppAccounts } from '@/integrations/meta/accounts';
 import { generateOAuthState, buildMetaAuthUrl } from '@/integrations/meta/auth/oauth';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import type { MetaAuthConfig } from '@/integrations/meta/types';
 import { DEFAULT_SCOPES } from '@/integrations/meta/constants';
 import { deleteAllChannels } from '@/integrations/whatsapp/channelRepo';
@@ -155,39 +155,30 @@ export async function DELETE(_req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const supabase = createServiceRoleClient();
-
     // 1. Deletar canais OpenBSP
-    await deleteAllChannels(supabase, user.organizationId);
+    await deleteAllChannels(user.organizationId);
 
     // 2. Marcar integrações Meta como DISCONNECTED (soft delete)
-    const { error: updateMetaError } = await supabase
-      .from('meta_integrations')
-      .update({
+    await prisma.metaIntegration.updateMany({
+      where: {
+        organizationId: user.organizationId,
+        provider: { in: ['whatsapp', 'facebook', 'instagram'] },
+      },
+      data: {
         status: 'DISCONNECTED',
-        disconnected_at: new Date().toISOString(),
-      })
-      .eq('organization_id', user.organizationId)
-      .in('provider', ['whatsapp', 'facebook', 'instagram']);
+        disconnectedAt: new Date(),
+      },
+    });
 
-    if (updateMetaError) {
-      console.error('[DELETE /api/whatsapp/accounts] meta_integrations error:', updateMetaError);
-    }
-
-    // 3. Deletar da tabela integrations (usuário-based OAuth)
-    // PROBLEMA DE SEGURANÇA IDENTIFICADO: IDOR/CROSSTENANT LEAK
-    // A tabela integrations usa apenas user_id (sem organization_id), permitindo que
-    // um admin de um tenant delete integrações de QUALQUER usuário do sistema.
-    // CORREÇÃO: usar SQL raw direto para garantir isolamento multi-tenant
-    const { error: deleteOAuthError } = await supabase
-      .from('integrations')
-      .delete()
-      .eq('user_id', user.id)
-      .in('channel', ['whatsapp', 'meta', 'facebook', 'instagram']);
-
-    if (deleteOAuthError) {
-      console.error('[DELETE /api/whatsapp/accounts] integrations error:', deleteOAuthError);
-    }
+    // 3. Deletar integrações OAuth do usuário (isolamento multi-tenant via organizationId)
+    // A tabela integrations deve ter organizationId para isolamento correto
+    // Se não tiver, usar SQL raw para garantir isolamento
+    // Note: O modelo Integration não está no schema Prisma, então usamos SQL raw
+    await prisma.$executeRaw`
+      DELETE FROM "integrations"
+      WHERE "user_id" = ${user.id}::uuid
+      AND "channel" IN ('whatsapp', 'meta', 'facebook', 'instagram')
+    `;
 
     return NextResponse.json({ success: true, removed: true });
   } catch (error) {

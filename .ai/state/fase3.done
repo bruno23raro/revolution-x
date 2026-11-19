@@ -1,0 +1,1 @@
+FASE 3 complete - Zod validation schemas in lib/validation/schemas.ts, RBAC in lib/auth/rbac.ts, applied to auth routes (login, register, forgot-password, reset-password, verify-email, resend-verification), CRM routes (contacts, leads, deals, pipelines), campaigns, whatsapp send/templates.

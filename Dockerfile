@@ -1,25 +1,25 @@
 # =============================================================================
 # REVOLUTION X — Imagem de PRODUÇÃO (multi-stage)
 #
-# node:20-slim (LTS) — satisfaz "engines: >=18" do package.json e casa com
-# @types/node ^20. Slim (Debian) mantém openssl + ca-certs que a CLI do
+# node:22-slim (LTS) — satisfaz "engines: >=18" do package.json e casa com
+# @types/node ^22. Slim (Debian) mantém openssl + ca-certs que a CLI do
 # Prisma precisa; sem camadas extras.
 #
-# Estratégia NÃO INVASIVA: a imagem serve o build com `npm run start`
-# (next start, o comando de produção atual do package.json). Não há
+# Estratégia NÃO INVASIVA: a imagem serve o build com `node .next/standalone/server.js`
+# (output: standalone, o comando de produção correto). Não há
 # `output: 'standalone'` no next.config.mjs e não o adicionamos — ver
 # README-DOCKER.md §Melhorias futuras.
 #
 # Camadas:
 #   deps   → npm ci determinístico (package-lock.json) + prisma generate
 #   build  → next build (segredos de runtime NUNCA entram na imagem final)
-#   runner → imagem mínima com .next + node_modules, usuário não-root
+#   runner → imagem mínima com .next/standalone + node_modules, usuário não-root
 # =============================================================================
 
 ##############################
 # 1/3 — dependências
 ##############################
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -34,7 +34,7 @@ RUN npm ci
 ##############################
 # 2/3 — build
 ##############################
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
@@ -44,6 +44,9 @@ COPY --from=deps /app/package.json ./
 
 # Contexto completo (limitado por .dockerignore — sem .env, node_modules, .git).
 COPY . .
+
+# Copiar .env.local para que o runner tenha JWT_REFRESH_SECRET etc.
+COPY .env.local ./
 
 # Variáveis NEXT_PUBLIC_* são INLINE-ADAS no bundle client no build (comportamento
 # do Next.js) — recebem-se via ARG e só existem nesta camada intermediária.
@@ -64,7 +67,7 @@ RUN npm run build
 ##############################
 # 3/3 — runner (imagem final)
 ##############################
-FROM node:20-slim AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -72,17 +75,19 @@ ENV NODE_ENV=production \
 
 # Só o essencial para `next start` + operações de runtime (migrate/persist).
 COPY --from=deps /app/node_modules ./node_modules
-# DESTINO EXPLÍCITO (.next): `COPY --from=build /app/.next ./` (destino `./`
-# = WORKDIR) espalha o CONTEÚDO do .next direto em /app em vez de criar
+# DESTINO EXPLÍCITO (.next/standalone): `COPY --from=build /app/.next/standalone ./` (destino `./`
+# = WORKDIR) espalha o CONTEÚDO do .next/standalone direto em /app em vez de criar
 # /app/.next, deixando a imagem sem BUILD_ID e `next start` crash-loopando.
-# Com destino `.next` o conteúdo entra em /app/.next corretamente.
-COPY --from=build /app/.next ./.next
+# Com destino `.next/standalone` o conteúdo entra em /app corretamente.
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/next.config.mjs ./
 COPY --from=build /app/package.json ./
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/.env.example ./.env.example
+COPY --from=build /app/.env.local ./.env.local
 
 # Prisma/Next podem escrever cache em runtime.
 RUN mkdir -p .next/cache && chown -R node:node /app
@@ -96,4 +101,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD node -e "const p=process.env.PORT||3000;require('http').get('http://127.0.0.1:'+p+'/',r=>{process.exit(r.statusCode>=200&&r.statusCode<500?0:1)}).on('error',()=>process.exit(1))"
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]

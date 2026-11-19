@@ -114,3 +114,10 @@ vendor/public-apis/
 
 .vercel
 .env*
+_tmp/
+.tmp-*
+artifacts/
+*.png
+*.pdf
+*.docx
+_infra/

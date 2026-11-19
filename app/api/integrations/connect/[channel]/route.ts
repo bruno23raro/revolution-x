@@ -6,8 +6,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 import { mintOnboardingToken, upsertChannelPending } from '@/integrations/whatsapp';
 import crypto from 'crypto';
 
@@ -70,9 +68,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Pré-provisionar canal como PENDING
-  const service = createServiceRoleClient();
   try {
-    await upsertChannelPending(service, {
+    await upsertChannelPending({
       organizationId: user.organizationId,
       verifyToken,
       callbackUrl,
@@ -103,15 +100,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Channel inválido' }, { status: 400 });
   }
 
-  const service = createServiceRoleClient();
-  const { data: channelData } = await service
-    .from('whatsapp_channels')
-    .select('id, provider, status, verifiedName, lastError')
-    .eq('organizationId', user.organizationId)
-    .in('provider', ['openbsp', channel === 'whatsapp' ? 'openbsp' : 'manual'])
-    .neq('status', 'DISCONNECTED')
-    .limit(1)
-    .maybeSingle();
+  const channelData = await prisma.whatsappChannel.findFirst({
+    where: {
+      organizationId: user.organizationId,
+      provider: { in: ['openbsp', channel === 'whatsapp' ? 'openbsp' : 'manual'] },
+      status: { not: 'DISCONNECTED' },
+    },
+    select: {
+      id: true,
+      provider: true,
+      status: true,
+      verifiedName: true,
+      lastError: true,
+    },
+  });
 
   if (!channelData) {
     return NextResponse.json({ connected: false, channel }, { status: 200 });

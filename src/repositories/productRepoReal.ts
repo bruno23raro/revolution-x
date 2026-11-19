@@ -1,6 +1,6 @@
 // FASE 4 — REPOSITORY REAL — products (Migration 004 executada e confirmada)
 import { Product } from '../models/product';
-import { withTenantContext } from '../lib/prisma';
+import { withTenantContext } from '@/lib/prisma';
 
 export interface ProductRepo {
   findByOrganization(orgId: string): Promise<Product[]>;
@@ -23,7 +23,7 @@ export const productRepoReal: ProductRepo = {
         category: r.category ?? undefined,
         active: true,
         createdAt: r.createdAt.toISOString(),
-        updatedAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
       }));
     });
   },
@@ -33,8 +33,6 @@ export const productRepoReal: ProductRepo = {
       const row = await tx.product.create({
         data: {
           organizationId: data.organizationId,
-          // Generate a deterministic SKU if not provided
-          sku: `sku-${Date.now()}`,
           name: data.name!,
           description: data.description ?? null,
           price: data.price ?? 0,
@@ -50,7 +48,7 @@ export const productRepoReal: ProductRepo = {
         category: row.category ?? undefined,
         active: true,
         createdAt: row.createdAt.toISOString(),
-        updatedAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
       };
     });
   },

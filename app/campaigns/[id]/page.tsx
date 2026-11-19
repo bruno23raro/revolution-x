@@ -3,7 +3,7 @@
 // FASE 17 — Detalhe da campanha + ações da máquina de estados (§10/§11/§12).
 //
 //  * Ações derivadas do estado ATUAL (start/resume, pause, cancel,
-//    mark_manual_complete, preview) — o servidor revalida (409 invalid_state
+//    mark_manual_complete, preview, dispatch) — o servidor revalida (409 invalid_state
 //    quando a máquina de estados não permite).
 //  * WhatsApp: seletor de conta POR OPERAÇÃO (§7/§11). Se a campanha já tem
 //    conta ancorada, ela começa selecionada (escolha explícita na criação),
@@ -13,6 +13,7 @@
 //  * Canal manual: a RX NUNCA envia; "Concluir manualmente" registra a
 //    confirmação do usuário (§12).
 //  * Destinatários: resultados REAIS por destinatário, paginados (§10).
+//  * Dispatch OpenBSP: processa em lotes com polling até terminar.
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -85,6 +86,10 @@ export default function CampaignDetailPage() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [preview, setPreview] = useState<Array<{ text: string; missing: string[] }> | null>(null);
   const [acting, setActing] = useState(false);
+
+  // Dispatch OpenBSP (lotes)
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<{ sent: number; failed: number; remaining: number; progress: number } | null>(null);
 
   // Destinatários (fila, §10)
   const [recStatus, setRecStatus] = useState('');
@@ -196,6 +201,46 @@ export default function CampaignDetailPage() {
     }
   };
 
+  const dispatchBatch = async () => {
+    if (!campaign || campaign.channel !== 'whatsapp_api') return;
+    setDispatching(true);
+    setDispatchResult(null);
+    setMsg(null);
+    try {
+      let totalSent = 0;
+      let totalFailed = 0;
+      let currentRemaining = 1;
+      let progress = 0;
+
+      while (currentRemaining > 0) {
+        const res = await fetch(`/api/campaigns/${id}/dispatch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchSize: 10 }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? 'Falha no dispatch');
+        }
+        const data = await res.json();
+        totalSent += data.sent ?? 0;
+        totalFailed += data.failed ?? 0;
+        currentRemaining = data.remaining ?? 0;
+        progress = data.progress ?? 0;
+        setDispatchResult({ sent: totalSent, failed: totalFailed, remaining: currentRemaining, progress });
+        // Pequena pausa entre lotes para não sobrecarregar
+        await new Promise(r => setTimeout(r, 500));
+      }
+      setMsg({ ok: true, text: `Disparo concluído: ${totalSent} enviadas, ${totalFailed} falhas` });
+      await load();
+      await loadRecipients();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'Erro no disparo' });
+    } finally {
+      setDispatching(false);
+    }
+  };
+
   if (unauthorized) {
     return (
       <AppShell>
@@ -225,6 +270,7 @@ export default function CampaignDetailPage() {
   const pausable = campaign && ['queued', 'running'].includes(campaign.status);
   const cancellable = campaign && !terminal;
   const manualCompletable = campaign && campaign.resultKind === 'manual' && campaign.status === 'awaiting_validation';
+  const canDispatch = campaign && campaign.channel === 'whatsapp_api' && !terminal && !dispatching;
 
   const labelOf = (a: WaAccount) => a.displayName || a.phoneNumberId || a.id;
   const selectedAccount = accounts.find((a) => a.id === accountId);
@@ -322,6 +368,15 @@ export default function CampaignDetailPage() {
                     {campaign.status === 'paused' || campaign.status === 'failed' ? 'Retomar' : 'Iniciar disparo'}
                   </button>
                 )}
+                {canDispatch && (
+                  <button
+                    onClick={dispatchBatch}
+                    disabled={dispatching}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {dispatching ? 'Disparando lote…' : 'Disparar lote (OpenBSP)'}
+                  </button>
+                )}
                 {pausable && (
                   <button onClick={() => act('pause')} disabled={acting} className="px-4 py-2 text-sm rounded-lg border border-white/15 text-gray-200 hover:bg-white/5 disabled:opacity-50">
                     Pausar
@@ -343,6 +398,20 @@ export default function CampaignDetailPage() {
                   </button>
                 )}
               </div>
+
+              {dispatchResult && (
+                <div className="p-3 bg-black/40 border border-white/10 rounded-lg text-sm">
+                  <div className="flex gap-4 text-gray-300">
+                    <span>Enviadas: <strong className="text-green-300">{dispatchResult.sent}</strong></span>
+                    <span>Falhas: <strong className="text-red-300">{dispatchResult.failed}</strong></span>
+                    <span>Restantes: <strong className="text-amber-300">{dispatchResult.remaining}</strong></span>
+                  </div>
+                  <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500" style={{ width: `${Math.min(100, Math.max(0, dispatchResult.progress))}%` }} />
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-1">Progresso: {dispatchResult.progress}%</div>
+                </div>
+              )}
 
               {msg && (
                 <div className={`p-3 text-sm rounded-lg ${msg.ok ? 'text-green-300 bg-green-400/10 border border-green-400/20' : 'text-red-300 bg-red-400/10 border border-red-400/20'}`}>

@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "filesystem": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@modelcontextprotocol/server-filesystem","C:\\AI\\workspace\\revolution-x"] },
+    "git": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@modelcontextprotocol/server-git","--repository","C:\\AI\\workspace\\revolution-x\\repo"] },
+    "memory": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@modelcontextprotocol/server-memory"] },
+    "seqthink": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@modelcontextprotocol/server-sequential-thinking"] },
+    "fetch": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@modelcontextprotocol/server-fetch"] },
+    "playwright": { "type": "stdio", "command": "cmd", "args": ["/c","npx","-y","@playwright/mcp","--headless","--isolated"] }
+  }
+}

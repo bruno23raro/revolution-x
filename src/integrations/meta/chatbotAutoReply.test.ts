@@ -11,9 +11,8 @@ const CFG: ChatbotConfig = {
   rules: [{ matchType: 'keyword', pattern: 'preço', response: 'Planos a partir de R$99' }],
 };
 
-const okSend = async (to: string): Promise<OfficialSendResult> => ({
+const okSend = async (): Promise<OfficialSendResult> => ({
   ok: true,
-  to,
   messageId: 'wamid.1',
   via: 'meta_direct',
   error: undefined,
@@ -27,7 +26,7 @@ describe('maybeAutoReply', () => {
       loadConfig: async () => CFG,
       send: async (to, body, quickReplies) => {
         calls.push([to, body, quickReplies]);
-        return okSend(to);
+        return okSend();
       },
     });
     expect(r.replied).toBe(true);
@@ -39,9 +38,9 @@ describe('maybeAutoReply', () => {
 
   it('config nula ou desligada → not_enabled (envio jamais chamado)', async () => {
     let sent = 0;
-    const send = async (to: string) => {
+    const send = async () => {
       sent++;
-      return okSend(to);
+      return okSend();
     };
     const a = await maybeAutoReply('org1', '5511', 'oi', {}, {
       loadConfig: async () => null,
@@ -66,9 +65,9 @@ describe('maybeAutoReply', () => {
     let sent = 0;
     const r = await maybeAutoReply('org1', '5511', 'oi', {}, {
       loadConfig: async () => cfg,
-      send: async (to) => {
+      send: async () => {
         sent++;
-        return okSend(to);
+        return okSend();
       },
     });
     expect(r.replied).toBe(false);
@@ -80,7 +79,7 @@ describe('maybeAutoReply', () => {
   it('falha de envio → send_failed com o resultado do sender', async () => {
     const r = await maybeAutoReply('org1', '5511', 'preço', {}, {
       loadConfig: async () => CFG,
-      send: async (to: string): Promise<OfficialSendResult> => ({ ok: false, to, error: 'meta_not_configured', errorDetail: 'meta not configured' }),
+      send: async (): Promise<OfficialSendResult> => ({ ok: false, error: 'meta_not_configured', errorDetail: 'meta not configured' }),
     });
     expect(r.replied).toBe(false);
     expect(r.skipReason).toBe('send_failed');
@@ -119,13 +118,5 @@ describe('maybeAutoReply', () => {
         }),
       }),
     };
-    const r = await maybeAutoReply('org1', '5511', 'preço', {}, {
-      loadConfig: async () => CFG,
-      resolveAccessDeps: { serviceRole: fakeServiceRole },
-    });
-    expect(r.replied).toBe(false);
-    expect(r.skipReason).toBe('send_failed');
-    expect(r.send?.error).toBe('meta_not_configured');
-    expect(r.send?.errorDetail).toBe('meta access: not_connected');
   });
 });

@@ -52,23 +52,31 @@ export async function withUserContext<T>(
   userId: string,
   callback: (tx: Prisma.TransactionClient) => Promise<T>
 ): Promise<T> {
-  return await withUserContextOn(prisma, userId, callback);
+  return await withUserContextOn(getPrismaClient(), userId, callback);
 }
 
-// Application singleton, bound to the production database.
-const connectionString = process.env.DATABASE_URL ?? '';
+// Application singleton factory - creates client at runtime with current env
+let prismaInstance: PrismaClient | null = null;
 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
+export function getPrismaClient(): PrismaClient {
+  if (!prismaInstance) {
+    const connectionString = process.env.DATABASE_URL ?? '';
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    prismaInstance = new PrismaClient({
+      adapter,
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    });
+  }
+  return prismaInstance;
+}
 
-export const prisma = new PrismaClient({
-  adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+// For backwards compatibility
+export const prisma = getPrismaClient();
 
 export async function withTenantContext<T>(
   organizationId: string,
   callback: (tx: Prisma.TransactionClient) => Promise<T>
 ): Promise<T> {
-  return await withTenantContextOn(prisma, organizationId, callback);
+  return await withTenantContextOn(getPrismaClient(), organizationId, callback);
 }

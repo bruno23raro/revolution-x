@@ -1,18 +1,10 @@
-import { defineConfig, devices } from '@playwright/test';
-
+﻿import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
-  testDir: './tests/e2e',
-  reporter: [['list'], ['html', { outputFolder: 'artifacts/playwright-report' }]],
-  outputDir: 'artifacts/playwright-results/',
-  use: {
-    baseURL: process.env.E2E_BASE_URL || 'https://revolutionx.com.br',
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
+  testDir: "./e2e",
+  timeout: 30000,
+  retries: 1,
+  reporter: [["html", { outputFolder: "artifacts/playwright" }]],
+  use: { baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000", trace: "on-first-retry", screenshot: "only-on-failure" },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } },
+             { name: "mobile", use: { ...devices["Pixel 7"] } }],
 });

@@ -1,41 +1,36 @@
 // FASE 5 — GET /api/schedules (listar agendamentos)
-// Baseado no padrão de app/api/crm/leads/route.ts
-// Usa Supabase service-role client para queries reais
+// Usa Prisma com tenant isolation
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { validateSchedule } from '@/services/scheduleService';
 
-interface ScheduleRecord {
-  id: string;
-  organizationId: string;
-  title: string;
-  scheduledAt: string;
-  status: string;
-  channel: string;
-  createdAt: string;
-}
+export const runtime = 'nodejs';
 
 // GET /api/schedules
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { user } = await getAuth(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   try {
-    const admin = createServiceRoleClient();
-    const { data, error } = await admin.from('Schedule').select('*');
+    const schedules = await prisma.schedule.findMany({
+      where: { organizationId: user.organizationId },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    if (error) {
-      console.error('[schedules] DB error:', error);
-      return NextResponse.json({ data: [], total: 0, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ data, total: data?.length ?? 0 });
+    return NextResponse.json({ schedules, total: schedules.length });
   } catch (err) {
-    console.error('[schedules] Unexpected error:', err);
-    return NextResponse.json({ data: [], total: 0, error: 'internal_error' }, { status: 500 });
+    console.error('[schedules] DB error:', err);
+    return NextResponse.json({ schedules: [], total: 0, error: 'internal_error' }, { status: 500 });
   }
 }
 
 // POST /api/schedules
 export async function POST(req: NextRequest) {
+  const { user } = await getAuth(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   const body = await req.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
@@ -47,25 +42,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const admin = createServiceRoleClient();
-    const { data, error } = await admin.from('Schedule').insert({
-      id: 's-' + Date.now(),
-      organizationId: body.organizationId || crypto.randomUUID().toString(),
-      title: body.title,
-      scheduledAt: body.scheduledAt,
-      status: 'scheduled',
-      channel: body.channel || 'social',
-      createdAt: new Date().toISOString(),
+    const schedule = await prisma.schedule.create({
+      data: {
+        organizationId: user.organizationId,
+        title: body.title,
+        description: body.description ?? null,
+        scheduledAt: new Date(body.scheduledAt),
+        status: 'scheduled',
+        channel: body.channel ?? 'social',
+        content: body.content ?? null,
+      },
     });
 
-    if (error) {
-      console.error('[schedules] DB insert error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ data, status: 201 });
+    return NextResponse.json({ schedule }, { status: 201 });
   } catch (err) {
-    console.error('[schedules] Unexpected error:', err);
+    console.error('[schedules] DB insert error:', err);
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
   }
 }

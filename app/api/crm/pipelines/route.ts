@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validatePipeline } from '../../../../src/services/crmService';
 import { pipelineRepoReal } from '../../../../src/repositories/crmRepoReal';
 import { getAuth } from '@/lib/auth';
+import { pipelineCreateSchema, searchParamsSchema } from '@/lib/validation/schemas';
+import { withTenantContext } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const items = await pipelineRepoReal.findByOrganization(user.organizationId);
+
+  const searchParams = req.nextUrl.searchParams;
+  const parsed = searchParamsSchema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_query', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const items = await pipelineRepoReal.list(user.organizationId);
   return NextResponse.json({ organizationId: user.organizationId, items });
 }
 
@@ -17,9 +29,24 @@ export async function POST(req: NextRequest) {
   if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
   const body = await req.json();
-  const errors = validatePipeline(body);
-  if (errors.length) return NextResponse.json({ error: errors.join(',') }, { status: 400 });
-  const item = await pipelineRepoReal.create({ organizationId: user.organizationId, name: body.name, stages: body.stages || [] });
+  const parsed = pipelineCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_payload', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const data: Prisma.PipelineUncheckedCreateInput = {
+    organizationId: user.organizationId,
+    ...parsed.data,
+  };
+
+  const item = await withTenantContext(user.organizationId, async (tx) => {
+    return tx.pipeline.create({ data });
+  });
+
   return NextResponse.json(item, { status: 201 });
 }

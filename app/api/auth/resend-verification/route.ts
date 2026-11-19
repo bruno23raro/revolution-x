@@ -1,50 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
-import { generateSecureToken, getMailProvider } from '@/lib/email';
+import { prisma } from '@/lib/prisma';
+import { getMailProvider } from '@/lib/email';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
+import { emailRateLimitKey, rateLimit } from '@/lib/security/rate-limit';
+import { forgotPasswordSchema } from '@/lib/validation/schemas';
+import { createMagicLink } from '@/lib/auth';
 
 const VERIFICATION_TOKEN_TTL_MS = 3600_000; // 1 hour
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 3;
-
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const bucket = rateLimitBuckets.get(email);
-  if (!bucket || now > bucket.resetAt) {
-    rateLimitBuckets.set(email, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (bucket.count >= RATE_LIMIT_MAX) return false;
-  bucket.count++;
-  return true;
-}
 
 export async function POST(request: NextRequest) {
-  let body;
   try {
-    body = await request.json().catch(() => ({}));
-  } catch {
-    body = {};
-  }
+    const body = await request.json().catch(() => ({}));
+    const parsed = forgotPasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid_payload', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-  const rawEmail = String(body?.email ?? '').trim().toLowerCase();
-  if (!rawEmail) {
-    return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
-  }
+    const rawEmail = parsed.data.email;
 
-  if (!checkRateLimit(rawEmail)) {
-    return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
-  }
+    // Email-based rate limit
+    const rlKey = `verify:${rawEmail}`;
+    const rl = rateLimit(rlKey, 3, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
+    }
 
-  try {
-    const svc = createServiceRoleClient();
-    const { data: userRow } = await svc
-      .from('User')
-      .select('id, email, emailVerified')
-      .eq('email', rawEmail)
-      .maybeSingle();
+    const userRow = await prisma.user.findUnique({
+      where: { email: rawEmail },
+      select: { id: true, email: true, emailVerified: true },
+    });
 
     if (!userRow) {
       return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
@@ -54,23 +41,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email already verified.' });
     }
 
-    const { raw: tokenRaw, hash: tokenHash } = generateSecureToken();
-    const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
-
-    // Invalidate old unused verification tokens
-    await svc.from('EmailVerificationToken')
-      .update({ usedAt: new Date() })
-      .match({ userId: userRow.id, usedAt: null });
-
-    // Insert new token
-    await svc.from('EmailVerificationToken')
-      .insert({ userId: userRow.id, tokenHash, expiresAt });
-
-    // resolvePublicSiteOrigin: env NEXT_PUBLIC_SITE_URL tem prioridade;
-    // senão, a origem da request — exceto valores quebrados de proxy
-    // interno (0.0.0.0:3000); senão, apex de produção.
+    // Generate magic link token for verification
+    const magicLinkToken = await createMagicLink(rawEmail, 'verify', userRow.id);
     const siteOrigin = resolvePublicSiteOrigin(request.nextUrl.origin);
-    const verifyLink = `${siteOrigin}/verify-email?token=${tokenRaw}`;
+    const verifyLink = `${siteOrigin}/verify-email?token=${magicLinkToken}`;
+
+    // Invalidate old tokens via Prisma
+    await prisma.emailVerificationToken.updateMany({
+      where: { userId: userRow.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    await prisma.emailVerificationToken.create({
+      data: { userId: userRow.id, tokenHash: magicLinkToken, expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS) },
+    });
 
     try {
       await getMailProvider().send({

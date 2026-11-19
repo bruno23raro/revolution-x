@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { resolvePublicSiteOrigin } from '@/lib/site-origin';
+import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
+import { registerSchema } from '@/lib/validation/schemas';
+import { emailRateLimitKey, rateLimit } from '@/lib/security/rate-limit';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  createTokenFamily,
+  setAuthCookies,
+} from '@/lib/auth';
 
 function slugify(name: string): string {
   return name
@@ -15,11 +22,8 @@ function slugify(name: string): string {
 
 export interface OnboardingResult {
   ok: boolean;
-  /** orgId gerado mesmo que o insert falhe — o cleanup de resíduo parcial precisa dele. */
   orgId?: string;
-  /** Erro original (NUNCA exposto ao client; só log). */
   error?: unknown;
-  /** Se true, o usuário foi criado mas o onboarding falhou → precisa de rollback */
   rollbackNeeded?: boolean;
 }
 
@@ -28,154 +32,155 @@ async function createOnboardingRecords(
   name: string,
   email: string,
   passwordHash: string,
-): Promise<OnboardingResult> {
-  const admin = createServiceRoleClient();
-
-  // 1. Sync to public.User (auth.users → public."User")
-  // O passwordHash é obrigatório pela constraint NOT NULL da coluna.
-  // Usamos o hash gerado localmente com bcrypt (mesmo algoritmo usado pelo GoTrue).
-  const { error: userError } = await admin.from('User').insert({
-    id: userId,
-    email,
-    name,
-    passwordHash,
-    emailVerified: false,
-  });
-  if (userError) {
-    // 23505 = e-mail já em uso por linha anterior → idempotente, ignora.
-    // Qualquer outro erro é real (ex.: banco fora) → falha o onboarding.
-    if (userError.code !== '23505') return { ok: false, error: userError };
+): Promise<{ ok: boolean; orgId?: string; error?: unknown }> {
+  // Create user record in local DB
+  try {
+    await prisma.user.create({
+      data: {
+        id: userId,
+        email,
+        name,
+        passwordHash,
+        emailVerified: false,
+      },
+    });
+  } catch (userError: unknown) {
+    if (userError instanceof Error && 'code' in userError && (userError as { code: string }).code === 'P2002') {
+      // Email already exists, ignore
+    } else {
+      return { ok: false, error: userError };
+    }
   }
 
-  // 2. Create default Organization for this user
+  // Create default Organization for this user
   const orgName = `${name.trim()}'s Organization`;
   const orgId = crypto.randomUUID();
-  const { error: orgError } = await admin.from('Organization').insert({
-    id: orgId,
-    name: orgName,
-    slug: slugify(orgName),
-    status: 'active',
-  });
-  if (orgError) return { ok: false, orgId, error: orgError };
+  try {
+    await prisma.organization.create({
+      data: {
+        id: orgId,
+        name: orgName,
+        slug: slugify(orgName),
+        status: 'active',
+      },
+    });
+  } catch (orgError) {
+    return { ok: false, orgId, error: orgError };
+  }
 
-  // 3. Link user as admin member
-  const { error: memberError } = await admin.from('OrganizationMember').insert({
-    organizationId: orgId,
-    userId,
-    role: 'admin',
-  });
-  if (memberError) return { ok: false, orgId, error: memberError };
+  // Link user as admin member
+  try {
+    await prisma.organizationMember.create({
+      data: {
+        organizationId: orgId,
+        userId,
+        role: 'admin',
+      },
+    });
+  } catch (memberError) {
+    return { ok: false, orgId, error: memberError };
+  }
 
   return { ok: true, orgId };
 }
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
-    }
-    const normalizedEmail = String(email ?? '').trim().toLowerCase();
-    const normalizedPassword = String(password ?? '');
-    if (!normalizedEmail || !normalizedPassword) {
-      return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
-    }
-    const supabase = await createClient();
-    // NUNCA construir a origem do link de confirmação do header Host sem
-    // validação: o proxy interno do Hostinger pode entregar 0.0.0.0:3000
-    // (link de e-mail quebrado). resolvePublicSiteOrigin faz o fallback
-    // para NEXT_PUBLIC_SITE_URL / apex de produção (mesmo padrão do
-    // forgot-password).
-    const host = request.headers.get('host') ?? '';
-    const hostName = host.split(':')[0].toLowerCase();
-    const isLocal = hostName === 'localhost' || hostName === '127.0.0.1';
-    const requestOrigin = host ? `${isLocal ? 'http' : 'https'}://${host}` : '';
-    const emailRedirectTo = `${resolvePublicSiteOrigin(requestOrigin)}/auth/callback?next=/verify-email`;
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password: normalizedPassword,
-      options: {
-        emailRedirectTo,
-        data: { name: String(name ?? '').trim() }
-        // ATENÇÃO (skill supabase): user_metadata / raw_user_meta_data é editável pelo usuário.
-        // Dados de autorização devem vir de app_metadata; não usar raw_user_meta_data em políticas RLS.
-      }
-    });
-    if (error) {
-      // Diagnóstico SEM segredo e SEM PII: a resposta segue 400 genérico
-      // (evita enumeração), mas a metadados do erro GoTrue (code/status)
-      // fica rastreável no runtime log do hPanel — ex.: mailer quebrado,
-      // rate limit ou signup desabilitado no dashboard do Supabase.
-      console.error('[register] GoTrue signUp failed:', {
-        code: error.code ?? null,
-        status: error.status ?? null,
-      });
-      return NextResponse.json({ error: 'registration_failed' }, { status: 400 });
-    }
-    if (!data || !data.user) {
-      return NextResponse.json({ error: 'registration_failed' }, { status: 400 });
+    // Email-based rate limit
+    const rlKey = await emailRateLimitKey(request);
+    const rl = rateLimit(rlKey, 10, 60 * 60_1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'too_many_requests', message: 'Rate limit exceeded' },
+        { status: 429 }
+      );
     }
 
-    // Hash da senha para armazenar em public.User (coluna obrigatória passwordHash)
+    const body = await request.json();
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid_payload', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password } = parsed.data;
+    const normalizedEmail = email;
+    const normalizedPassword = password;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'email_already_registered' },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
     const passwordHash = await hashPassword(normalizedPassword);
 
-    // Create public.User + Organization + OrganizationMember for CRM access.
-    // NUNCA lança: devolve um resultado — a falha é o ponto de compensação P4-2.
-    let onboarding: OnboardingResult;
-    try {
-      onboarding = await createOnboardingRecords(
-        data.user.id,
-        String(name ?? '').trim(),
-        normalizedEmail,
-        passwordHash,
-      );
-    } catch (onboardErr) {
-      // createServiceRoleClient() pode lançar (service key ausente) — trata
-      // como onboarding falhado (sem orgId conhecido).
-      onboarding = { ok: false, error: onboardErr };
-    }
-
-    if (!onboarding.ok) {
-      // P4-2 (registro-zumbi): onboarding falhou → usuário com sessão GoTrue
-      // válida mas sem public."User"/Organization → bloqueio permanente, sem retry.
-      // Compensa com dois planos: (a) tenta cleanup; (b) retorna 500 honesto para
-      // permitir re-registro limpo. Se o rollback parcial falhar, loga sem derrubar
-      // a resposta para o e-mail poder re-registrar depois.
-      console.error('[register] onboarding failed:', onboarding.error);
-      let rolledBack = false;
-      try {
-        const admin = createServiceRoleClient();
-        // 1. Mata a sessão GoTrue (principal)
-        await admin.auth.admin.deleteUser(data.user.id);
-        rolledBack = true;
-        // 2. Cleanup best-effort das tabelas públicas — cada delete é independente
-        try { await admin.from('OrganizationMember').delete().eq('userId', data.user.id); } catch {}
-        try { if (onboarding.orgId) { await admin.from('Organization').delete().eq('id', onboarding.orgId); } } catch {}
-        try { await admin.from('User').delete().eq('id', data.user.id); } catch {}
-      } catch (rollbackErr) {
-        // Falha parcial do rollback: log sem derrubar a resposta.
-        // Mesmo com resíduo, permite o usuário re-registrar depois.
-        console.error('[register] compensating delete left residue:', rollbackErr);
-      }
-      return NextResponse.json(
-        {
-          error: 'registration_failed',
-          detail: rolledBack ? 'onboarding_rolled_back' : 'onboarding_residual',
+    // Create user + organization + membership in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          email: normalizedEmail,
+          name: String(name ?? '').trim(),
+          passwordHash,
+          emailVerified: false,
         },
-        { status: 500 },
-      );
-    }
+      });
 
-    return NextResponse.json({
+      const orgName = `${name.trim()}'s Organization`;
+      const orgId = crypto.randomUUID();
+      await tx.organization.create({
+        data: {
+          id: orgId,
+          name: orgName,
+          slug: slugify(orgName),
+          status: 'active',
+        },
+      });
+
+      await tx.organizationMember.create({
+        data: {
+          organizationId: orgId,
+          userId: user.id,
+          role: 'admin',
+        },
+      });
+
+      return { userId: user.id, orgId };
+    });
+
+    // Create token family and tokens
+    const userId = result.userId;
+    const orgId = result.orgId;
+
+    const familyId = `${userId}:${crypto.randomUUID()}`;
+    const { createTokenFamily, generateAccessToken, generateRefreshToken, setAuthCookies } = await import('@/lib/auth');
+
+    createTokenFamily(familyId);
+
+    const accessToken = generateAccessToken({ sub: userId, fid: familyId, orgId, role: 'admin' });
+    const refreshToken = generateRefreshToken({ sub: userId, fid: familyId });
+
+    const response = NextResponse.json({
       user: {
-        id: data.user.id,
-        email: data.user.email || normalizedEmail,
-        // NÃO usar user_metadata para decisão de autorização (skill supabase: raw_user_meta_data é editável).
-        // Se precisar de claim de auth, usar app_metadata (raw_app_meta_data) via admin/updateUser.
-        name: (data.user.app_metadata && typeof data.user.app_metadata === 'object' && data.user.app_metadata.name) || (data.user.user_metadata && typeof data.user.user_metadata === 'object' && data.user.user_metadata.name) || String(name ?? '').trim(),
-        email_verified: !!data.user.email_confirmed_at
-      }
+        id: userId,
+        email: normalizedEmail,
+        name: String(name ?? '').trim(),
+        email_verified: false,
+      },
     }, { status: 201 });
+
+    setAuthCookies(response, accessToken, refreshToken);
+
+    return response;
   } catch {
     return NextResponse.json({ error: 'registration_failed' }, { status: 500 });
   }

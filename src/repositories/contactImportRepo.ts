@@ -47,6 +47,7 @@ export async function listMarketingContacts(
     lastName: string | null;
     email: string | null;
     phone: string | null;
+    waId: string | null;
     company: string | null;
     source: string | null;
     tags: unknown;
@@ -66,6 +67,7 @@ export async function listMarketingContacts(
         lastName: true,
         email: true,
         phone: true,
+        waId: true,
         company: true,
         source: true,
         tags: true,

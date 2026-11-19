@@ -4,7 +4,6 @@
 //   { recipients?: [{to, text?}], to?: string[], text?, template?: {name, variables, language}, delayMs?, account? }
 // → { ok, total, sent, failed, tracked, taskId?, results }
 //
-//
 // PROVIDER-OPENBSP: Resolve contas apenas de whatsapp_channels (provider='openb').
 // Sem dependência Meta/Graph API. Usa headers api-key + apikey do OpenBSP.
 //
@@ -24,21 +23,19 @@ import {
 } from '@/lib/taskQueue';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendViaOpenBSP, sendTemplateViaOpenBSP, sendMassViaOpenBSP, type Recipient, type MassSendOptions } from '@/integrations/openbsp/send';
-
-// Removido import decryptToken - OpenBSP usa token limpo
+import { whatsappSendSchema } from '@/lib/validation/schemas';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_RECIPIENTS = 500;
 
-// Tipo para resolução de conta OpenBSP
 type Provider = 'openbsp';
 
 interface ResolvedAccount {
   ok: true;
   provider: Provider;
-  accessToken: string;      // OpenBSP: token limpo para headers
-  phoneNumberId: string;    // phoneNumberId da whatsapp_channels
+  accessToken: string;
+  phoneNumberId: string;
   row: Record<string, unknown>;
 }
 
@@ -47,18 +44,12 @@ interface ResolveFailure {
   reason: 'not_connected' | 'no_token' | 'account_not_found';
 }
 
-/**
- * Resolve uma conta OpenBSP (whatsapp_channels).
- * Apenas OpenBSP - sem busca Meta.
- */
 async function resolveTenantOpenBSPAccess(
   organizationId: string,
   accountId?: string,
 ): Promise<ResolvedAccount | ResolveFailure> {
   const service = createServiceRoleClient();
 
-  // Buscar apenas whatsapp_channels com provider='openbsp'
-  // Tabelas 019 usam PascalCase (organizationId, wabaId, etc.)
   let q = service
     .from('whatsapp_channels')
     .select('id, provider, status, wabaId, phoneNumberId, phoneNumber, verifiedName, accessTokenEnc, lastError, tierLimitPer24h, sentWindow24h, windowStartedAt')
@@ -74,15 +65,12 @@ async function resolveTenantOpenBSPAccess(
   }
 
   const channel = channelData as Record<string, unknown>;
-
-  // OpenBSP: o accessToken já vem no formato adequado para headers diretos
-  // (não é cifrado como Meta - o OpenBSP armazena o token plaintext ou codificado base64)
   const accessToken = channel.accessTokenEnc as string || '';
 
   return {
     ok: true,
     provider: 'openbsp',
-    accessToken: accessToken, // Token OpenBSP direto nos headers
+    accessToken: accessToken,
     phoneNumberId: channel.phoneNumberId as string || '',
     row: channel,
   };
@@ -99,7 +87,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const recipients: Recipient[] = normalizeRecipients(body);
+  // Validate with Zod schema
+  const parsed = whatsappSendSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_payload', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const recipients: Recipient[] = normalizeRecipients({
+    to: parsed.data.to,
+    recipients: parsed.data.recipients,
+    text: parsed.data.text,
+  });
   if (recipients.length === 0) {
     return NextResponse.json({ error: 'recipients vazios' }, { status: 400 });
   }
@@ -110,10 +111,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // MULTICONTAS — `account` (row id) ancora a conta específica
-  const account = body.account ? String(body.account).trim() : undefined;
+  const account = parsed.data.account;
 
-  // RESOLVER CONTA OPENBSP (sem Meta)
   const resolved = await resolveTenantOpenBSPAccess(user.organizationId, account);
   if (!resolved.ok) {
     const status = resolved.reason === 'not_connected' || resolved.reason === 'account_not_found' ? 409 : 503;
@@ -127,12 +126,12 @@ export async function POST(req: NextRequest) {
   }
 
   const opts: MassSendOptions = {
-    delayMs: typeof body.delayMs === 'number' ? Math.max(0, Math.min(body.delayMs, 60000)) : 0,
-    template: body.template?.name
+    delayMs: parsed.data.delayMs ?? 0,
+    template: parsed.data.template?.name
       ? {
-          name: String(body.template.name),
-          variables: Array.isArray(body.template.variables) ? body.template.variables.map((v: unknown) => String(v)) : [],
-          language: body.template.language ? String(body.template.language) : undefined,
+          name: parsed.data.template.name,
+          variables: parsed.data.template.variables ?? [],
+          language: parsed.data.template.language,
         }
       : undefined,
   };
@@ -140,7 +139,6 @@ export async function POST(req: NextRequest) {
   const scope = { organizationId: user.organizationId, userId: user.id };
   const stepNames = ['resolver', `enviar ${recipients.length}`, 'concluir'];
 
-  // Tracking best-effort: a fila não pode bloquear o trabalho real.
   let taskId: string | null = null;
   let tracked = false;
   try {
@@ -158,10 +156,8 @@ export async function POST(req: NextRequest) {
     else throw e;
   }
 
-  // TRABALHO REAL - OPENBSP
   let result: { total: number; sent: number; failed: number; results: unknown[] };
 
-  // Semp usar OpenBSP - esta é a única provider
   result = await sendMassViaOpenBSP(resolved, recipients, opts);
 
   if (tracked && taskId) {
@@ -181,21 +177,20 @@ export async function POST(req: NextRequest) {
   );
 }
 
-function normalizeRecipients(body: Record<string, any>): Recipient[] {
+function normalizeRecipients(data: { to?: string[]; recipients?: Array<{ to: string; text?: string }>; text?: string }): Recipient[] {
   const out: Recipient[] = [];
-  if (Array.isArray(body.recipients)) {
-    for (const r of body.recipients) {
+  if (Array.isArray(data.recipients)) {
+    for (const r of data.recipients) {
       const to = r?.to != null ? String(r.to).trim() : '';
       if (to) out.push({ to, text: r?.text != null ? String(r.text) : undefined });
     }
-  } else if (Array.isArray(body.to)) {
-    const text = body.text != null ? String(body.text) : undefined;
-    for (const t of body.to) {
+  } else if (Array.isArray(data.to)) {
+    const text = data.text != null ? String(data.text) : undefined;
+    for (const t of data.to) {
       const to = t != null ? String(t).trim() : '';
       if (to) out.push({ to, text });
     }
   }
-  // dedup por número
   const seen = new Set<string>();
   return out.filter((r) => (seen.has(r.to) ? false : (seen.add(r.to), true)));
 }

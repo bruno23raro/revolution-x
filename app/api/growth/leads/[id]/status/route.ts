@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   req: NextRequest,
@@ -17,7 +17,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const supa = createServiceRoleClient();
   const { id } = await params;
 
   const body = await req.json();
@@ -33,7 +32,7 @@ export async function PUT(
   }
 
   const updateData: Record<string, any> = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date(),
   };
 
   if (funnelStatus) {
@@ -46,28 +45,27 @@ export async function PUT(
     updateData.assignedTo = assignedTo;
   }
 
-  const { data, error } = await supa
-    .from('growth_leads')
-    .update(updateData)
-    .eq('id', id)
-    .eq('organizationId', user.organizationId)
-    .select()
-    .single();
+  try {
+    const lead = await prisma.growthLead.update({
+      where: {
+        id,
+        organizationId: user.organizationId,
+      },
+      data: updateData,
+    });
 
-  if (error) {
+    return NextResponse.json({ success: true, lead });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Record to update not found')) {
+      return NextResponse.json(
+        { error: 'Lead not found' },
+        { status: 404 }
+      );
+    }
     console.error('[Growth Leads] Error updating status:', error);
     return NextResponse.json(
       { error: 'Failed to update lead status' },
       { status: 500 }
     );
   }
-
-  if (!data) {
-    return NextResponse.json(
-      { error: 'Lead not found' },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json({ success: true, lead: data });
 }

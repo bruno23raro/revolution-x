@@ -341,8 +341,7 @@ async function doStartOfficial(
   org: string,
   from: CampaignStatus,
 ) {
-  const client = createServiceRoleClient();
-  const channel = await getChannelDecrypted(client, org);
+  const channel = await getChannelDecrypted(org);
   // Conexão válida se: status CONNECTED E (tem wabaId+accessToken do Meta OU phoneNumberId do OpenBSP)
   const isMetaConnected = channel?.status === 'CONNECTED' && channel?.wabaId && channel?.accessToken;
   const isOpenBSPConnected = channel?.status === 'CONNECTED' && channel?.phoneNumberId;
@@ -404,7 +403,7 @@ async function doStartOfficial(
     await campaignRepoReal.setStatus(org, campaign.id, 'queued', { startedAt: campaign.startedAt ?? new Date() });
   }
 
-  const sender = buildOfficialSender({ channel, client, payload, expectedCategory });
+  const sender = buildOfficialSender({ channel, payload, expectedCategory });
   const withPlan = { ...campaign, totalCount: campaign.totalCount + planned.planned };
   const result = await executeCampaignBatch({ campaign: withPlan, sender });
 

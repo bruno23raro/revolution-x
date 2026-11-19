@@ -1,4 +1,4 @@
-import { hashPassword, verifyPassword, isPasswordStrong, generateToken, verifyToken } from './auth';
+import { hashPassword, verifyPassword, isPasswordStrong, generateAccessToken, verifyAccessToken, generateRefreshToken, verifyRefreshToken } from './auth';
 import { requireTenant } from '../services/tenant';
 import { defaultGrants, requirePermission } from '../services/rbac';
 
@@ -14,12 +14,19 @@ describe('auth security', () => {
     expect(await verifyPassword(password, hash)).toBe(true);
     expect(await verifyPassword('Wrong123', hash)).toBe(false);
   });
-  it('rejects invalid token', () => {
-    expect(verifyToken('invalid', 'test-secret')).toBeNull();
+  it('rejects invalid access token', () => {
+    expect(verifyAccessToken('invalid')).toBeNull();
   });
-  it('validates a signed token', () => {
-    const token = generateToken({ sub: 'user-a' }, 'test-secret');
-    expect(verifyToken(token, 'test-secret')).toMatchObject({ sub: 'user-a' });
+  it('validates a signed access token', () => {
+    const token = generateAccessToken({ sub: 'user-a' });
+    expect(verifyAccessToken(token)).toMatchObject({ sub: 'user-a' });
+  });
+  it('rejects invalid refresh token', () => {
+    expect(verifyRefreshToken('invalid')).toBeNull();
+  });
+  it('validates a signed refresh token', () => {
+    const token = generateRefreshToken({ sub: 'user-a' });
+    expect(verifyRefreshToken(token)).toMatchObject({ sub: 'user-a' });
   });
 });
 

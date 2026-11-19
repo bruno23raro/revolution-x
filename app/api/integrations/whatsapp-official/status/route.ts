@@ -4,14 +4,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { getChannelDecrypted, checkTier } from '@/integrations/whatsapp';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const channel = await getChannelDecrypted(createServiceRoleClient(), user.organizationId);
+  const channel = await getChannelDecrypted(user.organizationId);
   if (!channel || channel.status === 'PENDING') {
     return NextResponse.json({ connected: false, status: channel?.status ?? 'NONE' });
   }

@@ -15,7 +15,6 @@ import {
   upsertTemplateRow,
 } from '@/integrations/whatsapp';
 import type { OfficialTemplateSpec } from '@/integrations/whatsapp';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +28,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const rows = await listTemplateRows(createServiceRoleClient(), user.organizationId);
+  const rows = await listTemplateRows(user.organizationId);
   return NextResponse.json({
     items: rows.map((r) => ({
       id: r.id,
@@ -64,8 +63,7 @@ export async function POST(req: NextRequest) {
   const bodyText = typeof body.body === 'string' ? body.body.trim() : '';
   if (!bodyText || bodyText.length > 4096) return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
 
-  const client = createServiceRoleClient();
-  const channel = await getChannelDecrypted(client, user.organizationId);
+  const channel = await getChannelDecrypted(user.organizationId);
   // Conexão válida se: status CONNECTED E (tem wabaId+accessToken do Meta OU phoneNumberId do OpenBSP)
   const isMetaConnected = channel?.status === 'CONNECTED' && channel?.wabaId && channel?.accessToken !== null;
   const isOpenBSPConnected = channel?.status === 'CONNECTED' && channel?.phoneNumberId;
@@ -82,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'template_create_failed', detail: r.errorDetail ?? r.error }, { status: 502 });
   }
 
-  await upsertTemplateRow(client, {
+  await upsertTemplateRow({
     organizationId: user.organizationId,
     name,
     language,

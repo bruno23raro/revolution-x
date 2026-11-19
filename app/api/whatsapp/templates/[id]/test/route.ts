@@ -103,17 +103,17 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     return response;
   }
   const provider = getWhatsAppProvider();
-  const result = await provider.sendTestMessage?.(resolved.access, template.name, body.to, variables, { language: language || 'en_US' } as any) ?? { ok: false, error: 'sendTestMessage_not_supported', errorDetail: 'sendTestMessage_not_supported' } as const;
+  const result = await provider.sendTestMessage?.(resolved.access, template.name, body.to, variables, { language: language || 'en_US' } as any);
 
   const response = NextResponse.json(
     {
-      ok: result.ok,
-      messageId: result.ok ? result.messageId : undefined,
-      error: result.error,
-      errorDetail: result.errorDetail,
-      detail: result.ok ? 'Mensagem de teste enviada com sucesso' : result.errorDetail,
+      ok: result?.ok ?? false,
+      messageId: result?.ok ? result.messageId : undefined,
+      error: result?.error,
+      errorDetail: result?.errorDetail,
+      detail: result?.ok ? 'Mensagem de teste enviada com sucesso' : result?.errorDetail,
     },
-    { status: result.ok ? 200 : 500 }
+    { status: result?.ok ? 200 : 500 }
   );
   response.headers.set('X-RateLimit-Remaining', String(rateResult.remaining));
   return response;

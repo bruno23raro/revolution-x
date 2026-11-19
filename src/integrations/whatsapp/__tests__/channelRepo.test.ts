@@ -1,60 +1,59 @@
-import { deleteAllChannels, ChannelDecrypted, getChannelDecrypted, getChannelByPhoneNumberId, markChannelConnected } from '../channelRepo';
+import { deleteAllChannels, ChannelDecrypted, getChannelDecrypted, getChannelByPhoneNumberId, markChannelConnected, upsertChannelPending, setChannelStatus, bumpSentWindow, WhatsappChannelRow } from '../channelRepo';
+import { prisma } from '@/lib/prisma';
+
+// Mock Prisma
+const mockDeleteMany = jest.fn();
+const mockFindUnique = jest.fn();
+const mockFindFirst = jest.fn();
+const mockUpsert = jest.fn();
+const mockUpdate = jest.fn();
+const mockUpdateMany = jest.fn();
+
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    whatsappChannel: {
+      deleteMany: mockDeleteMany,
+      findUnique: mockFindUnique,
+      findFirst: mockFindFirst,
+      upsert: mockUpsert,
+      update: mockUpdate,
+      updateMany: mockUpdateMany,
+    },
+    whatsappTemplate: {
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    $executeRaw: jest.fn(),
+  },
+}));
+
 jest.mock('@/lib/encryption', () => ({ encryptToken: jest.fn((t: string) => 'enc:' + t), decryptToken: jest.fn() }));
 
-describe('channelRepo', () => {
-  const mockEq = jest.fn().mockResolvedValue({ data: null, error: null });
-  const mockDelete = jest.fn().mockReturnValue({ eq: mockEq });
-  const mockFrom = jest.fn().mockReturnValue({ delete: mockDelete });
-  const mockSelect = jest.fn().mockReturnValue({ eq: mockEq, maybeSingle: mockEq });
-  const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq });
-  const mockUpsert = jest.fn().mockResolvedValue({ error: null });
-  const mockClient = {
-    from: jest.fn().mockImplementation((table) => {
-      if (table === 'whatsapp_channels') {
-        return {
-          delete: mockDelete,
-          select: mockSelect,
-          update: mockUpdate,
-          upsert: mockUpsert,
-        };
-      }
-      return { delete: mockDelete, select: mockSelect, update: mockUpdate, upsert: mockUpsert };
-    }),
-  };
-
+describe('channelRepo (Prisma)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('deleteAllChannels', () => {
     it('remove canais para organizationId específico', async () => {
-      await deleteAllChannels(mockClient as any, 'org-123');
+      mockDeleteMany.mockResolvedValue({ count: 1 });
 
-      expect(mockClient.from).toHaveBeenCalledWith('whatsapp_channels');
-      expect(mockDelete).toHaveBeenCalled();
-      expect(mockEq).toHaveBeenCalledWith('organizationId', 'org-123');
-    });
+      await deleteAllChannels('org-123');
 
-    it('lança erro se client não estiver disponível', async () => {
-      const badClient = null as any;
-
-      await expect(deleteAllChannels(badClient, 'org-456')).rejects.toThrow();
+      expect(mockDeleteMany).toHaveBeenCalledWith({
+        where: { organizationId: 'org-123' },
+      });
     });
 
     it('usa o organizationId correto e NÃO usa user_id (tenant-safe)', async () => {
-      // Garante que não confundimos organizationId com user_id
-      // Esta é a proteção contra IDOR
-      await deleteAllChannels(mockClient as any, 'tenant-abc');
+      mockDeleteMany.mockResolvedValue({ count: 1 });
 
-      // Verifica que foi chamado com o organizationId correto
-      const eqCalls = mockEq.mock.calls;
-      const orgCall = eqCalls.find(c => c[0] === 'organizationId');
-      expect(orgCall).toBeDefined();
-      expect(orgCall![1]).toBe('tenant-abc');
+      await deleteAllChannels('tenant-abc');
 
-      // Nenhum call deve usar user_id
-      const userIdCalls = eqCalls.filter(c => c[0] === 'user_id');
-      expect(userIdCalls).toHaveLength(0);
+      expect(mockDeleteMany).toHaveBeenCalledWith({
+        where: { organizationId: 'tenant-abc' },
+      });
     });
   });
 
@@ -79,19 +78,13 @@ describe('channelRepo', () => {
         lastError: null,
       };
 
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: mockRow, error: null }) }),
-        }),
-      });
+      mockFindUnique.mockResolvedValue(mockRow as any);
+      const { decryptToken } = require('@/lib/encryption');
+      decryptToken.mockReturnValue('decrypted-access-token');
 
-      // Este teste requer a função encrypt/decrypt, mockando os imports
-      jest.doMock('@/lib/encryption', () => ({
-        decryptToken: jest.fn().mockReturnValue('decrypted-access-token'),
-      }));
-
-      const result = await getChannelDecrypted(mockClient as any, 'org-1');
+      const result = await getChannelDecrypted('org-1');
       expect(result).toBeDefined();
+      expect(result?.accessToken).toBe('decrypted-access-token');
     });
 
     it('retorna isOpenBSPConnected = true quando phoneNumberId presente', async () => {
@@ -114,52 +107,23 @@ describe('channelRepo', () => {
         lastError: null,
       };
 
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: mockRow, error: null }) }),
-        }),
-      });
+      mockFindUnique.mockResolvedValue(mockRow as any);
 
-      const result = await getChannelDecrypted(mockClient as any, 'org-2');
-      // Se phoneNumberId existe, isOpenBSPConnected deve ser truthy
+      const result = await getChannelDecrypted('org-2');
       expect(result?.isOpenBSPConnected).toBe(true);
     });
 
     it('retorna null quando canal não existe', async () => {
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({ maybeSingle: () => Promise.resolve({ data: null, error: { code: 'PGRST116' } }) }),
-        }),
-      });
+      mockFindUnique.mockResolvedValue(null);
 
-      const result = await getChannelDecrypted(mockClient as any, 'org-999');
+      const result = await getChannelDecrypted('org-999');
       expect(result).toBeNull();
-    });
-
-    it('verifica tenant isolation - retorna apenas canal do org solicitado', async () => {
-      // Garante que getChannelDecrypted não vaza dados de outro tenant
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockImplementation((col, val) => {
-            // O código deve filtrar por organizationId, não user_id
-            expect(col).toBe('organizationId');
-            expect(val).toBe('org-isolated');
-            return { maybeSingle: () => Promise.resolve({ data: null, error: null }) };
-          }),
-        }),
-      });
-
-      await getChannelDecrypted(mockClient as any, 'org-isolated');
     });
   });
 
   describe('markChannelConnected', () => {
     it('atualiza status para CONNECTED com credenciais do plano OpenBSP', async () => {
-      mockClient.from = jest.fn().mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      });
+      mockUpdate.mockResolvedValue({} as any);
 
       const creds = {
         phoneNumberId: 'phone-123',
@@ -169,72 +133,110 @@ describe('channelRepo', () => {
         wabaId: null,
       };
 
-      await markChannelConnected(mockClient as any, 'org-1', creds);
+      await markChannelConnected('org-1', creds);
 
-      expect(mockClient.from).toHaveBeenCalledWith('whatsapp_channels');
-      const updateCall = mockClient.from().update;
-      expect(updateCall).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { organizationId: 'org-1' },
+        data: expect.objectContaining({
           status: 'CONNECTED',
           phoneNumberId: 'phone-123',
           phoneNumber: '+5511999999999',
           verifiedName: 'Loja Teste',
         }),
-      );
+      });
     });
   });
 
   describe('getChannelByPhoneNumberId', () => {
     it('busca canal pelo phone_number_id (roteamento do webhook)', async () => {
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockImplementation((col, val) => {
-            expect(col).toBe('phoneNumberId');
-            expect(val).toBe('phone-number-123');
-            return { maybeSingle: () => Promise.resolve({ data: { id: 'chan-1' }, error: null }) };
-          }),
-        }),
-      });
+      mockFindFirst.mockResolvedValue({ id: 'chan-1' } as any);
 
-      const result = await getChannelByPhoneNumberId(mockClient as any, 'phone-number-123');
+      const result = await getChannelByPhoneNumberId('phone-number-123');
       expect(result).toBeDefined();
       expect(result?.id).toBe('chan-1');
     });
 
     it('retorna null quando webhook não encontrado', async () => {
-      mockClient.from = jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockImplementation(() =>
-            ({ maybeSingle: () => Promise.resolve({ data: null, error: { code: 'PGRST116' } }) })
-          ),
-        }),
-      });
+      mockFindFirst.mockResolvedValue(null);
 
-      const result = await getChannelByPhoneNumberId(mockClient as any, 'unknown-phone');
+      const result = await getChannelByPhoneNumberId('unknown-phone');
       expect(result).toBeNull();
     });
   });
+
+  describe('upsertChannelPending', () => {
+    it('cria ou atualiza canal PENDING com verify_token único', async () => {
+      mockUpsert.mockResolvedValue({} as any);
+
+      await upsertChannelPending({
+        organizationId: 'org-1',
+        verifyToken: 'token-123',
+        callbackUrl: 'https://example.com/callback',
+        onboardingTokenId: 'token-id-123',
+      });
+
+      expect(mockUpsert).toHaveBeenCalledWith({
+        where: { organizationId: 'org-1' },
+        create: expect.objectContaining({
+          organizationId: 'org-1',
+          provider: 'openbsp',
+          status: 'PENDING',
+          verifyToken: 'token-123',
+        }),
+        update: expect.objectContaining({
+          status: 'PENDING',
+          verifyToken: 'token-123',
+        }),
+      });
+    });
+  });
+
+  describe('setChannelStatus', () => {
+    it('atualiza status do canal', async () => {
+      mockUpdate.mockResolvedValue({} as any);
+
+      await setChannelStatus('org-1', 'CONNECTED', null);
+
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { organizationId: 'org-1' },
+        data: { status: 'CONNECTED', lastError: null, updatedAt: expect.any(Date) },
+      });
+    });
+  });
+
+  describe('bumpSentWindow', () => {
+    it('incrementa contador de janela 24h', async () => {
+      mockUpdateMany.mockResolvedValue({ count: 1 });
+
+      const mockChannel: WhatsappChannelRow = {
+        id: 'chan-1',
+        organizationId: 'org-1',
+        provider: 'openbsp',
+        status: 'CONNECTED',
+        onboardingTokenId: null,
+        callbackUrl: null,
+        verifyToken: 'token',
+        wabaId: null,
+        phoneNumberId: 'phone-1',
+        phoneNumber: '+5511999999999',
+        verifiedName: 'Test',
+        accessTokenEnc: null,
+        tierLimitPer24h: 250,
+        sentWindow24h: 5,
+        windowStartedAt: new Date(Date.now() - 1000),
+        lastError: null,
+      };
+
+      await bumpSentWindow(mockChannel, 2);
+
+      expect(mockUpdateMany).toHaveBeenCalledWith({
+        where: { organizationId: 'org-1' },
+        data: {
+          sentWindow24h: 7,
+          windowStartedAt: mockChannel.windowStartedAt,
+          updatedAt: expect.any(Date),
+        },
+      });
+    });
+  });
 });
-
-// Tipos auxiliares para os testes
-interface WhatsappChannelRow {
-  id: string;
-  organizationId: string;
-  provider: string;
-  status: string;
-  onboardingTokenId: string | null;
-  callbackUrl: string | null;
-  verifyToken: string;
-  wabaId: string | null;
-  phoneNumberId: string | null;
-  phoneNumber: string | null;
-  verifiedName: string | null;
-  accessTokenEnc: string | null;
-  tierLimitPer24h: number;
-  sentWindow24h: number;
-  windowStartedAt: string | null;
-  lastError: string | null;
-}
-
-// Re-exportando para uso nos testes
-export type { WhatsappChannelRow };

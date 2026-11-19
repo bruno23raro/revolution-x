@@ -1,12 +1,22 @@
 // Rota desconhecida → redireciona para a página inicial ("tudo redirecionando").
 // Card de espera com auto-redirect (1,2 s) + link direto. Não expõe nada sensível.
 
+'use client';
+
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function NotFound() {
-  // Redireciona após 1.2s para a página inicial
-  setTimeout(() => redirect('/'), 1200);
+  const router = useRouter();
+
+  // Redireciona após 1.2s para a página inicial (client-side only)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/');
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-[#05020A] text-gray-300">
@@ -31,7 +41,3 @@ export default function NotFound() {
     </main>
   );
 }
-
-// Tratar como fallback para rotas não encontradas
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;

@@ -8,12 +8,14 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -25,10 +27,24 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle validation errors (fieldErrors)
+        if (data.details?.fieldErrors) {
+          const errors: Record<string, string> = {};
+          for (const [field, messages] of Object.entries(data.details.fieldErrors)) {
+            if (Array.isArray(messages) && messages.length > 0) {
+              errors[field] = messages[0];
+            }
+          }
+          setFieldErrors(errors);
+          setError(data.error || 'Dados inválidos');
+          return;
+        }
+
+        // Handle generic errors (like invalid_credentials)
         throw new Error(data.error || 'Erro ao entrar');
       }
 
-      // Sucesso - redirecionar para o dashboard (area logada)
+      // Success - redirect to dashboard
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
@@ -57,8 +73,13 @@ export default function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
+            className={`w-full px-4 py-2 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500 ${
+              fieldErrors.email ? 'border-red-400' : ''
+            }`}
           />
+          {fieldErrors.email && (
+            <p className="text-sm text-red-400">{fieldErrors.email}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -71,8 +92,13 @@ export default function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+            className={`w-full px-4 py-2 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white ${
+              fieldErrors.password ? 'border-red-400' : ''
+            }`}
           />
+          {fieldErrors.password && (
+            <p className="text-sm text-red-400">{fieldErrors.password}</p>
+          )}
         </div>
 
         {error && (

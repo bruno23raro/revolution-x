@@ -1,0 +1,1 @@
+FASE 4 complete - Auth hardening: Cookie httpOnly Secure SameSite=Lax, JWT access 15min, refresh rotation with family, invalidation on login, bcrypt cost 12, Magic link via Resend 15min/unique, OAuth Google/GitHub structure.

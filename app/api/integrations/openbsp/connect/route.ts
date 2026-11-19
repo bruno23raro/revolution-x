@@ -1,17 +1,16 @@
-// POST /api/integrations/openbsp/connect â€” inicia o onboarding do canal
+// POST /api/integrations/openbsp/connect — inicia o onboarding do canal
 // OFICIAL por tenant (PASSO E / plano OpenBSP).
 //
 // Fluxo: mint de onboarding token na conta OpenBSP com callback_url +
-// verify_token ÃšNICOS por tenant (a correlaÃ§Ã£o da linha
-// `organizations_addresses` de volta ao tenant Ã© por verify_token â€” o id do
-// token nÃ£o aparece lÃ¡). PrÃ©-provisiona whatsapp_channels como PENDING e
+// verify_token ÚNICOS por tenant (a correlação da linha
+// `organizations_addresses` de volta ao tenant é por verify_token — o id do
+// token não aparece lá). Pré-provisiona whatsapp_channels como PENDING e
 // devolve a URL do popup Embedded Signup.
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getAuth } from '@/lib/auth';
 import { mintOnboardingToken, upsertChannelPending } from '@/integrations/whatsapp';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await upsertChannelPending(createServiceRoleClient(), {
+    await upsertChannelPending({
       organizationId: user.organizationId,
       verifyToken,
       callbackUrl,

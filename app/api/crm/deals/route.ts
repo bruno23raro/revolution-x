@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateDeal } from '../../../../src/services/crmService';
 import { dealRepoReal } from '../../../../src/repositories/crmRepoReal';
 import { getAuth } from '@/lib/auth';
+import { dealCreateSchema, searchParamsSchema } from '@/lib/validation/schemas';
+import { withTenantContext } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const searchParams = req.nextUrl.searchParams;
+  const parsed = searchParamsSchema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_query', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
   const items = await dealRepoReal.findByOrganization(user.organizationId);
   return NextResponse.json({ organizationId: user.organizationId, items });
 }
@@ -17,14 +29,24 @@ export async function POST(req: NextRequest) {
   if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
   const body = await req.json();
-  const errors = validateDeal(body);
-  if (errors.length) return NextResponse.json({ error: errors.join(',') }, { status: 400 });
-  // Nunca confiar em organizationId vindo do payload (mass-assignment): a linha
-  // SEMPRE nasce na org do usuário autenticado (server-derived). Mesmo padrão
-  // seguro da rota /api/crm/pipelines. O `...body` original permitia plantar
-  // registros em outro tenant.
-  delete (body as Record<string, unknown>).organizationId;
-  const item = await dealRepoReal.create({ organizationId: user.organizationId, ...body });
+  const parsed = dealCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'invalid_payload', details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const data: Prisma.DealUncheckedCreateInput = {
+    organizationId: user.organizationId,
+    ...parsed.data,
+  };
+
+  const item = await withTenantContext(user.organizationId, async (tx) => {
+    return tx.deal.create({ data });
+  });
+
   return NextResponse.json(item, { status: 201 });
 }

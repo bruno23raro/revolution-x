@@ -1,0 +1,1 @@
+FASE 2 complete - Headers consolidated in next.config.mjs, rate limit per-email keys added in middleware, lib/security re-exports from canonical source.

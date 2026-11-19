@@ -1,19 +1,21 @@
-// FASE 1 — Templates oficiais de WhatsApp (Cloud API da Meta).
+// FASE 1 — Templates oficiais de WhatsApp via OpenBSP.
 //
 //   GET  /api/whatsapp/templates → { ok, templates }        (membro)
 //   POST /api/whatsapp/templates → { ok, name }              (admin)
 //
 // GET lista os templates do escopo do tenant (número/WABA) e guarda um
-// snapshot local (melhor esforço). POST cria um template e não lança:
-// retorna resultado honesto com código HTTP coerente.
+// snapshot local (melhor esforço). POST cria um template no OpenBSP
+// e salva snapshot local. Não lança: retorna resultado honesto com código HTTP coerente.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
-import type { OfficialTemplateSpec } from '@/integrations/whatsapp/types';
 import { saveTemplateSnapshot } from '@/integrations/configStore';
+import { whatsappTemplateSchema } from '@/lib/validation/schemas';
+import { getChannelDecrypted } from '@/integrations/whatsapp/channelRepo';
+import { openbspConfig, createTemplate } from '@/integrations/whatsapp/openbsp/client';
+import { upsertTemplateRow, listTemplateRows } from '@/integrations/whatsapp/channelRepo';
+import type { CreateTemplateInput } from '@/integrations/whatsapp/openbsp/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,38 +34,29 @@ export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
-  // MULTICONTAS — `account` (?account=rowId) ancora o número; ausente → padrão.
-  const account = new URL(req.url).searchParams.get('account')?.trim() || undefined;
-  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account);
-  if (!resolved.ok) {
-    if (resolved.reason === 'account_not_found') {
-      return NextResponse.json(
-        { ok: false, error: 'account_not_found', detail: `Conta Meta "${account}" não encontrada neste tenant.` },
-        { status: 409 },
-      );
-    }
-    const status = resolved.reason === 'not_connected' ? 409 : 503;
-    return NextResponse.json({ ok: false, error: resolved.reason }, { status });
+  const channel = await getChannelDecrypted(user.organizationId);
+  if (!channel || !channel.isOpenBSPConnected) {
+    return NextResponse.json(
+      { ok: false, error: 'channel_unavailable', detail: 'WhatsApp não conectado via OpenBSP' },
+      { status: 409 },
+    );
   }
 
-  const provider = getWhatsAppProvider();
-  const result = await provider.listTemplates(resolved.access, {});
-  if (result.ok) {
-    const scope = { organizationId: user.organizationId, userId: user.id };
-    try {
-      await saveTemplateSnapshot(prisma, scope, {
-        at: new Date().toISOString(),
-        templates: result.templates,
-      });
-    } catch {
-      /* snapshot é melhor esforço — não afeta a listagem */
-    }
+  const localTemplates = await listTemplateRows(user.organizationId);
+
+  const scope = { organizationId: user.organizationId, userId: user.id };
+  try {
+    await saveTemplateSnapshot(prisma, scope, {
+      at: new Date().toISOString(),
+      templates: localTemplates,
+    });
+  } catch {
+    /* snapshot é melhor esforço — não afeta a listagem */
   }
 
-  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : result.error ? 502 : 500;
   return NextResponse.json(
-    { ok: result.ok, templates: result.templates, error: result.error, detail: result.errorDetail },
-    { status },
+    { ok: true, templates: localTemplates },
+    { status: 200 },
   );
 }
 
@@ -78,43 +71,68 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'JSON inválido' }, { status: 400 });
   }
 
-  const name = String(body.name ?? '').trim();
-  if (!name) return NextResponse.json({ ok: false, error: 'name_vazio' }, { status: 400 });
-  // Meta exige nomes de template: apenas letras minúsculas (a-z), números e underscore.
-  // Máximo 512 caracteres. Nomes com letras maiúsculas ou caracteres especiais são rejeitados.
-  if (!/^[a-z0-9_]+$/.test(name) || name.length > 512) {
-    return NextResponse.json({ ok: false, error: 'name_invalido', detail: 'Nome do template deve conter apenas letras minúsculas, números e underscore (máx 512 caracteres)' }, { status: 400 });
+  const parsed = whatsappTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: 'invalid_payload', details: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
-  const category = (CATEGORIES as readonly string[]).includes(body.category)
-    ? (body.category as 'MARKETING' | 'UTILITY' | 'AUTHENTICATION')
-    : undefined;
 
-  const spec: OfficialTemplateSpec = {
+  const { name, language, category, body: templateBody } = parsed.data;
+
+  const channel = await getChannelDecrypted(user.organizationId);
+  if (!channel || !channel.isOpenBSPConnected) {
+    return NextResponse.json(
+      { ok: false, error: 'channel_unavailable', detail: 'WhatsApp não conectado via OpenBSP' },
+      { status: 409 },
+    );
+  }
+
+  const cfg = openbspConfig();
+  if (!cfg) {
+    return NextResponse.json(
+      { ok: false, error: 'openbsp_not_configured', detail: 'OpenBSP não configurado no servidor' },
+      { status: 503 },
+    );
+  }
+
+  const components: CreateTemplateInput['components'] = [
+    { type: 'BODY', text: templateBody ?? '' },
+  ];
+
+  const input: CreateTemplateInput = {
     name,
-    language: body.language && typeof body.language === 'string' ? body.language!.trim() : '',
-    body: typeof body.body === 'string' ? body.body : '',
-    ...(body.category && { category: body.category as 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' }),
+    language: language?.trim() ?? 'pt_BR',
+    category: (category as CreateTemplateInput['category']) ?? 'UTILITY',
+    components,
   };
 
-  // MULTICONTAS — `account` (row id) ancora o número; ausente → padrão.
-  const account = body.account ? String(body.account).trim() : undefined;
-  const resolved = await resolveTenantMetaAccess(user.organizationId, {}, account);
-  if (!resolved.ok) {
-    if (resolved.reason === 'account_not_found') {
-      return NextResponse.json(
-        { ok: false, error: 'account_not_found', detail: `Conta Meta "${account}" não encontrada neste tenant.` },
-        { status: 409 },
-      );
-    }
-    const status = resolved.reason === 'not_connected' ? 409 : 503;
-    return NextResponse.json({ ok: false, error: resolved.reason }, { status });
+  const result = await createTemplate(cfg, input);
+
+  if (!result.ok) {
+    const status = result.error === 'openbsp_not_configured' ? 503 : result.error ? 502 : 500;
+    return NextResponse.json(
+      { ok: false, error: result.error, detail: result.errorDetail },
+      { status },
+    );
   }
 
-  const provider = getWhatsAppProvider();
-  const result = await provider.createTemplate(resolved.access, spec);
-  const status = result.ok ? 200 : result.error === 'meta_not_configured' ? 503 : result.error ? 502 : 500;
+  const templateRow = {
+    organizationId: user.organizationId,
+    name: result.data!.name,
+    language: result.data!.language,
+    category: result.data!.category,
+    status: result.data!.status,
+    metaTemplateId: result.data!.id,
+    componentsJson: result.data!.components,
+    rejectionReason: result.data!.rejection_reason ?? null,
+  };
+
+  await upsertTemplateRow(templateRow);
+
   return NextResponse.json(
-    { ok: result.ok, name: result.name, templateId: result.templateId, error: result.error, detail: result.errorDetail },
-    { status },
+    { ok: true, name: result.data!.name, templateId: result.data!.id },
+    { status: 200 },
   );
 }

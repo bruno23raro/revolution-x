@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
   let channel: Awaited<ReturnType<typeof getChannelByPhoneNumberId>> = null;
   try {
-    channel = await getChannelByPhoneNumberId(createServiceRoleClient(), phoneNumberId);
+    channel = await getChannelByPhoneNumberId(phoneNumberId);
   } catch {
     return NextResponse.json({ error: 'db_error' }, { status: 500 }); // retry Meta
   }

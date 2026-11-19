@@ -32,7 +32,6 @@ export function checkTier(channel: WhatsappChannelRow, now = Date.now()): TierVe
 
 export interface OfficialSenderDeps {
   channel: ChannelDecrypted;
-  client: Parameters<typeof bumpSentWindow>[0];
   payload: DispatchPayload;
   /** Categoria esperada do template (auditoria; o gate 2 checa a tabela). */
   expectedCategory?: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
@@ -73,7 +72,7 @@ export function buildOfficialSender(deps: OfficialSenderDeps): OfficialSender {
     // Gate 2: template precisa estar APPROVED no espelho local (019).
     let payload: DispatchPayload = deps.payload;
     if (payload.kind === 'template') {
-      const approved = await getApprovedTemplate(deps.client, deps.channel.organizationId, payload.name, payload.language);
+      const approved = await getApprovedTemplate(deps.channel.organizationId, payload.name, payload.language);
       if (!approved) return { ok: false, error: 'template_not_approved' };
       if (deps.expectedCategory && approved.category !== deps.expectedCategory) {
         return { ok: false, error: 'template_category_mismatch' };
@@ -85,7 +84,7 @@ export function buildOfficialSender(deps: OfficialSenderDeps): OfficialSender {
     if (r.ok) {
       sentInRun += 1;
       deps.channel.sentWindow24h += 1; // espelho em memoria p/ checkTier no lote
-      await bumpSentWindow(deps.client, deps.channel);
+      await bumpSentWindow(deps.channel);
       nearLimit = checkTier(deps.channel).nearLimit;
       return { ok: true, externalMessageId: r.messageId ?? undefined };
     }

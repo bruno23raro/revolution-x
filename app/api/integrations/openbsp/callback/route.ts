@@ -1,21 +1,19 @@
-// GET /api/integrations/openbsp/callback â€” pÃ³s-popup: o front chama depois do
-// postMessage/verificaÃ§Ã£o. Confirma conexÃ£o por POLLING de
+// GET /api/integrations/openbsp/callback — pós-popup: o front chama depois do
+// postMessage/verificação. Confirma conexão por POLLING de
 // `organizations_addresses` (plano OpenBSP) casando o verify_token do tenant,
 // e grava as credenciais (access_token AES-GCM). Sem webhook de conta no MVP.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { fetchConnectedAddress, getChannelDecrypted, markChannelConnected } from '@/integrations/whatsapp';
-import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const client = createServiceRoleClient();
 
-  const channel = await getChannelDecrypted(client, user.organizationId);
+  const channel = await getChannelDecrypted(user.organizationId);
   if (channel?.status === 'CONNECTED') {
     return NextResponse.json({ connected: true, phoneNumber: channel.phoneNumber, verifiedName: channel.verifiedName });
   }
@@ -25,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (!hit.ok || !hit.data?.extra?.access_token) {
     return NextResponse.json({ connected: false, reason: hit.errorDetail ?? 'aguardando_onboarding' });
   }
-  await markChannelConnected(client, user.organizationId, {
+  await markChannelConnected(user.organizationId, {
     wabaId: hit.data.extra.waba_id ?? null,
     phoneNumberId: hit.data.address,
     phoneNumber: hit.data.extra.phone_number ?? null,

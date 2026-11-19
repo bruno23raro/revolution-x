@@ -15,9 +15,25 @@
     "jsx": "preserve",
     "incremental": true,
     "baseUrl": ".",
-    "paths": {"@/*": ["./src/*"], "@": ["."]},
+    "paths": {
+      "@/*": ["./*", "./src/*", "./lib/*", "./app/*"],
+      "@/lib/*": ["./lib/*", "./src/lib/*"],
+      "@/validation/*": ["./lib/validation/*"],
+      "@/security/*": ["./lib/security/*"],
+      "@/auth/*": ["./lib/auth/*"],
+      "@/supabase/*": ["./src/lib/supabase/*"],
+      "@/email/*": ["./src/lib/email/*"],
+      "@/encryption/*": ["./src/lib/encryption/*"],
+      "@/logger/*": ["./src/lib/logger/*"],
+      "@/taskQueue/*": ["./src/lib/taskQueue/*"],
+      "@/admin-bearer/*": ["./src/lib/admin-bearer/*"],
+      "@/prisma/*": ["./src/lib/prisma/*"],
+      "@/site-origin/*": ["./src/lib/site-origin/*"],
+      "@/redis/*": ["./src/lib/redis/*"],
+      "@/whatsapp/*": ["./src/lib/whatsapp/*"]
+    },
     "plugins": [{ "name": "next" }]
   },
-  "include": ["next-env.d.ts", ".next/types/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "src/**/*.test.ts", "app/**/*.ts", "app/**/*.tsx"],
+  "include": ["next-env.d.ts", ".next/types/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "src/**/*.test.ts", "app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts"],
   "exclude": ["node_modules"]
 }

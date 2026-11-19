@@ -6,14 +6,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import { formatE164 } from '@/services/evolution/EvolutionService';
 
 export async function POST(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supa = createServiceRoleClient();
   const body = await req.json();
 
   // Support both single lead and batch import
@@ -27,23 +26,20 @@ export async function POST(req: NextRequest) {
     status: 'pending',
     funnelStatus: 'pending',
     responseCount: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   }));
 
-  const { data, error } = await supa
-    .from('growth_leads')
-    .insert(newLeads)
-    .select()
-    .single();
+  try {
+    const createdLeads = await prisma.growthLead.createMany({
+      data: newLeads,
+      skipDuplicates: true,
+    });
 
-  if (error) {
+    return NextResponse.json({ success: true, count: createdLeads.count }, { status: 201 });
+  } catch (error) {
     console.error('[Growth Leads] Error creating lead:', error);
     return NextResponse.json(
-      { error: 'Failed to create lead', details: error.message },
+      { error: 'Failed to create lead', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ success: true, lead: data }, { status: 201 });
 }

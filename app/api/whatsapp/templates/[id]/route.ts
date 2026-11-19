@@ -1,4 +1,4 @@
-// FASE 5.1 — GET individual de template WhatsApp (detalhes completos)
+// FASE 5.1 — GET individual de template WhatsApp (detalhes completos) via OpenBSP
 //
 //   GET /api/whatsapp/templates/[id] → { ok, template }  (membro)
 //
@@ -8,9 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { resolveTenantMetaAccess } from '@/integrations/meta/resolveAccess';
-import { getWhatsAppProvider } from '@/integrations/whatsapp/provider';
 import { rateLimit } from '@/middleware/rate-limit';
+import { getChannelDecrypted } from '@/integrations/whatsapp/channelRepo';
+import { openbspConfig, getTemplateStatus } from '@/integrations/whatsapp/openbsp/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,6 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     return response;
   }
 
-  // Primeiro, buscar no banco local (snapshot)
   const localTemplate = await prisma.whatsappTemplate.findFirst({
     where: {
       id: templateId,
@@ -53,8 +52,7 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     return response;
   }
 
-  // Construir template com componentes
-  const template = {
+  let template = {
     id: localTemplate.id,
     name: localTemplate.name,
     language: localTemplate.language,
@@ -68,22 +66,35 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
     updatedAt: localTemplate.updatedAt.toISOString(),
   };
 
-  // Se o template está pendente, buscar detalhes atualizados da Meta
+  // Se o template está pendente ou não tem metaTemplateId, buscar status no OpenBSP
   if (localTemplate.status === 'PENDING' || !localTemplate.metaTemplateId) {
-    const resolved = await resolveTenantMetaAccess(user.organizationId);
-    if (resolved.ok && resolved.access) {
-      try {
-        // Usar o metaTemplateId se disponível, senão tentar buscar pelo nome
-        const provider = getWhatsAppProvider();
-          const metaResult = await provider.getTemplateStatus(resolved.access, localTemplate.metaTemplateId || localTemplate.name, 'en_US', {});
-        if (metaResult.ok && metaResult.template) {
-          // Atualizar com dados da Meta
-          template.componentsJson = metaResult.template.components || template.componentsJson;
-          template.status = metaResult.template.status || template.status;
-          template.rejectionReason = metaResult.template.rejection_reason || template.rejectionReason;
+    const channel = await getChannelDecrypted(user.organizationId);
+    if (channel?.isOpenBSPConnected) {
+      const cfg = openbspConfig();
+      if (cfg) {
+        try {
+          const metaResult = await getTemplateStatus(cfg, localTemplate.name, localTemplate.language);
+          if (metaResult.ok && metaResult.data) {
+            template.componentsJson = metaResult.data.components || template.componentsJson;
+            template.status = metaResult.data.status || template.status;
+            template.rejectionReason = metaResult.data.rejection_reason || template.rejectionReason;
+            template.metaTemplateId = metaResult.data.id || template.metaTemplateId;
+
+            await prisma.whatsappTemplate.update({
+              where: { id: templateId, organizationId: user.organizationId },
+              data: {
+                status: metaResult.data.status,
+                componentsJson: metaResult.data.components,
+                rejectionReason: metaResult.data.rejection_reason,
+                metaTemplateId: metaResult.data.id,
+                lastCheckedAt: new Date(),
+                updatedAt: new Date(),
+              },
+            });
+          }
+        } catch {
+          /* Falha na chamada ao OpenBSP — usa dados locais */
         }
-      } catch {
-        /* Falha na chamada à Meta — usa dados locais */
       }
     }
   }
@@ -141,13 +152,13 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
     return response;
   }
 
-  // Excluir template
+  // Excluir template localmente (não remove do OpenBSP)
   await prisma.whatsappTemplate.delete({
     where: { id: templateId, organizationId: user.organizationId },
   });
 
   const response = NextResponse.json(
-    { ok: true, message: 'Template excluído com sucesso' },
+    { ok: true, message: 'Template excluído localmente (não remove do OpenBSP)' },
     { status: 200 }
   );
   response.headers.set('X-RateLimit-Remaining', String(rateResult.remaining));

@@ -1,18 +1,13 @@
 // Acesso às tabelas 019 (whatsapp_channels / whatsapp_templates).
 //
-// `client` é injetável (padrão dos crons/testes); no app passa-se
-// createServiceRoleClient() — as rotas já autenticam o usuário e derivam o
-// tenant; RLS FORCE continua valendo para qualquer leitura por anon key.
+// Refatorado para usar Prisma (snake_case via @@map).
+// As rotas já autenticam o usuário e derivam o tenant; RLS FORCE continua valendo
+// para qualquer leitura por anon key.
 //
 // Criptografia do access_token: META_TOKEN_ENCRYPTION_KEY (AES-GCM,
 // src/lib/encryption.ts) — server-side e decryptável por cron sem usuário.
-//
-// ATENÇÃO (dual-schema, introspecção produção 2026-11-07): estas DUAS tabelas
-// têm colunas PascalCase com aspas (migration 019) — PostgREST expõe
-// `organizationId`, `phoneNumberId`, `access_token_enc` NAO existe aqui.
-// snake_case vale apenas p/ meta_integrations/webhook_events (014/015) e p/ o
-// banco do PROVEDOR OpenBSP (messages/organizations_addresses em send.ts).
 
+import { prisma } from '@/lib/prisma';
 import { encryptToken, decryptToken } from '@/lib/encryption';
 
 export interface WhatsappChannelRow {
@@ -30,42 +25,25 @@ export interface WhatsappChannelRow {
   accessTokenEnc: string | null;
   tierLimitPer24h: number;
   sentWindow24h: number;
-  windowStartedAt: string | null;
+  windowStartedAt: Date | null;
   lastError: string | null;
 }
-
-type Query = {
-  from: (table: string) => {
-    select: (cols: string) => any;
-    upsert: (row: unknown, opts?: Record<string, unknown>) => any;
-    update: (patch: Record<string, unknown>) => any;
-    delete: () => any;
-  };
-};
 
 export interface ChannelDecrypted extends WhatsappChannelRow {
   accessToken: string | null;
   isOpenBSPConnected: boolean;
 }
 
-async function findOrg(client: Query, organizationId: string): Promise<WhatsappChannelRow | null> {
-  const { data, error } = await client
-    .from('whatsapp_channels')
-    .select('*')
-    .eq('organizationId', organizationId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as WhatsappChannelRow;
-}
-
 /** Canal do tenant com o access_token decifrado (null se não conectado). */
-export async function getChannelDecrypted(client: Query, organizationId: string): Promise<ChannelDecrypted | null> {
-  const row = await findOrg(client, organizationId);
+export async function getChannelDecrypted(organizationId: string): Promise<ChannelDecrypted | null> {
+  const row = await prisma.whatsappChannel.findUnique({
+    where: { organizationId },
+  });
   if (!row) return null;
 
   // Verifica se há conexão Meta (wabaId + accessToken) OU OpenBSP (phoneNumberId presente)
   const isMetaConnected = !!row.wabaId && row.accessTokenEnc ? true : false;
-  const isOpenBSPConnected = row.phoneNumberId;
+  const isOpenBSPConnected = !!row.phoneNumberId;
 
   let accessToken: string | null = null;
   if (isMetaConnected) {
@@ -77,50 +55,53 @@ export async function getChannelDecrypted(client: Query, organizationId: string)
     }
   }
 
-  return { ...row, accessToken: accessToken ?? null, isOpenBSPConnected: !!isOpenBSPConnected };
+  return {
+    ...row,
+    accessToken: accessToken ?? null,
+    isOpenBSPConnected: !!isOpenBSPConnected,
+  };
 }
 
 /** Canal pelo phone_number_id (roteamento do webhook Meta → tenant). */
-export async function getChannelByPhoneNumberId(client: Query, phoneNumberId: string): Promise<WhatsappChannelRow | null> {
-  const { data, error } = await client
-    .from('whatsapp_channels')
-    .select('*')
-    .eq('phoneNumberId', phoneNumberId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as WhatsappChannelRow;
+export async function getChannelByPhoneNumberId(phoneNumberId: string): Promise<WhatsappChannelRow | null> {
+  const row = await prisma.whatsappChannel.findFirst({
+    where: { phoneNumberId },
+  });
+  return row ?? null;
 }
 
 /** Pré-provisiona o canal no connect (verify_token único por tenant). */
 export async function upsertChannelPending(
-  client: Query,
   input: { organizationId: string; verifyToken: string; callbackUrl: string; onboardingTokenId: string },
 ): Promise<void> {
-  await client
-    .from('whatsapp_channels')
-    .upsert(
-      {
-        organizationId: input.organizationId,
-        provider: 'openbsp',
-        status: 'PENDING',
-        verifyToken: input.verifyToken,
-        callbackUrl: input.callbackUrl,
-        onboardingTokenId: input.onboardingTokenId,
-        updatedAt: new Date().toISOString(),
-      },
-      { onConflict: 'organizationId' },
-    );
+  await prisma.whatsappChannel.upsert({
+    where: { organizationId: input.organizationId },
+    create: {
+      organizationId: input.organizationId,
+      provider: 'openbsp',
+      status: 'PENDING',
+      verifyToken: input.verifyToken,
+      callbackUrl: input.callbackUrl,
+      onboardingTokenId: input.onboardingTokenId,
+    },
+    update: {
+      status: 'PENDING',
+      verifyToken: input.verifyToken,
+      callbackUrl: input.callbackUrl,
+      onboardingTokenId: input.onboardingTokenId,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 /** Confirma conexão: credenciais do plano OpenBSP, token cifrado em repouso. */
 export async function markChannelConnected(
-  client: Query,
   organizationId: string,
   creds: { wabaId?: string | null; phoneNumberId: string; phoneNumber?: string | null; verifiedName?: string | null; accessToken: string },
 ): Promise<void> {
-  await client
-    .from('whatsapp_channels')
-    .update({
+  await prisma.whatsappChannel.update({
+    where: { organizationId },
+    data: {
       status: 'CONNECTED',
       wabaId: creds.wabaId ?? null,
       phoneNumberId: creds.phoneNumberId,
@@ -128,40 +109,41 @@ export async function markChannelConnected(
       verifiedName: creds.verifiedName ?? null,
       accessTokenEnc: encryptToken(creds.accessToken),
       lastError: null,
-      updatedAt: new Date().toISOString(),
-    })
-    .eq('organizationId', organizationId);
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function setChannelStatus(
-  client: Query,
   organizationId: string,
   status: 'PENDING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR',
   lastError?: string | null,
 ): Promise<void> {
-  await client
-    .from('whatsapp_channels')
-    .update({ status, lastError: lastError ?? null, updatedAt: new Date().toISOString() })
-    .eq('organizationId', organizationId);
+  await prisma.whatsappChannel.update({
+    where: { organizationId },
+    data: { status, lastError: lastError ?? null, updatedAt: new Date() },
+  });
 }
 
 /** Remove todas as linhas de whatsapp_channels para um organizationId específico. */
-export async function deleteAllChannels(client: Query, organizationId: string): Promise<void> {
-  await client.from('whatsapp_channels').delete().eq('organizationId', organizationId);
+export async function deleteAllChannels(organizationId: string): Promise<void> {
+  await prisma.whatsappChannel.deleteMany({
+    where: { organizationId },
+  });
 }
 
 /** Contador da janela móvel de 24h do tier (250/24h em número novo). */
-export async function bumpSentWindow(client: Query, channel: WhatsappChannelRow, n = 1): Promise<void> {
+export async function bumpSentWindow(channel: WhatsappChannelRow, n = 1): Promise<void> {
   const start = channel.windowStartedAt ? new Date(channel.windowStartedAt).getTime() : 0;
   const fresh = Date.now() - start > 86_400_000;
-  await client
-    .from('whatsapp_channels')
-    .update({
+  await prisma.whatsappChannel.update({
+    where: { organizationId: channel.organizationId },
+    data: {
       sentWindow24h: fresh ? n : channel.sentWindow24h + n,
-      windowStartedAt: fresh ? new Date().toISOString() : channel.windowStartedAt,
-      updatedAt: new Date().toISOString(),
-    })
-    .eq('organizationId', channel.organizationId);
+      windowStartedAt: fresh ? new Date() : channel.windowStartedAt,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 // ── whatsapp_templates (espelho local do status Meta) ────────────────────────
@@ -176,53 +158,62 @@ export interface WhatsappTemplateRow {
   status: string;
   componentsJson: unknown;
   rejectionReason: string | null;
-  lastCheckedAt: string | null;
+  lastCheckedAt: Date | null;
 }
 
-export async function listTemplateRows(client: Query, organizationId: string): Promise<WhatsappTemplateRow[]> {
-  const { data, error } = await client
-    .from('whatsapp_templates')
-    .select('*')
-    .eq('organizationId', organizationId)
-    .order('name', { ascending: true });
-  if (error || !Array.isArray(data)) return [];
-  return data as WhatsappTemplateRow[];
+export async function listTemplateRows(organizationId: string): Promise<WhatsappTemplateRow[]> {
+  const rows = await prisma.whatsappTemplate.findMany({
+    where: { organizationId },
+    orderBy: { name: 'asc' },
+  });
+  return rows;
 }
 
 export async function upsertTemplateRow(
-  client: Query,
   row: { organizationId: string; name: string; language: string; category: string; status: string; metaTemplateId?: string | null; componentsJson?: unknown; rejectionReason?: string | null },
 ): Promise<void> {
-  await client
-    .from('whatsapp_templates')
-    .upsert({
+  await prisma.whatsappTemplate.upsert({
+    where: {
+      organizationId_name_language: {
+        organizationId: row.organizationId,
+        name: row.name,
+        language: row.language,
+      },
+    },
+    create: {
       organizationId: row.organizationId,
       name: row.name,
       language: row.language,
       category: row.category,
       status: row.status,
       metaTemplateId: row.metaTemplateId,
-      componentsJson: row.componentsJson,
+      componentsJson: row.componentsJson ?? [],
       rejectionReason: row.rejectionReason,
-      updatedAt: new Date().toISOString(),
-    }, { onConflict: 'organizationId,name,language' });
+      updatedAt: new Date(),
+    },
+    update: {
+      status: row.status,
+      metaTemplateId: row.metaTemplateId,
+      componentsJson: row.componentsJson ?? [],
+      rejectionReason: row.rejectionReason,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 /** Gate 2: só template local APROVADO libera disparo em massa. */
 export async function getApprovedTemplate(
-  client: Query,
   organizationId: string,
   name: string,
   language: string,
 ): Promise<WhatsappTemplateRow | null> {
-  const { data, error } = await client
-    .from('whatsapp_templates')
-    .select('*')
-    .eq('organizationId', organizationId)
-    .eq('name', name)
-    .eq('language', language)
-    .eq('status', 'APPROVED')
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as WhatsappTemplateRow;
+  const row = await prisma.whatsappTemplate.findFirst({
+    where: {
+      organizationId,
+      name,
+      language,
+      status: 'APPROVED',
+    },
+  });
+  return row ?? null;
 }

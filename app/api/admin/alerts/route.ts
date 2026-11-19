@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const scope = user
     ? { organizationId: user.organizationId, userId: user.id }
     : {
-        organizationId: req.headers.get('x-org-id') || req.headers.get('x-organization-id'),
+        organizationId: req.headers.get('x-org-id'),
         userId: req.headers.get('x-user-id'),
       };
 

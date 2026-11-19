@@ -1,90 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import { withUserContext } from '@/lib/prisma';
 import { generateSecureToken, getMailProvider } from '@/lib/email';
 import { resolvePublicSiteOrigin } from '@/lib/site-origin';
+import { forgotPasswordSchema } from '@/lib/validation/schemas';
+import { emailRateLimitKey, rateLimit } from '@/lib/security/rate-limit';
+import { createMagicLink } from '@/lib/auth';
 
 const RESET_TOKEN_TTL_MS = 3600_000; // 1 hour
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 3; // max 3 requests per window per email
-
-// Simple in-memory rate limit bucket (per-process).
-// For multi-region deployments, replace with a Redis-backed counter.
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const bucket = rateLimitBuckets.get(email);
-  if (!bucket || now > bucket.resetAt) {
-    rateLimitBuckets.set(email, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (bucket.count >= RATE_LIMIT_MAX) return false;
-  bucket.count++;
-  return true;
-}
 
 export async function POST(request: NextRequest) {
-  let body;
   try {
-    body = await request.json().catch(() => ({}));
-  } catch {
-    body = {};
-  }
+    const body = await request.json().catch(() => ({}));
+    const parsed = forgotPasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid_payload', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-  const rawEmail = String(body?.email ?? '').trim().toLowerCase();
-  if (!rawEmail) {
-    // Generic response — do not reveal validation status
-    return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
-  }
+    const rawEmail = parsed.data.email;
 
-  // Rate limit before any DB access to avoid timing attacks.
-  if (!checkRateLimit(rawEmail)) {
-    return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
-  }
+    // Email-based rate limit
+    const rlKey = `forgot:${rawEmail}`;
+    const rl = rateLimit(rlKey, 3, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
+    }
 
-  try {
-    const svc = createServiceRoleClient();
-
-    // Look up user by email via service role (read-only, non-sensitive field)
-    const { data: userRow } = await svc
-      .from('User')
-      .select('id, email')
-      .eq('email', rawEmail)
-      .maybeSingle();
+    const userRow = await prisma.user.findUnique({
+      where: { email: rawEmail },
+      select: { id: true, email: true },
+    });
 
     if (!userRow) {
-      // Account not found (or DB unavailable) — return generic success
       return NextResponse.json({ message: 'If the account exists, instructions will be sent.' });
     }
 
     const userId = userRow.id;
 
-    // Generate token, store hash, invalidate old tokens
-    const { raw: tokenRaw, hash: tokenHash } = generateSecureToken();
+    // Generate magic link token for reset
+    const magicLinkToken = await createMagicLink(rawEmail, 'reset', userId);
     const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
-    await withUserContext(userId, async (tx) => {
-      // Invalidate any existing unused reset tokens for this user
-      await tx.$executeRaw`
-        UPDATE "PasswordResetToken"
-        SET "usedAt" = NOW()
-        WHERE "userId" = ${userId}::uuid AND "usedAt" IS NULL
-      `;
-      // Insert new token
-      await tx.passwordResetToken.create({
-        data: { userId, tokenHash, expiresAt },
+    // Invalidate old tokens and create new reset token via Prisma
+    // If this fails, return 500 and do NOT send email (prevents sending invalid links)
+    let tokenCreated = false;
+    try {
+      await withUserContext(userId, async (tx) => {
+        await tx.passwordResetToken.updateMany({
+          where: { userId, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+        await tx.passwordResetToken.create({
+          data: { userId, tokenHash: magicLinkToken, expiresAt },
+        });
       });
-    });
+      tokenCreated = true;
+    } catch (dbErr) {
+      console.error('[forgot-password] token creation failed:', dbErr);
+      return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+    }
 
-    // Build reset link (token is in the URL — not in the DB).
-    // resolvePublicSiteOrigin: env NEXT_PUBLIC_SITE_URL tem prioridade;
-    // senão, a origem da request — exceto valores quebrados de proxy
-    // interno (0.0.0.0:3000); senão, apex de produção.
+    if (!tokenCreated) {
+      return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+    }
+
+    // Build reset link
     const siteOrigin = resolvePublicSiteOrigin(request.nextUrl.origin);
-    const resetLink = `${siteOrigin}/reset-password?token=${tokenRaw}`;
+    const resetLink = `${siteOrigin}/reset-password?token=${magicLinkToken}`;
 
-    // Send email (pluggable; may be no-op until provider wired)
+    // Send email (only after token is confirmed in DB)
     try {
       await getMailProvider().send({
         to: rawEmail,
@@ -95,7 +82,6 @@ export async function POST(request: NextRequest) {
         text: `Reset your password at: ${resetLink}`,
       });
     } catch (emailErr) {
-      // Do not fail the request if email sending fails — token is still valid in DB.
       console.error('[forgot-password] email send failed:', emailErr);
     }
 

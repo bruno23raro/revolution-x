@@ -1,0 +1,10 @@
+2026/11/19-12:50:30.765 15ac Reusing MANIFEST C:\AI\workspace\revolution-x\repo\browser-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/11/19-12:50:30.766 15ac Recovering log #18
+2026/11/19-12:50:30.766 15ac Level-0 table #20: started
+2026/11/19-12:50:30.768 15ac Level-0 table #20: 16447 bytes OK
+2026/11/19-12:50:30.769 15ac Recovering log #19
+2026/11/19-12:50:30.769 15ac Reusing old log C:\AI\workspace\revolution-x\repo\browser-profile\Default\Local Storage\leveldb/000019.log 
+2026/11/19-12:50:30.770 15ac Delete type=0 #18
+2026/11/19-12:51:30.784 2ae8 Level-0 table #22: started
+2026/11/19-12:51:30.786 2ae8 Level-0 table #22: 50181 bytes OK
+2026/11/19-12:51:30.787 2ae8 Delete type=0 #19

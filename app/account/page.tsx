@@ -93,12 +93,19 @@ export default function AccountPage() {
     }
     setBusy(true);
     try {
-      // Self-service no próprio usuário logado (Supabase Auth / GoTrue).
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      const { error } = await supabase.auth.updateUser({ password: newPw });
-      if (error) {
-        setResult({ ok: false, text: `Não foi possível alterar a senha: ${error.message}` });
+      // Self-service via our own API (Prisma + bcrypt)
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResult({ ok: false, text: data.error === 'weak_password'
+          ? 'A nova senha precisa ter ao menos 8 caracteres.'
+          : data.error === 'invalid_credentials'
+            ? 'Senha atual incorreta.'
+            : 'Não foi possível alterar a senha.' });
       } else {
         setResult({
           ok: true,

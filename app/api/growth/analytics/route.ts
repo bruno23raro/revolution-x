@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
@@ -16,24 +16,23 @@ export async function GET(req: NextRequest) {
   const days = parseInt(searchParams.get('days') || '30');
   const instanceName = searchParams.get('instance');
 
-  const supa = createServiceRoleClient();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
   // Get leads by funnel status
-  const { data: leads, error: leadsError } = await supa
-    .from('growth_leads')
-    .select('funnelStatus, source, contact, createdAt, responseCount')
-    .eq('organizationId', user.organizationId)
-    .gte('createdAt', startDate.toISOString());
-
-  if (leadsError) {
-    console.error('[Growth Analytics] Error fetching leads:', leadsError);
-    return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
-      { status: 500 }
-    );
-  }
+  const leads = await prisma.growthLead.findMany({
+    where: {
+      organizationId: user.organizationId,
+      createdAt: { gte: startDate },
+    },
+    select: {
+      funnelStatus: true,
+      source: true,
+      contact: true,
+      createdAt: true,
+      responseCount: true,
+    },
+  });
 
   // Calculate funnel metrics
   const funnelCounts: Record<string, number> = {
@@ -56,19 +55,17 @@ export async function GET(req: NextRequest) {
     : 0;
 
   // Get WhatsApp messages for response rate calculation
-  const { data: messages, error: messagesError } = await supa
-    .from('messages')
-    .select('direction, createdAt, toContact')
-    .eq('organizationId', user.organizationId)
-    .gte('createdAt', startDate.toISOString());
-
-  if (messagesError) {
-    console.error('[Growth Analytics] Error fetching messages:', messagesError);
-    return NextResponse.json(
-      { error: 'Failed to fetch message analytics' },
-      { status: 500 }
-    );
-  }
+  const messages = await prisma.message.findMany({
+    where: {
+      organizationId: user.organizationId,
+      createdAt: { gte: startDate },
+    },
+    select: {
+      direction: true,
+      createdAt: true,
+      toContact: true,
+    },
+  });
 
   const messagesSent = messages?.filter(m => m.direction === 'outbound').length || 0;
   const messagesReceived = messages?.filter(m => m.direction === 'inbound').length || 0;
@@ -79,23 +76,27 @@ export async function GET(req: NextRequest) {
   // Get instance performance if specified
   let instancePerformance: any = null;
   if (instanceName) {
-    const { data: instance } = await supa
-      .from('whatsapp_instances')
-      .select('*')
-      .eq('organizationId', user.organizationId)
-      .eq('instanceName', instanceName)
-      .single();
+    const instance = await prisma.whatsappInstance.findFirst({
+      where: {
+        organizationId: user.organizationId,
+        instanceName,
+      },
+    });
 
-    const { data: instanceLeads } = await supa
-      .from('growth_leads')
-      .select('*')
-      .eq('organizationId', user.organizationId)
-      .eq('metadata->>targetInstance', instanceName);
+    const instanceLeads = await prisma.growthLead.count({
+      where: {
+        organizationId: user.organizationId,
+        metadata: {
+          path: ['targetInstance'],
+          equals: instanceName,
+        },
+      },
+    });
 
     instancePerformance = {
       instanceName,
       status: instance?.status,
-      totalLeads: instanceLeads?.length || 0,
+      totalLeads: instanceLeads,
       lastHeartbeat: instance?.lastHeartbeat,
     };
   }
@@ -110,7 +111,7 @@ export async function GET(req: NextRequest) {
   // Get leads by day for trend chart
   const leadsByDay: Record<string, number> = {};
   leads?.forEach(lead => {
-    const day = lead.createdAt.split('T')[0];
+    const day = lead.createdAt.toISOString().split('T')[0];
     leadsByDay[day] = (leadsByDay[day] || 0) + 1;
   });
 

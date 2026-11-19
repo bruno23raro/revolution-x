@@ -1,66 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import { withUserContext } from '@/lib/prisma';
+import { verifyMagicLink } from '@/lib/auth';
+import { verifyEmailSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
-  let body;
   try {
-    body = await request.json().catch(() => ({}));
-  } catch {
-    body = {};
-  }
+    const body = await request.json().catch(() => ({}));
+    const parsed = verifyEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'invalid_payload', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-  const rawToken = String(body?.token ?? '').trim();
-  if (!rawToken) {
-    return NextResponse.json({ error: 'missing_token' }, { status: 400 });
-  }
+    const { token } = parsed.data;
 
-  try {
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const now = new Date();
+    const payload = await verifyMagicLink(token);
+    if (!payload || payload.purpose !== 'verify') {
+      return NextResponse.json({ error: 'invalid_or_expired_token' }, { status: 400 });
+    }
 
-    const svc = createServiceRoleClient();
-    const { data: validToken } = await svc
-      .from('EmailVerificationToken')
-      .select('id, userId, expiresAt, usedAt')
-      .eq('tokenHash', tokenHash)
-      .is('usedAt', null)
-      .gt('expiresAt', now.toISOString())
-      .maybeSingle();
-
-    if (!validToken) {
+    const userId = payload.organizationId;
+    if (!userId) {
       return NextResponse.json({ error: 'invalid_token' }, { status: 400 });
     }
 
-    const userId = validToken.userId;
+    const userRow = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, emailVerified: true },
+    });
 
-    // Update user email verification status and mark token as used
-    // respecting RLS via withUserContext (app.current_user_id context)
+    if (!userRow) {
+      return NextResponse.json({ error: 'invalid_token' }, { status: 400 });
+    }
+
+    if (userRow.emailVerified) {
+      return NextResponse.json({ message: 'Email already verified.' });
+    }
+
     await withUserContext(userId, async (tx) => {
       await tx.user.update({
         where: { id: userId },
         data: { emailVerified: true },
       });
 
-      await tx.emailVerificationToken.update({
-        where: { id: validToken.id },
-        data: { usedAt: now },
+      await tx.emailVerificationToken.updateMany({
+        where: { userId, usedAt: null },
+        data: { usedAt: new Date() },
       });
     });
-
-    // Also confirm email in Supabase Auth (admin operation — service role)
-    try {
-      const { error: authErr } = await svc.auth.admin.updateUserById(userId, {
-        email_confirmed_at: new Date().toISOString(),
-      });
-      if (authErr) {
-        console.error('[verify-email] Auth confirm failed:', authErr);
-        // Best-effort: our local record is already updated
-      }
-    } catch {
-      // Non-fatal: our local record is already updated
-    }
 
     return NextResponse.json({ message: 'Email verified successfully.' });
   } catch {

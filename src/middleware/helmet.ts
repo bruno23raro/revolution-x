@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Applies Helmet-style security headers to all responses
  */
 
-const SECURITY_HEADERS = {
+export const SECURITY_HEADERS = {
   // Prevent clickjacking
   'X-Frame-Options': 'DENY',
   // Prevent MIME type sniffing

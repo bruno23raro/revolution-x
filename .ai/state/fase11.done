@@ -1,0 +1,8 @@
+FASE 11 complete - Infrastructure
+- compose.yaml: db, redis, mailpit, migrate, app services configured
+- db/redis/mailpit: containers healthy and running
+- migrations: 23 tables created in database (via psql direct)
+- prisma schema: 32 models with @@map for snake_case
+- prisma generate: OK
+- migrate service: authentication issue (psql using 'root' user)
+- seed: pending (Prisma authentication issue)

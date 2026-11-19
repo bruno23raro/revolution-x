@@ -38,8 +38,15 @@ export class NoopEmailProvider implements EmailProvider {
 export class ConsoleEmailProvider implements EmailProvider {
   async send(template: EmailTemplate): Promise<{ messageId: string }> {
     // WARNING: Only use in development/test. Never log tokens or secrets.
-    console.info('[email] to=', template.to, 'subject=', template.subject);
-    console.info('[email] html-preview=', template.html.slice(0, 200));
+    console.info('[email:dev] to=', template.to, 'subject=', template.subject);
+    // Extract and log the link from text/plain (which contains the raw URL)
+    if (template.text) {
+      const linkMatch = template.text.match(/(https?:\/\/[^\s]+)/);
+      if (linkMatch) {
+        console.info('[email:dev] link=', linkMatch[1]);
+      }
+    }
+    console.info('[email:dev] html-preview=', template.html.slice(0, 200));
     return { messageId: crypto.randomUUID() };
   }
 }

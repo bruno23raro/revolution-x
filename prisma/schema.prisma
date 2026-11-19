@@ -25,12 +25,13 @@ datasource db {
 model Plan {
   id           String   @id @default(uuid()) @db.Uuid
   name         String   @unique @db.VarChar(100)
-  priceMonthly Decimal  @default(0) @db.Decimal(10, 2)
-  limitsJson   Json     @default("{}")
-  featuresJson Json     @default("{}")
-  createdAt    DateTime @default(now()) @db.Timestamp(6)
+  priceMonthly Decimal  @map("price_monthly") @default(0) @db.Decimal(10, 2)
+  limitsJson   Json     @map("limits_json") @default("{}")
+  featuresJson Json     @map("features_json") @default("{}")
+  createdAt    DateTime @map("created_at") @default(now()) @db.Timestamp(6)
   organizations Organization[]
   subscriptions Subscription[]
+  @@map("plans")
 }
 
 // Modelo 2: usuário
@@ -38,10 +39,10 @@ model User {
   id               String    @id @default(uuid()) @db.Uuid
   email            String    @unique @db.VarChar(255)
   name             String    @db.VarChar(255)
-  passwordHash     String    @db.VarChar(255)
-  emailVerified    Boolean   @default(false)
-  createdAt        DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt        DateTime  @updatedAt
+  passwordHash     String    @map("password_hash") @db.VarChar(255)
+  emailVerified    Boolean   @map("email_verified") @default(false)
+  createdAt        DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt        DateTime  @map("updated_at") @updatedAt
   organizationMembers OrganizationMember[]
   sessions         Session[]
   passwordResetTokens PasswordResetToken[]
@@ -50,28 +51,24 @@ model User {
   tasks        Task[]
   agentMemories AgentMemory[]
   adminAlerts AdminAlert[]
+  @@map("users")
 }
 
 // Modelo 3: organização (tenant)
 model Organization {
   id           String    @id @default(uuid()) @db.Uuid
   name         String    @db.VarChar(255)
-  slug         String    @unique @db.VarChar(100)
-  planId       String?   @db.Uuid
-  plan         Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  slug         String    @unique @db.VarChar(255)
   status       String    @default("active") @db.VarChar(50)
-  createdAt    DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt    DateTime  @updatedAt
+  planId       String?   @map("plan_id") @db.Uuid
+  plan         Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime  @map("updated_at") @updatedAt
   members      OrganizationMember[]
-  roles        Role[]
-  subscriptions Subscription[]
-  usage        Usage[]
-  billingEvents BillingEvent[]
-  webhooks       Session[]
-  // FASE 12 back-references
   contacts     Contact[]
   leads        Lead[]
   deals        Deal[]
+  pipelines    Pipeline[]
   products     Product[]
   media        Media[]
   posts        Post[]
@@ -79,162 +76,183 @@ model Organization {
   videos       Video[]
   messages     Message[]
   reports      Report[]
+  subscriptions Subscription[]
+  usages       Usage[]
+  billingEvents BillingEvent[]
+  sessions     Session[]
+  roles        Role[]
   metaIntegrations MetaIntegration[]
-  pipelines    Pipeline[]
-  // FASE AGENT (Phase 2 — Centro Administrativo com IA)
   tasks        Task[]
   agentMemories AgentMemory[]
-  // FASE 17 — Campanhas e disparos
+  adminAlerts  AdminAlert[]
   campaigns    Campaign[]
-  adminAlerts AdminAlert[]
+  riskLogs     RiskLog[]
+  scraperConfigs ScraperConfig[]
+  whatsappChannels WhatsappChannel[]
+  whatsappTemplates WhatsappTemplate[]
+  integrationEvents IntegrationEvent[]
+  schedules        Schedule[]
+  growthLeads      GrowthLead[]
+  whatsappInstances WhatsappInstance[]
+  messageStatuses   MessageStatus[]
+  webhookDeadLetters WebhookDeadLetter[]
+  webhookEvents     WebhookEvent[]
+  @@map("organizations")
 }
 
-// Modelo 4: membro de organização
+// Modelo 4: membro da organização (relação user-org com papel)
 model OrganizationMember {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String        @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   role           String        @default("member") @db.VarChar(50)
-  joinedAt       DateTime      @default(now()) @db.Timestamp(6)
+  joinedAt       DateTime      @map("joined_at") @default(now()) @db.Timestamp(6)
   @@unique([organizationId, userId])
   @@index([organizationId])
   @@index([userId])
+  @@map("organization_members")
 }
 
-// Modelo 5: roles
+// Modelo 5: papel (para RBAC)
 model Role {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String?       @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String        @db.VarChar(100)
-  permissionsJson Json         @default("[]")
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  description    String?       @db.Text
+  permissions    Permission[]
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@unique([organizationId, name])
   @@index([organizationId])
+  @@map("roles")
 }
 
-// Modelo 6: permissões globais
+// Modelo 6: permissão (granular)
 model Permission {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @unique @db.VarChar(100)
-  resource  String   @db.VarChar(100)
-  action    String   @db.VarChar(100)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @db.VarChar(100)
+  description String?   @db.Text
+  roles       Role[]
+  @@map("permissions")
 }
 
-// Modelo 7: sessões persistentes
+// Modelo 7: sessão de usuário (para JWT refresh rotation)
 model Session {
-  id              String     @id @default(uuid()) @db.Uuid
-  userId          String     @db.Uuid
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizationId  String?    @db.Uuid
-  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  tokenHash       String     @unique @db.VarChar(255)
-  expiresAt       DateTime   @db.Timestamp(6)
-  revokedAt       DateTime?  @db.Timestamp(6)
-  createdAt       DateTime   @default(now()) @db.Timestamp(6)
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?   @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tokenHash      String    @map("token_hash") @db.Text
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([userId])
-  @@index([tokenHash])
+  @@index([organizationId])
+  @@map("sessions")
 }
 
-// Modelo 8: tokens de reset de senha
+// Modelo 8: token de reset de senha
 model PasswordResetToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique @db.VarChar(255)
-  expiresAt DateTime @db.Timestamp(6)
-  usedAt    DateTime? @db.Timestamp(6)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @map("token_hash") @db.Text
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([userId])
+  @@map("password_reset_tokens")
 }
 
-// Modelo 9: tokens de verificação de email
+// Modelo 9: token de verificação de e-mail
 model EmailVerificationToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique @db.VarChar(255)
-  expiresAt DateTime @db.Timestamp(6)
-  usedAt    DateTime? @db.Timestamp(6)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @map("token_hash") @db.Text
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([userId])
+  @@map("email_verification_tokens")
 }
 
-// Modelo 10: subscrições
+// Modelo 10: assinatura (billing)
 model Subscription {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  planId         String?       @db.Uuid
-  plan           Plan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
-  status         String        @default("trial") @db.VarChar(50)
-  startedAt      DateTime?     @db.Timestamp(6)
-  endedAt        DateTime?     @db.Timestamp(6)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  planId         String        @map("plan_id") @db.Uuid
+  plan           Plan          @relation(fields: [planId], references: [id])
+  status         String        @default("active") @db.VarChar(50)
+  currentPeriodStart DateTime  @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd   DateTime  @map("current_period_end") @db.Timestamptz(6)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
   @@index([organizationId])
+  @@index([status])
+  @@map("subscriptions")
 }
 
-// Modelo 11: uso / métricas
+// Modelo 11: uso/limites (rate limiting por tenant)
 model Usage {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   metric         String        @db.VarChar(100)
+  period         String        @db.VarChar(50)
   value          Int           @default(0)
-  period         String        @default("monthly") @db.VarChar(20)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@unique([organizationId, metric, period])
   @@index([organizationId])
+  @@map("usage")
 }
 
-// Modelo 12: eventos de faturamento
+// Modelo 12: eventos de billing (webhook Stripe etc.)
 model BillingEvent {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String?       @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  eventType      String        @db.VarChar(100)
-  amount         Decimal?      @db.Decimal(10, 2)
-  status         String        @default("pending") @db.VarChar(50)
-  externalId     String?       @db.VarChar(255)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  type           String        @db.VarChar(100)
+  payload        Json          @default("{}")
+  processed      Boolean       @default(false)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([organizationId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("billing_events")
 }
 
 // ============================================================
-// FASE 3 — CRM
+// FASE 3 — CRM (Contact, Lead, Deal, Pipeline)
 // ============================================================
-
-// FASE 12: waId, externalId added; email made nullable
-// FASE 17: campos de importação CSV + consentimento (seções 8/11 da missão
-// final — campos aditivos, nulos/descartáveis; CSV nunca altera campos
-// protegidos: organizationId, papel/rota de usuário)
+// Modelo 13: contato (protegidos: organizationId, papel/rota de usuário)
 model Contact {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   email          String?       @db.VarChar(255)
   name           String        @db.VarChar(255)
-  firstName      String?       @db.VarChar(255)
-  lastName       String?       @db.VarChar(255)
+  firstName      String?       @map("first_name") @db.VarChar(255)
+  lastName       String?       @map("last_name") @db.VarChar(255)
   company        String?       @db.VarChar(255)
   phone          String?       @db.VarChar(50)
-  waId           String?       @db.VarChar(50)
-  externalId     String?       @db.VarChar(255)
+  waId           String?       @map("wa_id") @db.VarChar(50)
+  externalId     String?       @map("external_id") @db.VarChar(255)
   source         String?       @db.VarChar(120)
-  tags           Json         @default("[]")
-  customFields   Json         @default("{}")
-  preferences    Json         @default("{}")
+  tags           Json          @map("tags") @default("[]")
+  customFields   Json          @map("custom_fields") @default("{}")
+  preferences    Json          @map("preferences") @default("{}")
   // Consentimento marketing (LGPD): contato importado SEM consentimento
   // comprovado NÃO é elegível para disparos automáticos.
-  consentMarketing Boolean    @default(false)
-  consentSource  String?      @db.VarChar(200)
-  consentAt      DateTime?    @db.Timestamp(6)
-  optOut         Boolean      @default(false)
-  createdAt      DateTime    @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime    @default(now()) @db.Timestamp(6)
+  consentMarketing Boolean     @map("consent_marketing") @default(false)
+  consentSource  String?       @map("consent_source") @db.VarChar(200)
+  consentAt      DateTime?     @map("consent_at") @db.Timestamp(6)
+  optOut         Boolean       @map("opt_out") @default(false)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt @db.Timestamp(6)
   messages       Message[]
   leads          Lead[]
   deals          Deal[]
@@ -243,146 +261,234 @@ model Contact {
   @@index([organizationId, waId])
   @@index([organizationId, email])
   @@index([organizationId, phone])
+  @@unique([organizationId, waId])
+  @@map("contacts")
 }
 
+// Modelo 14: lead
 model Lead {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contactId      String?       @db.Uuid
+  contactId      String?       @map("contact_id") @db.Uuid
   contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   source         String        @default("organic") @db.VarChar(50)
   status         String        @default("new") @db.VarChar(50)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
-  deals          Deal[]
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
+  deals          Deal[]        @relation("DealLead")
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([contactId])
+  @@map("leads")
 }
 
+// Modelo 15: deal
 model Deal {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leadId         String?       @db.Uuid
-  lead           Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  contactId      String?       @db.Uuid
+  contactId      String?       @map("contact_id") @db.Uuid
   contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  title          String        @db.VarChar(255)
+  pipelineId     String?       @map("pipeline_id") @db.Uuid
+  pipeline       Pipeline?     @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  title          String        @db.VarChar(300)
   value          Decimal       @default(0) @db.Decimal(10, 2)
   stage          String        @default("prospecting") @db.VarChar(50)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
+  lead           Lead?         @relation("DealLead", fields: [leadId], references: [id])
+  leadId         String?       @map("lead_id") @db.Uuid
   @@index([organizationId])
+  @@index([organizationId, stage])
+  @@index([pipelineId])
+  @@index([contactId])
+  @@map("deals")
 }
 
+// Modelo 16: pipeline
 model Pipeline {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String        @db.VarChar(100)
-  stages         Json          @default("[]")
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  name           String        @db.VarChar(255)
+  stages         String[]      @default(["prospecting", "proposal", "negotiation", "won", "lost"])
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
+  deals          Deal[]
   @@index([organizationId])
+  @@map("pipelines")
 }
 
-// ============================================================
-// FASE 4 — Produtos + Mídia
-// ============================================================
+// Modelo 17: produto
 model Product {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sku            String        @unique @db.VarChar(100)
   name           String        @db.VarChar(255)
   description    String?       @db.Text
-  price          Decimal       @default(0) @db.Decimal(10, 2)
+  price          Decimal?      @db.Decimal(10, 2)
   category       String?       @db.VarChar(100)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  active         Boolean       @default(true)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
   @@index([organizationId])
+  @@map("products")
 }
 
+// Modelo 18: mídia
 model Media {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  fileKey        String?       @db.VarChar(255)
   url            String?       @db.VarChar(500)
-  type           String        @default("image") @db.VarChar(50)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  type           String        @db.VarChar(50)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([organizationId])
+  @@map("media")
 }
 
-// ============================================================
-// FASE 5 — Publicador + Calendário
-// ============================================================
+// Modelo 19: post (publicador)
 model Post {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  title          String        @db.VarChar(255)
-  body           String?       @db.Text
+  content        String        @db.Text
+  platform       String        @db.VarChar(50)
   status         String        @default("draft") @db.VarChar(50)
-  publishAt      DateTime?     @db.Timestamp(6)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  scheduledAt    DateTime?     @map("scheduled_at") @db.Timestamptz(6)
+  publishedAt    DateTime?     @map("published_at") @db.Timestamptz(6)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("posts")
 }
 
+// Modelo 20: evento de calendário
 model CalendarEvent {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title          String        @db.VarChar(255)
-  eventDate      DateTime      @db.Date
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  description    String?       @db.Text
+  startAt        DateTime      @map("start_at") @db.Timestamptz(6)
+  endAt          DateTime      @map("end_at") @db.Timestamptz(6)
+  allDay         Boolean       @map("all_day") @default(false)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
   @@index([organizationId])
+  @@index([organizationId, startAt])
+  @@map("calendar_events")
 }
 
-// ============================================================
-// FASE 6 — Vídeo
-// ============================================================
+// Modelo 21: vídeo
 model Video {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   url            String?       @db.VarChar(500)
   duration       Int           @default(0)
   status         String        @default("processing") @db.VarChar(50)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([organizationId])
+  @@map("videos")
 }
 
-// ============================================================
-// FASE 8 — Central de Mensagens
-// ============================================================
-// FASE 12: contactId, externalId, direction, status, updatedAt added
+// Modelo 21b: agendamento (FASE 5)
+model Schedule {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String        @db.Text
+  description    String?       @db.Text
+  scheduledAt    DateTime      @map("scheduled_at") @db.Timestamptz(6)
+  status         String        @default("draft") @db.VarChar(50)
+  channel        String?       @db.VarChar(50)
+  content        String?       @db.Text
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt
+  @@index([organizationId])
+  @@map("schedules")
+}
+
+// Modelo: Growth Lead (FASE Growth - WhatsApp/Instagram leads)
+model GrowthLead {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organizationId") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source         String    @default("instagram") @db.VarChar(50)
+  contact        String    @db.VarChar(50)
+  metadata       Json      @default("{}")
+  status         String    @default("pending") @db.VarChar(50)
+  funnelStatus   String    @map("funnel_status") @default("pending") @db.VarChar(50)
+  lastContactAt  DateTime? @map("last_contact_at") @db.Timestamptz(6)
+  responseCount  Int       @map("response_count") @default(0)
+  costPerLead    Decimal?  @map("cost_per_lead") @db.Decimal(10, 2)
+  notes          String?   @db.Text
+  assignedTo     String?   @map("assigned_to") @db.Uuid
+  createdAt      DateTime  @map("createdAt") @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @map("updatedAt") @updatedAt @db.Timestamptz(6)
+  @@unique([organizationId, contact])
+  @@index([organizationId, funnelStatus])
+  @@index([organizationId, assignedTo])
+  @@index([organizationId, lastContactAt])
+  @@map("growth_leads")
+}
+
+// Modelo: WhatsApp Instance (FASE Growth - Evolution API)
+model WhatsappInstance {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organizationId") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instanceName   String    @map("instanceName") @db.Text
+  status         String    @default("DISCONNECTED") @db.VarChar(50)
+  qrCode         String?   @map("qrCode") @db.Text
+  accessToken    String?   @map("accessToken") @db.Text
+  lastHeartbeat  DateTime? @map("lastHeartbeat") @db.Timestamptz(6)
+  createdAt      DateTime  @map("createdAt") @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @map("updatedAt") @updatedAt @db.Timestamptz(6)
+  @@unique([organizationId, instanceName])
+  @@index([organizationId, status])
+  @@map("whatsapp_instances")
+}
+
+// Modelo 22: mensagem (Central de Mensagens)
 model Message {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contactId      String?       @db.Uuid
+  contactId      String?       @map("contact_id") @db.Uuid
   contact        Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  externalId     String?       @db.VarChar(255)
+  externalId     String?       @map("external_id") @db.VarChar(255)
   body           String?       @db.Text
-  fromChannel    String        @default("whatsapp") @db.VarChar(50)
-  toContact      String?       @db.VarChar(255)
+  fromChannel    String        @map("from_channel") @default("whatsapp") @db.VarChar(50)
+  toContact      String?       @map("to_contact") @db.VarChar(255)
   direction      String        @default("inbound") @db.VarChar(20)
   status         String        @default("received") @db.VarChar(50)
-  updatedAt      DateTime      @updatedAt
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime      @map("updated_at") @updatedAt @db.Timestamptz(6)
   @@index([organizationId])
   @@index([contactId])
   @@index([externalId])
+  @@map("messages")
 }
 
-// ============================================================
-// FASE 9–11
-// ============================================================
+// Modelo 23: relatório
 model Report {
   id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reportType     String        @db.VarChar(100)
+  reportType     String        @map("report_type") @db.VarChar(100)
   data           Json          @default("{}")
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamp(6)
   @@index([organizationId])
+  @@map("reports")
 }
 
 // ============================================================
@@ -395,7 +501,7 @@ model Report {
 model MetaIntegration {
   id                        String    @id @default(uuid()) @map("id") @db.Uuid
   organizationId            String    @map("organization_id") @db.Uuid
-  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization              Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   provider                  String    @map("provider") @db.Text
   metaPageId                String?   @map("meta_page_id") @db.Text
   instagramAccountId        String?   @map("instagram_account_id") @db.Text
@@ -416,15 +522,18 @@ model MetaIntegration {
 
 // Tabela: webhook_events (canônica snake_case + openbsp_event_id, migration 025)
 model WebhookEvent {
-  eventId       String        @id @default(uuid()) @map("event_id") @db.Uuid
-  metaEventId   String        @map("meta_event_id") @db.Text
-  integrationId String?       @map("integration_id") @db.Uuid
-  eventType     String        @map("event_type") @db.Text
-  payloadHash   String        @map("payload_hash") @db.Text
-  processedAt   DateTime      @default(now()) @map("processed_at") @db.Timestamptz(6)
-  openbspEventId String?      @map("openbsp_event_id") @db.Text
+  eventId        String            @id @default(uuid()) @map("event_id") @db.Uuid
+  metaEventId    String            @map("meta_event_id") @db.Text
+  integrationId  String?           @map("integration_id") @db.Uuid
+  organizationId String?           @map("organization_id") @db.Uuid
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  eventType      String            @map("event_type") @db.Text
+  payloadHash    String            @map("payload_hash") @db.Text
+  processedAt    DateTime          @default(now()) @map("processed_at") @db.Timestamptz(6)
+  openbspEventId String?           @map("openbsp_event_id") @db.Text
   metaIntegration MetaIntegration? @relation(fields: [integrationId], references: [id])
   @@unique([metaEventId, integrationId])
+  @@index([organizationId])
   @@map("webhook_events")
 }
 
@@ -448,9 +557,9 @@ model WebhookEvent {
 
 model Task {
   id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String       @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   title          String       @db.VarChar(300)
   status         String       @default("queued") @db.VarChar(30)
@@ -458,82 +567,87 @@ model Task {
   inputJson      Json         @default("{}")
   resultJson     Json?
   errorText      String?      @db.Text
-  modelUsed      String?      @db.VarChar(100)
+  modelUsed      String?      @map("model_used") @db.VarChar(100)
   usageJson      Json?
-  waitingReason  String?      @db.VarChar(300)
-  createdAt      DateTime     @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime     @updatedAt
-  completedAt    DateTime?    @db.Timestamp(6)
+  waitingReason  String?      @map("waiting_reason") @db.VarChar(300)
+  createdAt      DateTime     @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @map("updated_at") @updatedAt
+  completedAt    DateTime?    @map("completed_at") @db.Timestamp(6)
   steps          TaskStep[]
   events         TaskEvent[]
   @@index([organizationId, status])
   @@index([userId])
+  @@map("tasks")
 }
 
 model TaskStep {
   id             String    @id @default(uuid()) @db.Uuid
-  taskId         String    @db.Uuid
-  organizationId String    @db.Uuid
+  taskId         String    @map("task_id") @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
   seq            Int
   name           String    @db.VarChar(200)
   status         String    @default("pending") @db.VarChar(30)
   detailJson     Json?
-  startedAt      DateTime? @db.Timestamp(6)
-  finishedAt     DateTime? @db.Timestamp(6)
-  createdAt      DateTime  @default(now()) @db.Timestamp(6)
+  startedAt      DateTime? @map("started_at") @db.Timestamp(6)
+  finishedAt     DateTime? @map("finished_at") @db.Timestamp(6)
+  createdAt      DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
   task           Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   @@index([taskId, seq])
   @@index([organizationId])
+  @@map("task_steps")
 }
 
 model TaskEvent {
   id             String   @id @default(uuid()) @db.Uuid
-  taskId         String   @db.Uuid
-  organizationId String   @db.Uuid
+  taskId         String   @map("task_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
   type           String   @db.VarChar(60)
   payloadJson    Json     @default("{}")
-  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  createdAt      DateTime @map("created_at") @default(now()) @db.Timestamp(6)
   task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   @@index([taskId])
   @@index([organizationId])
+  @@map("task_events")
 }
 
 model AgentMemory {
   id             String       @id @default(uuid()) @db.Uuid
-  organizationId String       @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String       @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind           String       @db.VarChar(40)
-  memoryKey      String       @db.VarChar(200)
+  memoryKey      String       @map("memory_key") @db.VarChar(200)
   valueJson      Json
-  supersededAt   DateTime?    @db.Timestamp(6)
-  createdAt      DateTime     @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime     @updatedAt
+  supersededAt   DateTime?    @map("superseded_at") @db.Timestamp(6)
+  createdAt      DateTime     @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime     @map("updated_at") @updatedAt
   @@unique([organizationId, userId, kind, memoryKey])
   @@index([organizationId, userId])
+  @@map("agent_memories")
 }
 
 model AdminAlert {
-  id             String       @id @default(uuid()) @db.Uuid
-  organizationId String?       @db.Uuid
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  userId         String?       @db.Uuid
+  userId         String?       @map("user_id") @db.Uuid
   user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  type           String       @db.VarChar(50)
-  severity       String       @db.VarChar(20) @default("warning")
-  title          String       @db.VarChar(255)
-  message        String       @db.Text
+  type           String        @db.VarChar(50)
+  severity       String        @db.VarChar(20) @default("warning")
+  title          String        @db.VarChar(255)
+  message        String        @db.Text
   statusCode     Int?
   route          String?       @db.VarChar(255)
-  timestamp      DateTime     @default(now()) @db.Timestamp(6)
-  metadata       Json         @default("{}")
+  timestamp      DateTime      @default(now()) @db.Timestamp(6)
+  metadata       Json          @default("{}")
   @@index([organizationId])
   @@index([timestamp])
+  @@map("admin_alerts")
 }
 
 // ============================================================
-// FASE 17 — CAMPANHAS E DISPARIOS (missão final, seções 9–12)
+// FASE 17 — CAMPANHAS E DISPAROS (missão final, seções 9–12)
 //
 // Campanha = mensagem + público + canal + conta selecionada.
 // Estados (máquina, cf. CAMPAIGN_STATUSES no serviço): draft,
@@ -548,57 +662,59 @@ model AdminAlert {
 
 model Campaign {
   id           String     @id @default(uuid()) @db.Uuid
-  organizationId String   @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId       String     @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
   title        String     @db.VarChar(300)
   channel      String     @db.VarChar(30)
   status       String     @default("draft") @db.VarChar(30)
   /// Conta multicontas SELECIONADA (id da meta_integrations / config do
   /// provedor). Ausente em canais manuais. NUNCA há conta "padrão global":
   /// cada operação valida a conta e o tenant.
-  accountId    String?    @db.VarChar(64)
+  accountId    String?    @map("account_id") @db.VarChar(64)
   message      String     @db.Text
   variables    Json      @default("{}")
-  audienceJson Json      @default("{}")
-  batchJson    Json      @default("{}")
+  audienceJson Json      @map("audience_json") @default("{}")
+  batchJson    Json      @map("batch_json") @default("{}")
   /// 'auto' (enviado pela plataforma) | 'manual' (usuário confirmou o
   /// disparo fora da plataforma — §12; a RX NUNCA afirma ter enviado).
-  resultKind   String?    @db.VarChar(20)
-  scheduledFor DateTime?  @db.Timestamp(6)
-  startedAt    DateTime?  @db.Timestamp(6)
-  completedAt  DateTime?  @db.Timestamp(6)
+  resultKind   String?    @map("result_kind") @db.VarChar(20)
+  scheduledFor DateTime?  @map("scheduled_for") @db.Timestamp(6)
+  startedAt    DateTime?  @map("started_at") @db.Timestamp(6)
+  completedAt  DateTime?  @map("completed_at") @db.Timestamp(6)
   progress     Int        @default(0)
-  totalCount   Int        @default(0)
-  sentCount    Int        @default(0)
-  failedCount  Int        @default(0)
-  skippedCount Int        @default(0)
-  errorText    String?
-  manualNotes  String?
-  createdAt    DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt    DateTime  @default(now()) @db.Timestamp(6)
+  totalCount   Int        @map("total_count") @default(0)
+  sentCount    Int        @map("sent_count") @default(0)
+  failedCount  Int        @map("failed_count") @default(0)
+  skippedCount Int        @map("skipped_count") @default(0)
+  errorText    String?    @map("error_text")
+  manualNotes  String?    @map("manual_notes")
+  createdAt    DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime  @map("updated_at") @default(now()) @db.Timestamp(6)
   recipients   CampaignRecipient[]
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
+  @@map("campaigns")
 }
 
 model CampaignRecipient {
   id        String     @id @default(uuid()) @db.Uuid
   campaign  Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  campaignId String    @db.Uuid
-  organizationId String @db.Uuid
+  campaignId String    @map("campaign_id") @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
   contact   Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  contactId String     @db.Uuid
+  contactId String     @map("contact_id") @db.Uuid
   status     String    @default("pending") @db.VarChar(20)
   attempts   Int       @default(0)
-  externalMessageId String? @db.VarChar(200)
-  lastError  String?
-  sentAt     DateTime? @db.Timestamp(6)
-  createdAt  DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt  DateTime  @default(now()) @db.Timestamp(6)
+  externalMessageId String? @map("external_message_id") @db.VarChar(200)
+  lastError  String?    @map("last_error")
+  sentAt     DateTime? @map("sent_at") @db.Timestamp(6)
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime  @map("updated_at") @default(now()) @db.Timestamp(6)
   @@unique([campaignId, contactId])
   @@index([campaignId, status])
   @@index([organizationId])
+  @@map("campaign_recipients")
 }
 
 // ============================================================
@@ -608,34 +724,38 @@ model CampaignRecipient {
 
 model RiskLog {
   id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
   action         String   @db.VarChar(200)
   platform       String   @db.VarChar(50)
   target         String   @db.VarChar(255)
-  riskLevel      String   @db.VarChar(20)
+  riskLevel      String   @map("risk_level") @db.VarChar(20)
   context        Json     @default("{}")
   result         String   @db.VarChar(50)
   timestamp      DateTime @default(now()) @db.Timestamp(6)
-  organizationId String   @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   @@index([organizationId])
   @@index([userId])
   @@index([platform])
   @@index([riskLevel])
   @@index([result])
+  @@map("risk_logs")
 }
 
 model ScraperConfig {
   id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   platform       String   @db.VarChar(50)
   maxResults     Int?
   rateLimitMs    Int?
   proxyUrl       String?
   timeoutMs      Int?
-  createdAt      DateTime @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @map("created_at") @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime @map("updated_at") @updatedAt
   @@unique([organizationId, platform])
   @@index([organizationId])
+  @@map("scraper_configs")
 }
 
 // ============================================================
@@ -644,41 +764,72 @@ model ScraperConfig {
 
 model WhatsappChannel {
   id               String   @id @default(uuid()) @db.Uuid
-  organizationId   String   @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   provider         String   @default("openbsp") @db.VarChar(20)
   status           String   @default("PENDING") @db.VarChar(20)
-  onboardingTokenId String? @db.Text
-  callbackUrl      String?  @db.Text
-  verifyToken      String   @db.Text
-  wabaId           String?  @db.Text
-  phoneNumberId    String?  @db.Text
-  phoneNumber      String?  @db.Text
-  verifiedName     String?  @db.Text
+  onboardingTokenId String? @map("onboarding_token_id") @db.Text
+  callbackUrl      String?  @map("callback_url") @db.Text
+  verifyToken      String   @map("verify_token") @db.Text
+  wabaId           String?  @map("waba_id") @db.Text
+  phoneNumberId    String?  @map("phone_number_id") @db.Text
+  phoneNumber      String?  @map("phone_number") @db.Text
+  verifiedName     String?  @map("verified_name") @db.Text
   /// access_token AES-GCM (src/lib/encryption.ts) — nunca expor na UI
-  accessTokenEnc   String?  @db.Text
-  tierLimitPer24h  Int      @default(250)
-  sentWindow24h    Int      @default(0)
-  windowStartedAt  DateTime? @db.Timestamptz(6)
-  lastError        String?  @db.Text
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @default(now()) @db.Timestamptz(6)
+  accessTokenEnc   String?  @map("access_token_enc") @db.Text
+  tierLimitPer24h  Int      @map("tier_limit_per_24h") @default(250)
+  sentWindow24h    Int      @map("sent_window_24h") @default(0)
+  windowStartedAt  DateTime? @map("window_started_at") @db.Timestamptz(6)
+  lastError        String?  @map("last_error") @db.Text
+  createdAt        DateTime @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @map("updated_at") @default(now()) @db.Timestamptz(6)
   @@unique([organizationId])
   @@map("whatsapp_channels")
 }
 
+model MessageStatus {
+  id             String    @id @default(uuid()) @db.Uuid
+  messageId      String    @map("message_id") @db.VarChar(255)
+  status         String    @db.VarChar(50)
+  organizationId String    @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  timestamp      DateTime  @map("timestamp") @db.Timestamptz(6)
+  errorCode      String?   @map("error_code") @db.VarChar(100)
+  payload        Json?
+  createdAt      DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  @@index([organizationId])
+  @@index([messageId])
+  @@map("message_status")
+}
+
+model WebhookDeadLetter {
+  id             String        @id @default(uuid()) @db.Uuid
+  eventType      String        @map("event_type") @db.VarChar(100)
+  rawBody        String        @map("raw_body") @db.Text
+  error          String        @db.Text
+  attempt        Int           @default(0)
+  createdAt      DateTime      @map("created_at") @default(now()) @db.Timestamptz(6)
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([eventType])
+  @@index([organizationId])
+  @@map("webhook_dead_letter")
+}
+
 model WhatsappTemplate {
   id              String   @id @default(uuid()) @db.Uuid
-  organizationId  String   @db.Uuid
-  metaTemplateId  String?  @db.Text
+  organizationId  String   @map("organization_id") @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metaTemplateId  String?  @map("meta_template_id") @db.Text
   name            String   @db.Text
   language        String   @default("pt_BR") @db.Text
   category        String   @db.VarChar(20)
   status          String   @default("PENDING") @db.VarChar(20)
-  componentsJson  Json     @default("[]")
-  rejectionReason String?  @db.Text
-  lastCheckedAt   DateTime? @db.Timestamptz(6)
-  createdAt       DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime @default(now()) @db.Timestamptz(6)
+  componentsJson  Json     @map("components_json") @default("[]")
+  rejectionReason String?  @map("rejection_reason") @db.Text
+  lastCheckedAt   DateTime? @map("last_checked_at") @db.Timestamptz(6)
+  createdAt       DateTime @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @map("updated_at") @default(now()) @db.Timestamptz(6)
   @@unique([organizationId, name, language])
   @@map("whatsapp_templates")
 }
@@ -704,6 +855,8 @@ model IntegrationEvent {
   metaEventId   String?  @map("meta_event_id") @db.Text
   payloadHash   String?  @map("payload_hash") @db.Text
   processedAt   DateTime? @map("processed_at") @db.Timestamptz(6)
+  organizationId String   @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Tipo do evento: connection_success, connection_failed, disconnection, credential_renewal, mode_switch, error
   @@index([workspaceId])

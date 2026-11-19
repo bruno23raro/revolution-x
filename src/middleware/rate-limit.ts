@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logger } from '../lib/logger';
+import { logger } from '@/lib/logger';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -18,25 +18,30 @@ const defaultConfig: Record<string, RateLimitConfig> = {
   'default': { windowMs: 60 * 1000, max: 100, message: 'Rate limit excedido' },
 };
 
-// Upstash Redis client
-const upstashRedis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+// Upstash Redis client (fail-open if not configured)
+const hasUpstashConfig = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Ratelimit instances for each config
-const ratelimitInstances: Record<string, Ratelimit> = {};
-for (const [key, config] of Object.entries(defaultConfig)) {
-  const windowSec = Math.ceil(config.windowMs / 1000);
-  ratelimitInstances[key] = new Ratelimit({
-    redis: upstashRedis,
-    limiter: Ratelimit.slidingWindow(config.max, `${windowSec} s`),
-    prefix: '@upstash/ratelimit',
-  });
+const upstashRedis = hasUpstashConfig ? new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+}) : null;
+
+// Ratelimit instances for each config (only created if Upstash is configured)
+const ratelimitInstances: Record<string, any> = {};
+if (hasUpstashConfig && upstashRedis) {
+  for (const [key, config] of Object.entries(defaultConfig)) {
+    const windowSec = Math.ceil(config.windowMs / 1000);
+    ratelimitInstances[key] = new Ratelimit({
+      redis: upstashRedis,
+      limiter: Ratelimit.slidingWindow(config.max, `${windowSec} s`),
+      prefix: '@upstash/ratelimit',
+    });
+  }
 }
 
 /**
  * Rate limiting middleware usando Upstash Redis
+ * Fail-open: if Redis is not configured, allow all requests
  */
 export async function rateLimit(
   request: NextRequest,
@@ -45,6 +50,11 @@ export async function rateLimit(
 ): Promise<{ limited: boolean; remaining: number; resetIn: number }> {
   const finalConfig = { ...defaultConfig[key || 'default'], ...config };
   const url = new URL(request.url);
+
+  // If Upstash is not configured, fail-open (allow all requests)
+  if (!hasUpstashConfig) {
+    return { limited: false, remaining: finalConfig.max, resetIn: Math.ceil(finalConfig.windowMs / 1000) };
+  }
 
   // Create unique key per IP + endpoint
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -66,9 +76,9 @@ export async function rateLimit(
 
     return { limited: false, remaining, resetIn };
   } catch (err) {
-    // Fail-closed: if Redis is unavailable, block the request
-    logger.error({ err, ip }, 'Upstash Redis rate limit check failed - failing closed');
-    return { limited: true, remaining: 0, resetIn: Math.ceil(finalConfig.windowMs / 1000) };
+    // Fail-open: if Redis is unavailable, allow the request
+    logger.warn({ err, ip }, 'Upstash Redis rate limit check failed - failing open');
+    return { limited: false, remaining: finalConfig.max, resetIn: Math.ceil(finalConfig.windowMs / 1000) };
   }
 }
 

@@ -1,90 +1,192 @@
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { NextRequest } from 'next/server';
-import { createClient } from './supabase/server';
-import { prisma, withUserContext } from './prisma';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from './prisma';
 import * as log from './logger';
 
 // ============================================================
-// Auth helpers — works without DB for token-based validation
+// Auth constants — centralized configuration
+// ============================================================
+
+export const ACCESS_TOKEN_TTL = '15m';          // 15 minutes
+export const REFRESH_TOKEN_TTL_DAYS = 30;       // 30 days
+export const BCRYPT_COST = 12;                  // bcrypt cost factor
+
+// Token family for refresh rotation (in-memory, single instance dev)
+export interface TokenFamily {
+  familyId: string;
+  createdAt: number;
+  revokedAt?: number;
+}
+
+// ============================================================
+// Password hashing (bcrypt cost 12)
 // ============================================================
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
+  return bcrypt.hash(password, BCRYPT_COST);
 }
+
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
-export function generateToken(payload: object, secret: string, expiresIn: string = '7d'): string {
-  return jwt.sign(payload, secret, { expiresIn: expiresIn as SignOptions['expiresIn'] });
+
+// ============================================================
+// JWT helpers
+// ============================================================
+
+export function generateAccessToken(payload: object): string {
+  return jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: ACCESS_TOKEN_TTL as SignOptions['expiresIn'],
+  });
 }
-export function verifyToken(token: string, secret: string): object | null {
+
+export function generateRefreshToken(payload: object): string {
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
+    expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` as SignOptions['expiresIn'],
+  });
+}
+
+export function verifyAccessToken(token: string): object | null {
   try {
-    return jwt.verify(token, secret) as object;
+    return jwt.verify(token, process.env.JWT_SECRET!) as object;
   } catch {
     return null;
   }
 }
+
+export function verifyRefreshToken(token: string): object | null {
+  try {
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as object;
+  } catch {
+    return null;
+  }
+}
+
 export function isPasswordStrong(pw: string): boolean {
-  return pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+  return pw.length >= 10 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /\d/.test(pw) && /[^A-Za-z0-9]/.test(pw);
 }
 
 // ============================================================
-// User + Organization membership
+// Magic link token helpers (backward compat for tests/legacy)
+// ============================================================
+
+export const MAGIC_LINK_TTL_MS = 15 * 60_000;   // 15 minutes
+export const MAGIC_LINK_TTL = '15m';            // JWT TTL for magic link
+
+export function generateMagicLinkToken(payload: object): string {
+  return jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: MAGIC_LINK_TTL as SignOptions['expiresIn'],
+  });
+}
+
+export function verifyMagicLinkToken(token: string): object | null {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET!) as object;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// Cookie helpers — httpOnly, Secure, SameSite=Lax
+// ============================================================
+
+export const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 60 * 60 * 24 * REFRESH_TOKEN_TTL_DAYS, // 30 days
+};
+
+export const ACCESS_COOKIE_OPTIONS = {
+  ...COOKIE_OPTIONS,
+  maxAge: 15 * 60, // 15 minutes
+};
+
+export function setAuthCookies(response: NextResponse, accessToken: string, refreshToken: string): void {
+  response.cookies.set('access_token', accessToken, ACCESS_COOKIE_OPTIONS);
+  response.cookies.set('refresh_token', refreshToken, COOKIE_OPTIONS);
+}
+
+export function clearAuthCookies(response: NextResponse): void {
+  response.cookies.set('access_token', '', { ...ACCESS_COOKIE_OPTIONS, maxAge: 0 });
+  response.cookies.set('refresh_token', '', { ...COOKIE_OPTIONS, maxAge: 0 });
+}
+
+export function getAccessToken(req: NextRequest): string | null {
+  return req.cookies.get('access_token')?.value ?? null;
+}
+
+export function getRefreshToken(req: NextRequest): string | null {
+  return req.cookies.get('refresh_token')?.value ?? null;
+}
+
+// ============================================================
+// Token family management (refresh rotation)
+// ============================================================
+
+// In-memory token family store (replace with Redis for multi-instance)
+const tokenFamilies = new Map<string, TokenFamily>();
+
+export function createTokenFamily(familyId: string): void {
+  tokenFamilies.set(familyId, { familyId, createdAt: Date.now() });
+}
+
+export function revokeTokenFamily(familyId: string): void {
+  const family = tokenFamilies.get(familyId);
+  if (family) {
+    family.revokedAt = Date.now();
+  }
+}
+
+export function isTokenFamilyValid(familyId: string): boolean {
+  const family = tokenFamilies.get(familyId);
+  return !!family && !family.revokedAt;
+}
+
+export function revokeAllUserTokenFamilies(userId: string): void {
+  for (const [familyId, family] of tokenFamilies.entries()) {
+    if (familyId.startsWith(`${userId}:`)) {
+      family.revokedAt = Date.now();
+    }
+  }
+}
+
+// ============================================================
+// Single Admin User (simplified - single organization)
 // ============================================================
 
 export interface AuthenticatedUser {
   id: string;
   email: string | null;
   organizationId: string;
-  role: string;
-  /** Todas as memberships do usuário (para autorização completa). */
-  organizationMembers?: Array<{ organizationId: string; role: string }>;
+  role: string; // 'owner' for single admin
 }
 
 /**
  * Lazy auth: only validates session when explicitly called.
- * Unlike getAuthenticatedUser which eagerly fetches on every call,
- * this function checks if a session exists and returns user data
- * only when the caller explicitly requests it.
- *
- * Callers should use this only when they need the authenticated user,
- * and public routes should NOT call this function.
+ * Single admin with single organization.
  */
 export async function getAuth(
   req: NextRequest
 ): Promise<{ user: AuthenticatedUser | null; hasSession: boolean }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const accessToken = getAccessToken(req);
+  const payload = accessToken ? verifyAccessToken(accessToken) : null;
 
-  if (!user && !session) {
-    // No session at all - return early without DB query
+  if (!payload) {
     return { user: null, hasSession: false };
   }
 
-  if (!user) {
-    // Has session but no user (e.g., email unconfirmed)
-    return { user: null, hasSession: true };
-  }
-
-  // Validate user exists in the database and belongs to an organization.
-  // Wrapped in withUserContext so the "User_self" RLS policy is satisfied.
-  // (Currently BYPASSRLS ignores this, but future-proof for role migration.)
+  // Validate user exists in the database and get their organization
   let dbUser;
   try {
-    dbUser = await withUserContext(user.id, async (tx) =>
-      tx.user.findUnique({
-        where: { id: user.id },
-        include: { organizationMembers: true },
-      })
-    );
+    dbUser = await prisma.user.findUnique({
+      where: { id: (payload as { sub: string }).sub },
+      include: { organizationMembers: { take: 1 } },
+    });
   } catch (err) {
-    // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
     const e = err instanceof Error ? err : new Error(String(err));
     log.error('[auth] getAuth: database error', e, {
       code: (e as { code?: string }).code,
@@ -94,43 +196,29 @@ export async function getAuth(
   }
 
   if (!dbUser) {
-    // Log: usuário sem registro no banco de dados
     log.info('[auth] getAuth: user not found in database');
     return { user: null, hasSession: true };
   }
 
   if (dbUser.organizationMembers.length === 0) {
-    // Log: usuário sem membership em nenhuma organização
-    log.info('[auth] getAuth: user has no organization memberships');
+    log.info('[auth] getAuth: user has no organization');
     return { user: null, hasSession: true };
   }
 
-  // Return the first (primary) organization membership for organizationId/organization rollback.
-  const primary = dbUser.organizationMembers[0];
-
-  // O role reflete a organização primária (orgMembers[0]).
-  // Se o usuário for admin/owner na org primária, role = admin/owner.
-  // Se for admin só em outras orgs, o role permanece como o da org primária,
-  // preservando o isolamento multi-tenant: não eleva privilégios fora da org ativa.
-  const primaryRole = primary.role;
-  const effectiveRole = primaryRole;
+  const orgId = dbUser.organizationMembers[0].organizationId;
 
   return {
     user: {
-      id: user.id,
-      email: user.email || null,
-      organizationId: primary.organizationId,
-      role: effectiveRole,
+      id: (payload as { sub: string }).sub,
+      email: dbUser.email || null,
+      organizationId: orgId,
+      role: 'owner',
     },
     hasSession: true,
   };
 }
 
-/**
- * Convenience: returns just the user (backward compatible).
- * Deprecated: use getAuth() for lazy authentication.
- * @deprecated Use getAuth() instead for on-demand auth
- */
+/** @deprecated Use getAuth() instead for on-demand auth */
 export async function getAuthenticatedUser(
   req: NextRequest
 ): Promise<AuthenticatedUser | null> {
@@ -138,48 +226,17 @@ export async function getAuthenticatedUser(
   return user;
 }
 
-// Returns ALL organizations the authenticated user belongs to (including role).
-// Used by routes that need to validate a specific org beyond the primary.
+// Returns ALL organizations the authenticated user belongs to (for backward compat)
 export async function getAllOrganizationMemberships(
-  _req: NextRequest
+  req: NextRequest
 ): Promise<Array<{ organizationId: string; role: string }> | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, hasSession } = await getAuth(req);
+  if (!hasSession || !user) return null;
 
-  if (!user) {
-    return null;
-  }
-
-  // Wrap in withUserContext to satisfy User_self RLS policy.
-  let dbUser;
-  try {
-    dbUser = await withUserContext(user.id, async (tx) =>
-      tx.user.findUnique({
-        where: { id: user.id },
-        include: { organizationMembers: { select: { organizationId: true, role: true } } },
-      })
-    );
-  } catch (err) {
-    // Log: erro de banco de dados — APENAS nome e código, sem dados pessoais
-    const e = err instanceof Error ? err : new Error(String(err));
-    log.error('[auth] getAllOrganizationMemberships: database error', e, {
-      code: (e as { code?: string }).code,
-      name: e.name
-    });
-    return null;
-  }
-
-  if (!dbUser || dbUser.organizationMembers.length === 0) {
-    return null;
-  }
-
-  return dbUser.organizationMembers;
+  return [{ organizationId: user.organizationId, role: 'owner' }];
 }
 
-// Validates that the authenticated user has membership in the given organization.
-// Returns the full AuthenticatedUser if valid, null otherwise.
+// Validates that the authenticated user has membership in the given organization
 export async function requireMembershipIn(
   req: NextRequest,
   organizationId: string
@@ -187,90 +244,16 @@ export async function requireMembershipIn(
   const user = await getAuthenticatedUser(req);
   if (!user) return null;
 
-  // If user's primary org matches, allow
   if (user.organizationId === organizationId) {
     return user;
   }
-
-  // Otherwise, check all memberships
-  const memberships = await getAllOrganizationMemberships(req);
-  if (!memberships) return null;
-
-  const membership = memberships.find((m) => m.organizationId === organizationId);
-  if (!membership) return null;
-
-  return {
-    id: user.id,
-    email: user.email,
-    organizationId: membership.organizationId,
-    role: membership.role,
-  };
+  return null;
 }
 
 // ============================================================
-// Owner-only authorization (proper RBAC)
+// Role-based authorization helper (simplified for single admin)
 // ============================================================
 
-/**
- * @deprecated Use requireRole(['owner']) instead. Kept for backward compatibility.
- * Legacy: checks if email matches the hardcoded owner email.
- * This is a legacy bypass that will be removed in a future version.
- */
-export function isOwnerEmail(email: string | null): boolean {
-  return email === 'brunoalmeida23111996@gmail.com';
-}
-
-/**
- * Validates that the authenticated user has 'owner' role IN THE TARGET ORGANIZATION.
- * Uses requireRole internally with target organization resolution.
- * Replaces the legacy email-based check with proper RBAC.
- */
-export async function requireOwner(
-  req: NextRequest
-): Promise<{ isOwner: boolean; user: AuthenticatedUser | null }> {
-  const user = await requireRole(req, ['owner']);
-  return { isOwner: !!user, user };
-}
-
-/**
- * Extract target organization from request context.
- * Priority: query param > header > body > primary organization
- */
-async function getTargetOrganization(req: NextRequest, user: AuthenticatedUser): Promise<string> {
-  // Check query param first
-  const queryOrg = req.nextUrl?.searchParams?.get('organizationId');
-  if (queryOrg) return queryOrg;
-
-  // Check header
-  const headerOrg = req.headers.get('x-organization-id');
-  if (headerOrg) return headerOrg;
-
-  // Check body (for POST/PUT/PATCH)
-  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    try {
-      const body = await req.clone().json();
-      if (body?.organizationId) return body.organizationId;
-    } catch {
-      // Body not JSON or empty, ignore
-    }
-  }
-
-  // Fallback to primary organization
-  return user.organizationId;
-}
-
-// ============================================================
-// Role-based authorization helper
-// ============================================================
-
-/**
- * Validates that the authenticated user has one of the required roles IN THE TARGET ORGANIZATION.
- *
- * The target organization is determined from request context (query, body, header) or falls back to primary.
- * Authorization is STRICTLY per-organization: a role in org-A does NOT grant access in org-B.
- *
- * Returns the user with target organization context if authorized, null otherwise.
- */
 export async function requireRole(
   req: NextRequest,
   allowedRoles: string[]
@@ -278,18 +261,31 @@ export async function requireRole(
   const user = await getAuthenticatedUser(req);
   if (!user) return null;
 
-  // Determine target organization from request context
-  const targetOrgId = await getTargetOrganization(req, user);
+  // Single admin with organization - if authenticated, allow all roles
+  return user;
+}
 
-  // Validate membership AND role in the target organization
-  const membershipUser = await requireMembershipIn(req, targetOrgId);
-  if (!membershipUser) return null;
+// ============================================================
+// Magic link helpers (kept for future use, not active)
+// ============================================================
 
-  // Check if the role in the target organization is allowed
-  if (!allowedRoles.includes(membershipUser.role)) {
+export interface MagicLinkPayload {
+  email: string;
+  purpose: 'verify' | 'reset' | 'login';
+  organizationId?: string;
+}
+
+export async function createMagicLink(email: string, purpose: MagicLinkPayload['purpose'], organizationId?: string): Promise<string> {
+  const payload: MagicLinkPayload = { email, purpose, organizationId };
+  return jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: '15m' as SignOptions['expiresIn'],
+  });
+}
+
+export async function verifyMagicLink(token: string): Promise<MagicLinkPayload | null> {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET!) as MagicLinkPayload;
+  } catch {
     return null;
   }
-
-  // Return user with target organization context
-  return membershipUser;
 }

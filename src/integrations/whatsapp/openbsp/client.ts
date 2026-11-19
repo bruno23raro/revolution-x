@@ -224,3 +224,129 @@ export function templateContent(name: string, language: string, variables: strin
     },
   };
 }
+
+// ── Templates via OpenBSP ───────────────────────────────────────────────────
+
+export interface OpenbspTemplateRow {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  status: string;
+  components: Array<{
+    type: string;
+    text?: string;
+    format?: string;
+    buttons?: Array<{ type: string; text: string; sub_type?: string; url?: string }>;
+    parameters?: Array<{ type: string; text: string }>;
+  }>;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTemplateInput {
+  name: string;
+  language: string;
+  category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  components: Array<{
+    type: string;
+    text?: string;
+    format?: string;
+    buttons?: Array<{ type: string; text: string; sub_type?: string; url?: string }>;
+    parameters?: Array<{ type: string; text: string }>;
+  }>;
+}
+
+export async function createTemplate(
+  cfg: OpenbspConfig,
+  input: CreateTemplateInput,
+  opts: ProviderCallOpts = {}
+): Promise<OpenbspResult<OpenbspTemplateRow>> {
+  const fetchImpl = resolveFetch(opts);
+  if (!fetchImpl) return { ok: false, error: 'fetch_unavailable' };
+
+  const url = `${cfg.base}/templates`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+  if (opts.signal) {
+    if (opts.signal.aborted) ctrl.abort();
+    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
+  try {
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: cfg.publishableKey,
+        'api-key': cfg.apiKey,
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(input),
+    });
+    const text = await res.text().catch(() => '');
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: 'http_error', errorDetail: text.slice(0, 500) };
+    }
+    let data: OpenbspTemplateRow | undefined;
+    try {
+      const parsed = text ? (JSON.parse(text) as OpenbspTemplateRow[]) : [];
+      data = parsed[0];
+    } catch {
+      data = undefined;
+    }
+    return { ok: true, data, status: res.status };
+  } catch (e) {
+    return { ok: false, error: 'network_error', errorDetail: String((e as Error)?.message ?? e) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function getTemplateStatus(
+  cfg: OpenbspConfig,
+  templateName: string,
+  language: string,
+  opts: ProviderCallOpts = {}
+): Promise<OpenbspResult<OpenbspTemplateRow>> {
+  const fetchImpl = resolveFetch(opts);
+  if (!fetchImpl) return { ok: false, error: 'fetch_unavailable' };
+
+  const url = `${cfg.base}/templates?name=eq.${encodeURIComponent(templateName)}&language=eq.${encodeURIComponent(language)}&select=*`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+  if (opts.signal) {
+    if (opts.signal.aborted) ctrl.abort();
+    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
+  try {
+    const res = await fetchImpl(url, {
+      method: 'GET',
+      signal: ctrl.signal,
+      headers: {
+        apikey: cfg.publishableKey,
+        'api-key': cfg.apiKey,
+      },
+    });
+    const text = await res.text().catch(() => '');
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: 'http_error', errorDetail: text.slice(0, 500) };
+    }
+    let data: OpenbspTemplateRow | undefined;
+    try {
+      const parsed = text ? (JSON.parse(text) as OpenbspTemplateRow[]) : [];
+      data = parsed[0];
+    } catch {
+      return { ok: false, error: 'provider_error', errorDetail: 'JSON inválido' };
+    }
+    if (!data) {
+      return { ok: false, error: 'provider_error', errorDetail: 'template não encontrado' };
+    }
+    return { ok: true, data, status: res.status };
+  } catch (e) {
+    return { ok: false, error: 'network_error', errorDetail: String((e as Error)?.message ?? e) };
+  } finally {
+    clearTimeout(timer);
+  }
+}

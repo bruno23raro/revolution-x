@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  console.log('[integrations/status] user:', JSON.stringify(user));
+  console.log('[integrations/status] user id:', user.id, 'orgId:', user.organizationId);
   try {
     const supabase = createServiceRoleClient();
     console.log('[integrations/status] supabase client created, orgId:', user.organizationId);

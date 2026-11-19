@@ -1,8 +1,11 @@
 // app/api/integrations/status/route.ts
 // GET /api/integrations/status — Get user's integrations status
 // Retorna lista de integrações do usuário autenticado (não-sensível)
-// Inclui conexões WhatsApp OpenBSP e Meta via whatsapp_channels + meta_integrations
+// Apenas conexões WhatsApp OpenBSP (sem Meta)
 
+// RLS da 018 exige a GUC app.current_user_id, que só o Prisma define —
+// o cliente anon/PostgREST sempre veria 0 linhas. Service role + filtro
+// explícito por user_id (mesmo padrão de src/integrations/manual.ts).
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
@@ -14,33 +17,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  console.log('[integrations/status] user:', JSON.stringify(user));
   try {
-    // RLS da 018 exige a GUC app.current_user_id, que so o Prisma define — o
-    // cliente anon/PostgREST sempre veria 0 linhas. Service role + filtro
-    // explicito por user_id (mesmo padrao de src/integrations/manual.ts).
     const supabase = createServiceRoleClient();
+    console.log('[integrations/status] supabase client created, orgId:', user.organizationId);
 
-    // Buscar integrações Meta do tipo 'integrations' table
-    const { data: metaRows, error: metaError } = await supabase
-      .from('integrations')
-      .select(
-        'id, channel, mode, status, meta_account_id, meta_account_name, phone_number, waba_id, expires_at, created_at, updated_at, last_error, metadata'
-      )
-      .eq('user_id', user.id)
-      .neq('status', 'DISCONNECTED')
-      .order('created_at', { ascending: false });
-
-    // Buscar canais WhatsApp (OpenBSP e Meta) via whatsapp_channels
-    // NOTE: whatsapp_channels (migração 019) usa colunas PascalCase, NÃO snake_case
+    // Buscar canais WhatsApp OpenBSP via whatsapp_channels (migração 019)
+    // NOTE: whatsapp_channels usa colunas PascalCase, NÃO snake_case
     const { data: channelRows, error: channelError } = await supabase
       .from('whatsapp_channels')
       .select('*')
       .eq('organizationId', user.organizationId);
 
-    if (metaError) {
-      if (isQueueUnavailable(metaError)) {
+    console.log('[integrations/status] query result:', { count: channelRows?.length, error: channelError });
+
+    if (channelError) {
+      if (isQueueUnavailable(channelError)) {
         return NextResponse.json({ connected: false, integrations: [] }, { status: 200 });
       }
+      console.error('[integrations/status] channelError:', channelError);
       return NextResponse.json({ error: 'internal_error' }, { status: 500 });
     }
 
@@ -60,27 +55,7 @@ export async function GET(req: NextRequest) {
       label: string | null;
     }> = [];
 
-    // Processar integrações Meta
-    if (metaRows && metaRows.length > 0) {
-      const integrationsMeta = metaRows.map((r: Record<string, unknown>) => ({
-        id: r.id as string,
-        channel: r.channel as string,
-        mode: r.mode ?? 'OFFICIAL',
-        status: r.status as string | null,
-        metaAccountId: r.meta_account_id as string | null,
-        metaAccountName: r.meta_account_name as string | null,
-        phoneNumber: r.phone_number as string | null,
-        wabaId: r.waba_id as string | null,
-        tokenExpiresAt: r.expires_at as string | null,
-        createdAt: r.created_at as string | null,
-        updatedAt: r.updated_at as string | null,
-        lastError: r.last_error as string | null,
-        label: ((r.metadata as Record<string, unknown> | null)?.label as string | null) ?? null,
-      }));
-      integrations.push(...integrationsMeta);
-    }
-
-    // Processar canais WhatsApp (OpenBSP e Meta)
+    // Processar canais WhatsApp OpenBSP
     if (channelRows && channelRows.length > 0) {
       const channelIntegrations = channelRows.map((r: Record<string, unknown>) => {
         const provider = r.provider as string;
@@ -91,6 +66,7 @@ export async function GET(req: NextRequest) {
         const accessTokenEnc = r.accessTokenEnc as string | null;
 
         // Determinar modo e status baseado no provider e credenciais
+        // Apenas OpenBSP — sem Meta
         let mode: string;
         let connStatus: string | null = null;
         let phoneNumber: string | null = null;
@@ -104,15 +80,6 @@ export async function GET(req: NextRequest) {
           // OpenBSP em processo de onboarding
           mode = 'OFFICIAL';
           connStatus = 'PENDING';
-        } else if (provider === 'meta_direct' || (provider === 'openbsp' && wabaId)) {
-          // Conexão Meta (via wabaId)
-          mode = 'OFFICIAL';
-          connStatus = 'CONNECTED';
-          phoneNumber = wabaId;
-        } else if (provider === 'instagram') {
-          // Instagram
-          mode = 'OFFICIAL';
-          connStatus = status;
         } else {
           mode = 'OFFICIAL';
           connStatus = 'DISCONNECTED';

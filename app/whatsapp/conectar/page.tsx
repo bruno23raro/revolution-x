@@ -12,9 +12,11 @@ type Sess = {
   flow_type?: string;
 };
 
+type Resposta = { status?: string; authResponse?: { code?: string } };
+
 type Fb = {
   init: (o: Record<string, unknown>) => void;
-  login: (cb: (r: { status?: string; authResponse?: { code?: string } }) => void, o: Record<string, unknown>) => void;
+  login: (cb: (r: Resposta) => void, o: Record<string, unknown>) => void;
 };
 
 declare global {
@@ -110,62 +112,66 @@ export default function ConectarWhatsApp() {
       );
     }, 5000);
 
+    const tratar = async (resp: Resposta) => {
+      pararAlarme();
+      const code = resp?.authResponse?.code;
+
+      if (!code) {
+        setFase("ready");
+        setDica("");
+        setDetalhe(`Login não concluído (status: ${resp?.status ?? "sem resposta"}).`);
+        return;
+      }
+
+      const s = sess.current;
+
+      try {
+        const r = await fetch("/api/integrations/openbsp/onboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            code,
+            application_id: APP_ID,
+            waba_id: s.waba_id,
+            phone_number_id: s.phone_number_id,
+            business_id: s.business_id,
+            flow_type: s.flow_type,
+          }),
+        });
+        const j = await r.json();
+
+        if (!j.ok) {
+          const causa = j.cause as { error?: { message?: string }; message?: string } | string | null;
+          const extra =
+            typeof causa === "string"
+              ? causa
+              : causa?.error?.message ?? causa?.message ?? "";
+          setFase("error");
+          setDica("");
+          setDetalhe([j.message, extra].filter(Boolean).join(" — ") || `Falha ${j.status}`);
+          return;
+        }
+
+        setFase("ok");
+        setDica("");
+        fetch("/api/integrations/openbsp/status", { cache: "no-store" }).catch(() => {});
+        if (window.opener) {
+          try {
+            (window.opener as Window).postMessage("openbsp-connected", "*");
+          } catch {}
+          setTimeout(() => window.close(), 2500);
+        }
+      } catch (e) {
+        setFase("error");
+        setDetalhe(e instanceof Error ? e.message : "Falha de rede.");
+      }
+    };
+
     try {
       window.FB.login(
-        async (resp) => {
-          pararAlarme();
-          const code = resp?.authResponse?.code;
-
-          if (!code) {
-            setFase("ready");
-            setDica("");
-            setDetalhe(`Login não concluído (status: ${resp?.status ?? "sem resposta"}).`);
-            return;
-          }
-
-          const s = sess.current;
-
-          try {
-            const r = await fetch("/api/integrations/openbsp/onboard", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                token,
-                code,
-                application_id: APP_ID,
-                waba_id: s.waba_id,
-                phone_number_id: s.phone_number_id,
-                business_id: s.business_id,
-                flow_type: s.flow_type,
-              }),
-            });
-            const j = await r.json();
-
-            if (!j.ok) {
-              const causa = j.cause as { error?: { message?: string }; message?: string } | string | null;
-              const extra =
-                typeof causa === "string"
-                  ? causa
-                  : causa?.error?.message ?? causa?.message ?? "";
-              setFase("error");
-              setDica("");
-              setDetalhe([j.message, extra].filter(Boolean).join(" — ") || `Falha ${j.status}`);
-              return;
-            }
-
-            setFase("ok");
-            setDica("");
-            fetch("/api/integrations/openbsp/status", { cache: "no-store" }).catch(() => {});
-            if (window.opener) {
-              try {
-                (window.opener as Window).postMessage("openbsp-connected", "*");
-              } catch {}
-              setTimeout(() => window.close(), 2500);
-            }
-          } catch (e) {
-            setFase("error");
-            setDetalhe(e instanceof Error ? e.message : "Falha de rede.");
-          }
+        function (resp) {
+          void tratar(resp);
         },
         {
           config_id: CONFIG_ID,
@@ -207,9 +213,7 @@ export default function ConectarWhatsApp() {
           <div style={{ fontSize: 13, color: "#f59e0b", wordBreak: "break-word" }}>{detalhe}</div>
         )}
 
-        {dica && (
-          <div style={{ fontSize: 12, color: "#f59e0b", lineHeight: 1.5 }}>{dica}</div>
-        )}
+        {dica && <div style={{ fontSize: 12, color: "#f59e0b", lineHeight: 1.5 }}>{dica}</div>}
 
         <button
           onClick={conectar}

@@ -147,36 +147,76 @@ export async function fetchConnectedAddress(
   if (!cfg) return { ok: false, error: 'openbsp_not_configured' };
   const fetchImpl = resolveFetch(opts);
   if (!fetchImpl) return { ok: false, error: 'fetch_unavailable' };
-  const url =
-    `${cfg.base}/organizations_addresses?service=eq.whatsapp&status=eq.connected` +
-    `&select=address,extra&order=created_at.desc&limit=50`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
-  if (opts.signal) {
-    if (opts.signal.aborted) ctrl.abort();
-    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
-  }
-  try {
-    const res = await fetchImpl(url, {
-      signal: ctrl.signal,
-      cache: 'no-store',
-      headers: { apikey: cfg.publishableKey, 'api-key': cfg.apiKey },
-    });
-    const text = await res.text().catch(() => '');
-    if (!res.ok) return { ok: false, status: res.status, error: 'http_error', errorDetail: text.slice(0, 500) };
-    let rows: OpenbspAddressRow[] = [];
-    try {
-      rows = JSON.parse(text) as OpenbspAddressRow[];
-    } catch {
-      return { ok: false, error: 'provider_error', errorDetail: 'JSON inv├ílido' };
+
+  let base = cfg.base;
+  while (base.endsWith('/')) base = base.slice(0, -1);
+  const orgEnv = (process.env.OPENBSP_ORG_ID ?? '').trim();
+  const org = orgEnv ? '&organization_id=eq.' + orgEnv : '';
+
+  // organizations_addresses nao tem created_at nem verify_token como coluna:
+  // sem order, e o verify_token e casado em memoria dentro de extra.
+  const tentativas = [
+    `${base}/organizations_addresses?service=eq.whatsapp&status=eq.connected${org}&select=address,extra`,
+    `${base}/organizations_addresses?service=eq.whatsapp&status=eq.connected${org}`,
+    `${base}/organizations_addresses?select=address,extra,status${org}&limit=200`,
+  ];
+
+  let ultimoErro: OpenbspError | 'provider_error' = 'provider_error';
+  let ultimoDetalhe = '';
+
+  for (const url of tentativas) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+    if (opts.signal) {
+      if (opts.signal.aborted) ctrl.abort();
+      else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
     }
-    const hit = rows.find((r) => (r.extra as Record<string, unknown> | null)?.verify_token === expectedVerifyToken);
-    return hit ? { ok: true, data: hit } : { ok: false, error: 'provider_error', errorDetail: 'sem linha conectada p/ este verify_token' };
-  } catch (e) {
-    return { ok: false, error: 'network_error', errorDetail: String((e as Error)?.message ?? e) };
-  } finally {
-    clearTimeout(timer);
+
+    try {
+      const res = await fetchImpl(url, {
+        signal: ctrl.signal,
+        cache: 'no-store',
+        headers: { apikey: cfg.publishableKey, 'api-key': cfg.apiKey },
+      });
+      const text = await res.text().catch(() => '');
+
+      if (!res.ok) {
+        ultimoErro = 'http_error';
+        ultimoDetalhe = text.slice(0, 500);
+        continue;
+      }
+
+      let rows: OpenbspAddressRow[] = [];
+      try {
+        rows = JSON.parse(text) as OpenbspAddressRow[];
+      } catch {
+        ultimoErro = 'provider_error';
+        ultimoDetalhe = 'JSON invalido';
+        continue;
+      }
+
+      const conectados = rows.filter((r) => {
+        const st = (r as { status?: string }).status;
+        return st === undefined || st === 'connected';
+      });
+
+      const hit = conectados.find(
+        (r) => (r.extra as Record<string, unknown> | null)?.verify_token === expectedVerifyToken,
+      );
+
+      if (hit) return { ok: true, data: hit };
+
+      ultimoErro = 'provider_error';
+      ultimoDetalhe = 'sem linha conectada p/ este verify_token';
+    } catch (e) {
+      ultimoErro = 'network_error';
+      ultimoDetalhe = String((e as Error)?.message ?? e);
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  return { ok: false, error: ultimoErro, errorDetail: ultimoDetalhe };
 }
 
 // ÔöÇÔöÇ Envio via OpenBSP ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ

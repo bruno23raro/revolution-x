@@ -10,6 +10,8 @@ import { sendTemplateViaOpenBSP } from '@/integrations/openbsp/send';
 
 export const dynamic = 'force-dynamic';
 
+const ORG_BSP = (process.env.OPENBSP_ORG_ID ?? '').trim();
+
 export async function POST(req: NextRequest, context: { params: { id: string } }) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });

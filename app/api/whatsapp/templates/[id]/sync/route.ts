@@ -15,6 +15,8 @@ import { upsertTemplateRow } from '@/integrations/whatsapp/channelRepo';
 
 export const dynamic = 'force-dynamic';
 
+const ORG_BSP = (process.env.OPENBSP_ORG_ID ?? '').trim();
+
 async function requireAdmin(req: NextRequest) {
   const { user, hasSession } = await getAuth(req);
   if (!hasSession || !user) return null;

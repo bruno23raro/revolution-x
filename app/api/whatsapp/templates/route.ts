@@ -19,6 +19,8 @@ import type { CreateTemplateInput } from '@/integrations/whatsapp/openbsp/client
 
 export const dynamic = 'force-dynamic';
 
+const ORG_BSP = (process.env.OPENBSP_ORG_ID ?? '').trim();
+
 const CATEGORIES = ['MARKETING', 'UTILITY', 'AUTHENTICATION'] as const;
 
 async function requireAdmin(req: NextRequest) {
@@ -49,7 +51,7 @@ export async function GET(req: NextRequest) {
   }
 
   // O provedor e a fonte da verdade: e ele quem carrega o status da Meta.
-  const remoto = await listTemplates(cfg, user.organizationId, channel.phoneNumberId);
+  const remoto = await listTemplates(cfg, ORG_BSP || user.organizationId, channel.phoneNumberId);
 
   if (!remoto.ok || !Array.isArray(remoto.data)) {
     return NextResponse.json({ ok: true, templates: localTemplates, origem: 'local', detail: remoto.errorDetail ?? null });

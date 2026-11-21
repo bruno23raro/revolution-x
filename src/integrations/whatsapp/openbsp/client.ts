@@ -159,6 +159,7 @@ export async function fetchConnectedAddress(
   try {
     const res = await fetchImpl(url, {
       signal: ctrl.signal,
+      cache: 'no-store',
       headers: { apikey: cfg.publishableKey, 'api-key': cfg.apiKey },
     });
     const text = await res.text().catch(() => '');

@@ -16,7 +16,7 @@ export function createPrismaClient(
   if (typeof source === 'string') {
     const url = new URL(source);
     url.searchParams.set('options', '-c search_path=public');
-    pool = new Pool({ connectionString: url.toString() });
+    pool = new Pool({ connectionString: url.toString(), ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
   } else {
     pool = source;
   }
@@ -70,7 +70,7 @@ export function getPrismaClient(): PrismaClient {
     const connectionString = process.env.DATABASE_URL ?? '';
     const url = new URL(connectionString);
     url.searchParams.set('options', '-c search_path=public');
-    const pool = new Pool({ connectionString: url.toString() });
+    const pool = new Pool({ connectionString: url.toString(), ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
     const adapter = new PrismaPg(pool);
     prismaInstance = new PrismaClient({
       adapter,
@@ -89,3 +89,4 @@ export async function withTenantContext<T>(
 ): Promise<T> {
   return await withTenantContextOn(getPrismaClient(), organizationId, callback);
 }
+

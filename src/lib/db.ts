@@ -5,7 +5,8 @@ export const createPoolConfig = () => {
   }
   return {
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   };
 };
 export const isDbConfigured = () => !!process.env.DATABASE_URL;
+

@@ -27,11 +27,11 @@ export type OpenbspChannelAccess = {
 };
 
 export function openbspConfig(): OpenbspConfig | null {
-  const base = (process.env.OPENBSP_BASE_URL || '').replace(/\/+$/, '');
-  const publishableKey = process.env.OPENBSP_PUBLISHABLE_KEY || '';
-  const apiKey = process.env.OPENBSP_API_KEY || '';
+  const base = (String(process.env.OPENBSP_BASE_URL ?? '').trim() || '').replace(/\/+$/, '');
+  const publishableKey = String(process.env.OPENBSP_PUBLISHABLE_KEY ?? '').trim() || '';
+  const apiKey = String(process.env.OPENBSP_API_KEY ?? '').trim() || '';
   if (!base || !publishableKey || !apiKey) return null;
-  return { base, publishableKey, apiKey, orgId: process.env.OPENBSP_ORG_ID || undefined };
+  return { base, publishableKey, apiKey, orgId: String(process.env.OPENBSP_ORG_ID ?? '').trim() || undefined };
 }
 
 function resolveFetch(opts: ProviderCallOpts): typeof fetch | null {
@@ -150,7 +150,7 @@ export async function fetchConnectedAddress(
 
   let base = cfg.base;
   while (base.endsWith('/')) base = base.slice(0, -1);
-  const orgEnv = (process.env.OPENBSP_ORG_ID ?? '').trim();
+  const orgEnv = (String(process.env.OPENBSP_ORG_ID ?? '').trim() ?? '').trim();
   const org = orgEnv ? '&organization_id=eq.' + orgEnv : '';
 
   // organizations_addresses nao tem created_at nem verify_token como coluna:

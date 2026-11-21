@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   }
 
   console.info('[openbsp] onboarding iniciado', { org: user.organizationId, tokenId: mint.tokenId, mode });
-  return NextResponse.json({ popupUrl: `${(process.env.NEXT_PUBLIC_APP_URL ?? 'https://revolutionx.com.br')}/whatsapp/conectar?token=${mint.tokenId}`, openbspPopupUrl: mint.popupUrl, tokenId: mint.tokenId, mode });
+  return NextResponse.json({ popupUrl: mint.popupUrl, internalPopupUrl: `${(process.env.NEXT_PUBLIC_APP_URL ?? 'https://revolutionx.com.br')}/whatsapp/conectar?token=${mint.tokenId}`, tokenId: mint.tokenId, mode });
 }
 
 

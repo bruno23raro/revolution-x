@@ -27,7 +27,8 @@ export type OpenbspChannelAccess = {
 };
 
 export function openbspConfig(): OpenbspConfig | null {
-  const base = (String(process.env.OPENBSP_BASE_URL ?? '').trim() || '').replace(/\/+$/, '');
+  let base = (String(process.env.OPENBSP_BASE_URL ?? '').trim() || '').replace(/\/+$/, '');
+  if (!base.endsWith('/rest/v1')) base += '/rest/v1';
   const publishableKey = String(process.env.OPENBSP_PUBLISHABLE_KEY ?? '').trim() || '';
   const apiKey = String(process.env.OPENBSP_API_KEY ?? '').trim() || '';
   if (!base || !publishableKey || !apiKey) return null;

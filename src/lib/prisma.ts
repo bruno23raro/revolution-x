@@ -8,6 +8,15 @@ export { Prisma };
 // URL inerte usada quando DATABASE_URL nao existe (ex.: build sem env).
 const FALLBACK_DB_URL = 'postgresql://localhost:5432/postgres';
 
+function safeDbUrl(raw?: string | null): URL {
+  const candidate = (raw ?? '').trim();
+  try {
+    return new URL(candidate || FALLBACK_DB_URL);
+  } catch {
+    return new URL(FALLBACK_DB_URL);
+  }
+}
+
 // Builds a Prisma client over a pg connection. Accepts either a connection
 // string (a pool is created internally) or a caller-owned Pool, so tests can
 // control the pool's lifecycle and avoid leaked open handles.
@@ -17,7 +26,7 @@ export function createPrismaClient(
 ): PrismaClient {
   let pool: Pool;
   if (typeof source === 'string') {
-    const url = new URL(source || FALLBACK_DB_URL);
+    const url = safeDbUrl(source);
     url.searchParams.set('options', '-c search_path=public');
     pool = new Pool({ connectionString: url.toString(), ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
   } else {
@@ -70,8 +79,7 @@ let prismaInstance: PrismaClient | null = null;
 
 export function getPrismaClient(): PrismaClient {
   if (!prismaInstance) {
-    const connectionString = process.env.DATABASE_URL ?? FALLBACK_DB_URL;
-    const url = new URL(connectionString);
+    const url = safeDbUrl(process.env.DATABASE_URL);
     url.searchParams.set('options', '-c search_path=public');
     const pool = new Pool({ connectionString: url.toString(), ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
     const adapter = new PrismaPg(pool);

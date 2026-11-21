@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
 
 
-  const tokenId = channel.onboardingTokenId;
+  const tokenId = channel.verifyToken;
   if (!tokenId) {
     return NextResponse.json({ error: 'no_token' }, { status: 409 });
   }
@@ -100,5 +100,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, tokenId, expiresIn: 60 * 24 * 60 * 60 }, { status: 200 });
+  return NextResponse.json({ ok: true, tokenId: channel.onboardingTokenId ?? tokenId, expiresIn: 60 * 24 * 60 * 60 }, { status: 200 });
 }

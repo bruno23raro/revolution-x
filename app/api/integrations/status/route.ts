@@ -64,13 +64,11 @@ export async function GET(req: NextRequest) {
         let connStatus: string | null = null;
         let phoneNumber: string | null = null;
 
-        if (provider === 'openbsp' && phoneNumberId) {
-          // Conexão OpenBSP - reconhecida como API Oficial
+        if (provider === 'openbsp' && status === 'CONNECTED' && phoneNumberId) {
           mode = 'OFFICIAL';
           connStatus = 'CONNECTED';
-          phoneNumber = phoneNumberId;
-        } else if (provider === 'openbsp' && !phoneNumberId && status === 'PENDING') {
-          // OpenBSP em processo de onboarding
+          phoneNumber = (r.phone_number as string | null) ?? phoneNumberId;
+        } else if (provider === 'openbsp' && status === 'PENDING') {
           mode = 'OFFICIAL';
           connStatus = 'PENDING';
         } else {
@@ -98,7 +96,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      connected: integrations.length > 0,
+      connected: integrations.some((i) => i.status === 'CONNECTED'),
       integrations,
     });
   } catch (e) { console.error('[status] FATAL:', e); return NextResponse.json({ error: 'internal_error', detail: String(((e as any)?.message) || e) }, { status: 500 });

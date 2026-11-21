@@ -16,11 +16,8 @@ export async function GET(req: NextRequest) {
   if (!hasSession || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  console.log('[integrations/status] user id:', user.id, 'orgId:', user.organizationId);
   try {
     const supabase = createServiceRoleClient();
-    console.log('[integrations/status] supabase client created, orgId:', user.organizationId);
 
     // Buscar canais WhatsApp OpenBSP via whatsapp_channels (migração 019)
     const { data: channelRows, error: channelError } = await supabase
@@ -28,14 +25,11 @@ export async function GET(req: NextRequest) {
       .select('*')
       .eq('organization_id', user.organizationId);
 
-    console.log('[integrations/status] query result:', { count: channelRows?.length, error: channelError });
-
     if (channelError) {
       if (isQueueUnavailable(channelError)) {
         return NextResponse.json({ connected: false, integrations: [] }, { status: 200 });
       }
-      console.error('[integrations/status] channelError:', channelError);
-      return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+      console.error('[integrations/status] channelError:', channelError); return NextResponse.json({ error: 'internal_error', detail: JSON.stringify(channelError) }, { status: 500 });
     }
 
     const integrations: Array<{
@@ -62,7 +56,7 @@ export async function GET(req: NextRequest) {
         const phoneNumberId = r.phone_number_id as string | null;
         const wabaId = r.waba_id as string | null;
         const verifiedName = r.verified_name as string | null;
-        const accessTokenEnc = r.access_token_enc as string | null;
+        const accessTokenEnc = r.accessTokenEnc as string | null;
 
         // Determinar modo e status baseado no provider e credenciais
         // Apenas OpenBSP — sem Meta
@@ -107,7 +101,10 @@ export async function GET(req: NextRequest) {
       connected: integrations.length > 0,
       integrations,
     });
-  } catch {
-    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  } catch (e) { console.error('[status] FATAL:', e); return NextResponse.json({ error: 'internal_error', detail: String((e && (e.message || e.hint || e.code)) || e) }, { status: 500 });
   }
 }
+
+
+
+

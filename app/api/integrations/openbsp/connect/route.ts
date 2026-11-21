@@ -73,3 +73,5 @@ export async function POST(req: NextRequest) {
   console.info('[openbsp] onboarding iniciado', { org: user.organizationId, tokenId: mint.tokenId, mode });
   return NextResponse.json({ popupUrl: mint.popupUrl, tokenId: mint.tokenId, mode });
 }
+
+

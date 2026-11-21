@@ -1,3 +1,4 @@
+import { sendViaOpenbsp } from '../../openbsp/send';
 // Provider OpenBSP puro - substitui o provider dual-path que caía no Meta.
 // Agora usa EXCLUSIVAMENTE OpenBSP para envio e templates.
 
@@ -162,3 +163,4 @@ export const openbspProvider: IWhatsAppProvider = {
   getTemplateStatus,
   createTemplate,
 };
+

@@ -17,6 +17,7 @@ export interface OpenbspResult<T = unknown> {
   status?: number;
   error?: OpenbspError | 'provider_error';
   errorDetail?: string;
+  matchedBy?: string;
 }
 
 /** Credenciais m├¡nimas para OpenBSP - apenas phoneNumberId ├® obrigat├│rio */
@@ -130,6 +131,8 @@ export async function mintOnboardingToken(
 
 export interface OpenbspAddressRow {
   address: string;
+  organization_id?: string;
+  matchedBy?: string;
   extra: {
     waba_id?: string;
     access_token?: string;

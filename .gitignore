@@ -121,3 +121,5 @@ artifacts/
 *.pdf
 *.docx
 _infra/
+
+.env.prod.local

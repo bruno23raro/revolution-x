@@ -123,3 +123,5 @@ artifacts/
 _infra/
 
 .env.prod.local
+blob-report/
+.vercel/

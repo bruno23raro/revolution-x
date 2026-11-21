@@ -23,11 +23,10 @@ export async function GET(req: NextRequest) {
     console.log('[integrations/status] supabase client created, orgId:', user.organizationId);
 
     // Buscar canais WhatsApp OpenBSP via whatsapp_channels (migração 019)
-    // NOTE: whatsapp_channels usa colunas PascalCase, NÃO snake_case
     const { data: channelRows, error: channelError } = await supabase
       .from('whatsapp_channels')
       .select('*')
-      .eq('organizationId', user.organizationId);
+      .eq('organization_id', user.organizationId);
 
     console.log('[integrations/status] query result:', { count: channelRows?.length, error: channelError });
 
@@ -60,10 +59,10 @@ export async function GET(req: NextRequest) {
       const channelIntegrations = channelRows.map((r: Record<string, unknown>) => {
         const provider = r.provider as string;
         const status = r.status as string;
-        const phoneNumberId = r.phoneNumberId as string | null;
-        const wabaId = r.wabaId as string | null;
-        const verifiedName = r.verifiedName as string | null;
-        const accessTokenEnc = r.accessTokenEnc as string | null;
+        const phoneNumberId = r.phone_number_id as string | null;
+        const wabaId = r.waba_id as string | null;
+        const verifiedName = r.verified_name as string | null;
+        const accessTokenEnc = r.access_token_enc as string | null;
 
         // Determinar modo e status baseado no provider e credenciais
         // Apenas OpenBSP — sem Meta
@@ -95,9 +94,9 @@ export async function GET(req: NextRequest) {
           phoneNumber,
           wabaId,
           tokenExpiresAt: null,
-          createdAt: r.createdAt as string | null,
-          updatedAt: r.updatedAt as string | null,
-          lastError: r.lastError as string | null,
+          createdAt: r.created_at as string | null,
+          updatedAt: r.updated_at as string | null,
+          lastError: r.last_error as string | null,
           label: null,
         };
       });

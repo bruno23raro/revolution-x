@@ -128,7 +128,7 @@ function MassSendCard() {
       }
       if (account) body.account = account; // MULTICONTAS — ancorado número escolhido
       // Verifica se há conexão OpenBSP (phoneNumberId) ou Meta (wabaId/accessToken)
-      const r = await fetch('/api/integrations/whatsapp-official/status', {
+      const r = await fetch('/api/integrations/openbsp/status', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -258,7 +258,7 @@ function TemplatesCard() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = () => {
-    fetch('/api/integrations/whatsapp-official/status')
+    fetch('/api/integrations/openbsp/status')
       .then(async (r) => {
         const d = await r.json().catch(() => ({}));
         if (r.ok) {

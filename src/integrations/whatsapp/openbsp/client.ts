@@ -400,3 +400,88 @@ export async function getTemplateStatus(
     clearTimeout(timer);
   }
 }
+
+// ---- templates (whatsapp-management) ----
+
+function functionsTemplates(cfg: OpenbspConfig): string {
+  return cfg.base.replace(/\/rest\/v1$/, '') + '/functions/v1/whatsapp-management/templates';
+}
+
+async function callTemplates<T>(
+  cfg: OpenbspConfig,
+  method: string,
+  body: unknown,
+  opts: ProviderCallOpts = {},
+): Promise<OpenbspResult<T>> {
+  const fetchImpl = resolveFetch(opts);
+  if (!fetchImpl) return { ok: false, error: 'fetch_unavailable' };
+  try {
+    const res = await fetchImpl(functionsTemplates(cfg), {
+      method,
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: cfg.publishableKey,
+        'api-key': cfg.apiKey,
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text().catch(() => '');
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: 'http_error', errorDetail: text.slice(0, 500) };
+    }
+    if (!text) return { ok: true, data: undefined as unknown as T };
+    try {
+      return { ok: true, data: JSON.parse(text) as T };
+    } catch {
+      return { ok: true, data: undefined as unknown as T };
+    }
+  } catch (e) {
+    return { ok: false, error: 'network_error', errorDetail: String((e as Error)?.message ?? e) };
+  }
+}
+
+export function listTemplates(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  organizationAddress: string,
+  opts: ProviderCallOpts = {},
+) {
+  return callTemplates<OpenbspTemplateRow[]>(
+    cfg,
+    'PUT',
+    { organization_id: organizationId, organization_address: organizationAddress },
+    opts,
+  );
+}
+
+export function editTemplate(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  organizationAddress: string,
+  template: CreateTemplateInput,
+  opts: ProviderCallOpts = {},
+) {
+  return callTemplates<OpenbspTemplateRow>(
+    cfg,
+    'PATCH',
+    { organization_id: organizationId, organization_address: organizationAddress, template },
+    opts,
+  );
+}
+
+export function deleteTemplate(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  organizationAddress: string,
+  template: CreateTemplateInput,
+  opts: ProviderCallOpts = {},
+) {
+  return callTemplates<unknown>(
+    cfg,
+    'DELETE',
+    { organization_id: organizationId, organization_address: organizationAddress, template },
+    opts,
+  );
+}

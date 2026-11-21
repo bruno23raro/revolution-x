@@ -13,7 +13,7 @@ import { prisma } from '@/lib/prisma';
 import { saveTemplateSnapshot } from '@/integrations/configStore';
 import { whatsappTemplateSchema } from '@/lib/validation/schemas';
 import { getChannelDecrypted } from '@/integrations/whatsapp/channelRepo';
-import { openbspConfig, createTemplate } from '@/integrations/whatsapp/openbsp/client';
+import { openbspConfig, createTemplate, listTemplates } from '@/integrations/whatsapp/openbsp/client';
 import { upsertTemplateRow, listTemplateRows } from '@/integrations/whatsapp/channelRepo';
 import type { CreateTemplateInput } from '@/integrations/whatsapp/openbsp/client';
 
@@ -35,29 +35,37 @@ export async function GET(req: NextRequest) {
   if (!hasSession || !user) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   const channel = await getChannelDecrypted(user.organizationId);
-  if (!channel || !channel.isOpenBSPConnected) {
+  if (!channel || !channel.isOpenBSPConnected || !channel.phoneNumberId) {
     return NextResponse.json(
-      { ok: false, error: 'channel_unavailable', detail: 'WhatsApp não conectado via OpenBSP' },
+      { ok: false, error: 'channel_unavailable', detail: 'WhatsApp nao conectado via OpenBSP' },
       { status: 409 },
     );
   }
 
   const localTemplates = await listTemplateRows(user.organizationId);
-
-  const scope = { organizationId: user.organizationId, userId: user.id };
-  try {
-    await saveTemplateSnapshot(prisma, scope, {
-      at: new Date().toISOString(),
-      templates: localTemplates,
-    });
-  } catch {
-    /* snapshot é melhor esforço — não afeta a listagem */
+  const cfg = openbspConfig();
+  if (!cfg) {
+    return NextResponse.json({ ok: true, templates: localTemplates, origem: 'local' });
   }
 
-  return NextResponse.json(
-    { ok: true, templates: localTemplates },
-    { status: 200 },
-  );
+  // O provedor e a fonte da verdade: e ele quem carrega o status da Meta.
+  const remoto = await listTemplates(cfg, user.organizationId, channel.phoneNumberId);
+
+  if (!remoto.ok || !Array.isArray(remoto.data)) {
+    return NextResponse.json({ ok: true, templates: localTemplates, origem: 'local', detail: remoto.errorDetail ?? null });
+  }
+
+  for (const t of remoto.data) {
+    const status = typeof t.status === 'string' ? t.status.toUpperCase() : null;
+    if (!status) continue;
+    await prisma.whatsappTemplate.updateMany({
+      where: { organizationId: user.organizationId, name: t.name, language: t.language },
+      data: { status, lastCheckedAt: new Date() },
+    });
+  }
+
+  const atualizados = await listTemplateRows(user.organizationId);
+  return NextResponse.json({ ok: true, templates: atualizados, origem: 'provedor' });
 }
 
 export async function POST(req: NextRequest) {

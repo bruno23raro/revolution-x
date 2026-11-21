@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     data: {
       status: 'DISCONNECTED',
       accessTokenEnc: null,
+      provider: 'openbsp',
       lastError: 'desconectado_pelo_usuario',
       updatedAt: new Date(),
     },

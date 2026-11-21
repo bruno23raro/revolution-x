@@ -14,7 +14,7 @@ type Sess = {
 
 type Fb = {
   init: (o: Record<string, unknown>) => void;
-  login: (cb: (r: { authResponse?: { code?: string } }) => void, o: Record<string, unknown>) => void;
+  login: (cb: (r: { status?: string; authResponse?: { code?: string } }) => void, o: Record<string, unknown>) => void;
 };
 
 declare global {
@@ -28,7 +28,16 @@ export default function ConectarWhatsApp() {
   const [token, setToken] = useState<string | null>(null);
   const [fase, setFase] = useState<"load" | "ready" | "busy" | "ok" | "error">("load");
   const [detalhe, setDetalhe] = useState("");
+  const [dica, setDica] = useState("");
   const sess = useRef<Sess>({});
+  const alarme = useRef<number | null>(null);
+
+  const pararAlarme = useCallback(() => {
+    if (alarme.current) {
+      window.clearTimeout(alarme.current);
+      alarme.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("token");
@@ -49,13 +58,21 @@ export default function ConectarWhatsApp() {
     window.addEventListener("message", onMsg);
 
     const boot = () => {
-      window.FB?.init({ appId: APP_ID, autoLogAppEvents: true, xfbml: false, version: "v24.0" });
-      setFase("ready");
+      try {
+        window.FB?.init({ appId: APP_ID, autoLogAppEvents: true, xfbml: false, version: "v24.0" });
+        setFase("ready");
+      } catch (e) {
+        setFase("error");
+        setDetalhe("FB.init falhou: " + (e instanceof Error ? e.message : String(e)));
+      }
     };
 
     if (window.FB) {
       boot();
-      return () => window.removeEventListener("message", onMsg);
+      return () => {
+        window.removeEventListener("message", onMsg);
+        pararAlarme();
+      };
     }
 
     window.fbAsyncInit = boot;
@@ -68,77 +85,107 @@ export default function ConectarWhatsApp() {
     };
     document.body.appendChild(s);
 
-    return () => window.removeEventListener("message", onMsg);
-  }, []);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      pararAlarme();
+    };
+  }, [pararAlarme]);
 
   const conectar = useCallback(() => {
-    if (!window.FB || !token) return;
+    if (!token) return;
+    if (!window.FB) {
+      setFase("error");
+      setDetalhe("SDK do Facebook não carregou. Recarregue a página.");
+      return;
+    }
+
     setFase("busy");
     setDetalhe("");
+    setDica("");
+    pararAlarme();
 
-    window.FB.login(
-      async (resp) => {
-        const code = resp?.authResponse?.code;
-        if (!code) {
-          setFase("ready");
-          setDetalhe("Login não autorizado.");
-          return;
-        }
+    alarme.current = window.setTimeout(() => {
+      setDica(
+        "A janela do Facebook não abriu. Libere pop-ups para revolutionx.com.br e clique em Tentar de novo.",
+      );
+    }, 5000);
 
-        const s = sess.current;
+    try {
+      window.FB.login(
+        async (resp) => {
+          pararAlarme();
+          const code = resp?.authResponse?.code;
 
-        try {
-          const r = await fetch("/api/integrations/openbsp/onboard", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              token,
-              code,
-              application_id: APP_ID,
-              waba_id: s.waba_id,
-              phone_number_id: s.phone_number_id,
-              business_id: s.business_id,
-              flow_type: s.flow_type,
-            }),
-          });
-          const j = await r.json();
-
-          if (!j.ok) {
-            const causa = j.cause as { error?: { message?: string }; message?: string } | string | null;
-            const extra =
-              typeof causa === "string"
-                ? causa
-                : causa?.error?.message ?? causa?.message ?? "";
-            setFase("error");
-            setDetalhe([j.message, extra].filter(Boolean).join(" — ") || `Falha ${j.status}`);
+          if (!code) {
+            setFase("ready");
+            setDica("");
+            setDetalhe(`Login não concluído (status: ${resp?.status ?? "sem resposta"}).`);
             return;
           }
 
-          setFase("ok");
-          fetch("/api/integrations/openbsp/status", { cache: "no-store" }).catch(() => {});
-          if (window.opener) {
-            try {
-              (window.opener as Window).postMessage("openbsp-connected", "*");
-            } catch {}
-            setTimeout(() => window.close(), 2500);
+          const s = sess.current;
+
+          try {
+            const r = await fetch("/api/integrations/openbsp/onboard", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                token,
+                code,
+                application_id: APP_ID,
+                waba_id: s.waba_id,
+                phone_number_id: s.phone_number_id,
+                business_id: s.business_id,
+                flow_type: s.flow_type,
+              }),
+            });
+            const j = await r.json();
+
+            if (!j.ok) {
+              const causa = j.cause as { error?: { message?: string }; message?: string } | string | null;
+              const extra =
+                typeof causa === "string"
+                  ? causa
+                  : causa?.error?.message ?? causa?.message ?? "";
+              setFase("error");
+              setDica("");
+              setDetalhe([j.message, extra].filter(Boolean).join(" — ") || `Falha ${j.status}`);
+              return;
+            }
+
+            setFase("ok");
+            setDica("");
+            fetch("/api/integrations/openbsp/status", { cache: "no-store" }).catch(() => {});
+            if (window.opener) {
+              try {
+                (window.opener as Window).postMessage("openbsp-connected", "*");
+              } catch {}
+              setTimeout(() => window.close(), 2500);
+            }
+          } catch (e) {
+            setFase("error");
+            setDetalhe(e instanceof Error ? e.message : "Falha de rede.");
           }
-        } catch (e) {
-          setFase("error");
-          setDetalhe(e instanceof Error ? e.message : "Falha de rede.");
-        }
-      },
-      {
-        config_id: CONFIG_ID,
-        response_type: "code",
-        override_default_response_type: true,
-        extras: {
-          setup: {},
-          featureType: "whatsapp_business_app_onboarding",
-          sessionInfoVersion: "3",
         },
-      },
-    );
-  }, [token]);
+        {
+          config_id: CONFIG_ID,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+            featureType: "whatsapp_business_app_onboarding",
+            sessionInfoVersion: "3",
+          },
+        },
+      );
+    } catch (e) {
+      pararAlarme();
+      setFase("error");
+      setDetalhe("FB.login falhou: " + (e instanceof Error ? e.message : String(e)));
+    }
+  }, [token, pararAlarme]);
+
+  const podeTentar = fase === "error" || (fase === "busy" && dica !== "");
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#08090d", color: "#e8e8ea", fontFamily: "system-ui, sans-serif", padding: 24 }}>
@@ -152,8 +199,16 @@ export default function ConectarWhatsApp() {
           </div>
         )}
 
-        {fase === "error" && (
+        {fase === "error" && detalhe && (
           <div style={{ fontSize: 13, color: "#ef4444", wordBreak: "break-word" }}>{detalhe}</div>
+        )}
+
+        {fase === "ready" && detalhe && (
+          <div style={{ fontSize: 13, color: "#f59e0b", wordBreak: "break-word" }}>{detalhe}</div>
+        )}
+
+        {dica && (
+          <div style={{ fontSize: 12, color: "#f59e0b", lineHeight: 1.5 }}>{dica}</div>
         )}
 
         <button
@@ -173,7 +228,7 @@ export default function ConectarWhatsApp() {
           {fase === "busy" ? "Conectando..." : fase === "load" ? "Carregando..." : "Continuar com Facebook"}
         </button>
 
-        {fase === "error" && (
+        {podeTentar && (
           <button
             onClick={conectar}
             style={{ background: "transparent", border: "1px solid #2a2d36", color: "#9a9aa2", borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer" }}

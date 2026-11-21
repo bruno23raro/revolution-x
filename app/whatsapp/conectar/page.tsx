@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const APP_ID = "629323992623834";
-const CONFIG_ID = "1122196270494238";
+const APP_ID = process.env.NEXT_PUBLIC_FB_APP_ID ?? "629323992623834";
+const CONFIG_ID = process.env.NEXT_PUBLIC_FB_CONFIG_ID ?? "1122196270494238";
 
 type Sess = {
   waba_id?: string;
   phone_number_id?: string;
   business_id?: string;
-  flow_type?: string;
+  flow_type?: "only_waba" | "new_phone_number" | "existing_phone_number";
 };
 
 type Resposta = { status?: string; authResponse?: { code?: string } };
@@ -25,6 +25,12 @@ declare global {
     fbAsyncInit?: () => void;
   }
 }
+
+const TIPO: Record<string, Sess["flow_type"]> = {
+  FINISH: "new_phone_number",
+  FINISH_ONLY_WABA: "only_waba",
+  FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING: "existing_phone_number",
+};
 
 export default function ConectarWhatsApp() {
   const [token, setToken] = useState<string | null>(null);
@@ -51,12 +57,31 @@ export default function ConectarWhatsApp() {
     }
 
     const onMsg = (e: MessageEvent) => {
-      const d = e.data as { type?: string; event?: string; data?: Sess } | undefined;
-      if (!d || d.type !== "WA_EMBEDDED_SIGNUP") return;
-      if (d.event && d.event.indexOf("FINISH") === 0 && d.data) {
-        sess.current = { ...sess.current, ...d.data };
+      if (typeof e.origin === "string" && !e.origin.endsWith("facebook.com")) return;
+
+      let d: { type?: string; event?: string; data?: Sess } | null = null;
+      if (typeof e.data === "string") {
+        try {
+          d = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+      } else if (e.data && typeof e.data === "object") {
+        d = e.data as { type?: string; event?: string; data?: Sess };
       }
+
+      if (!d || d.type !== "WA_EMBEDDED_SIGNUP") return;
+      const tipo = d.event ? TIPO[d.event] : undefined;
+      if (!tipo) return;
+
+      sess.current = {
+        waba_id: d.data?.waba_id,
+        phone_number_id: d.data?.phone_number_id,
+        business_id: d.data?.business_id,
+        flow_type: tipo,
+      };
     };
+
     window.addEventListener("message", onMsg);
 
     const boot = () => {
@@ -105,17 +130,13 @@ export default function ConectarWhatsApp() {
     setDetalhe("");
     setDica("");
     pararAlarme();
-
     alarme.current = window.setTimeout(() => {
-      setDica(
-        "A janela do Facebook não abriu. Libere pop-ups para revolutionx.com.br e clique em Tentar de novo.",
-      );
+      setDica("A janela do Facebook não abriu. Libere pop-ups para revolutionx.com.br e clique em Tentar de novo.");
     }, 5000);
 
     const tratar = async (resp: Resposta) => {
       pararAlarme();
       const code = resp?.authResponse?.code;
-
       if (!code) {
         setFase("ready");
         setDica("");
@@ -143,10 +164,7 @@ export default function ConectarWhatsApp() {
 
         if (!j.ok) {
           const causa = j.cause as { error?: { message?: string }; message?: string } | string | null;
-          const extra =
-            typeof causa === "string"
-              ? causa
-              : causa?.error?.message ?? causa?.message ?? "";
+          const extra = typeof causa === "string" ? causa : causa?.error?.message ?? causa?.message ?? "";
           setFase("error");
           setDica("");
           setDetalhe([j.message, extra].filter(Boolean).join(" — ") || `Falha ${j.status}`);
@@ -169,21 +187,14 @@ export default function ConectarWhatsApp() {
     };
 
     try {
-      window.FB.login(
-        function (resp) {
-          void tratar(resp);
-        },
-        {
-          config_id: CONFIG_ID,
-          response_type: "code",
-          override_default_response_type: true,
-          extras: {
-            setup: {},
-            featureType: "whatsapp_business_app_onboarding",
-            sessionInfoVersion: "3",
-          },
-        },
-      );
+      window.FB.login(function (resp) {
+        void tratar(resp);
+      }, {
+        config_id: CONFIG_ID,
+        response_type: "code",
+        override_default_response_type: true,
+        extras: { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" },
+      });
     } catch (e) {
       pararAlarme();
       setFase("error");
@@ -199,46 +210,34 @@ export default function ConectarWhatsApp() {
         <div style={{ fontWeight: 700, fontSize: 22, letterSpacing: -0.5 }}>Revolution X</div>
         <div style={{ fontSize: 14, color: "#9a9aa2" }}>Conectar número do WhatsApp</div>
 
-        {fase === "ok" && (
-          <div style={{ fontSize: 14, color: "#22c55e" }}>
-            Número conectado. Pode fechar esta janela.
-          </div>
-        )}
-
-        {fase === "error" && detalhe && (
-          <div style={{ fontSize: 13, color: "#ef4444", wordBreak: "break-word" }}>{detalhe}</div>
-        )}
-
-        {fase === "ready" && detalhe && (
-          <div style={{ fontSize: 13, color: "#f59e0b", wordBreak: "break-word" }}>{detalhe}</div>
-        )}
-
+        {fase === "ok" && <div style={{ fontSize: 14, color: "#22c55e" }}>Número conectado. Pode fechar esta janela.</div>}
+        {fase === "error" && detalhe && <div style={{ fontSize: 13, color: "#ef4444", wordBreak: "break-word" }}>{detalhe}</div>}
+        {fase === "ready" && detalhe && <div style={{ fontSize: 13, color: "#f59e0b", wordBreak: "break-word" }}>{detalhe}</div>}
         {dica && <div style={{ fontSize: 12, color: "#f59e0b", lineHeight: 1.5 }}>{dica}</div>}
 
         <button
           onClick={conectar}
           disabled={fase !== "ready"}
           style={{
-            padding: "12px 16px",
-            borderRadius: 8,
-            border: 0,
+            padding: "12px 16px", borderRadius: 8, border: 0,
             background: fase === "ready" ? "#4267b2" : "#2a2d36",
             color: fase === "ready" ? "#fff" : "#8b8b93",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: fase === "ready" ? "pointer" : "default",
+            fontSize: 14, fontWeight: 600, cursor: fase === "ready" ? "pointer" : "default",
           }}
         >
           {fase === "busy" ? "Conectando..." : fase === "load" ? "Carregando..." : "Continuar com Facebook"}
         </button>
 
         {podeTentar && (
-          <button
-            onClick={conectar}
-            style={{ background: "transparent", border: "1px solid #2a2d36", color: "#9a9aa2", borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer" }}
-          >
+          <button onClick={conectar} style={{ background: "transparent", border: "1px solid #2a2d36", color: "#9a9aa2", borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer" }}>
             Tentar de novo
           </button>
+        )}
+
+        {token && (
+          <a href={`https://web.openbsp.dev/onboard/whatsapp/${token}`} style={{ fontSize: 12, color: "#6b6b74" }}>
+            Usar a janela do OpenBSP
+          </a>
         )}
 
         <div style={{ fontSize: 11, color: "#6b6b74", lineHeight: 1.5 }}>

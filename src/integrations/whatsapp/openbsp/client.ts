@@ -143,6 +143,7 @@ export interface OpenbspAddressRow {
 export async function fetchConnectedAddress(
   expectedVerifyToken: string,
   opts: ProviderCallOpts = {},
+  expectedCallbackUrl?: string,
 ): Promise<OpenbspResult<OpenbspAddressRow>> {
   const cfg = openbspConfig();
   if (!cfg) return { ok: false, error: 'openbsp_not_configured' };
@@ -201,9 +202,16 @@ export async function fetchConnectedAddress(
         return st === undefined || st === 'connected';
       });
 
-      const hit = conectados.find(
+      const porToken = conectados.find(
         (r) => (r.extra as Record<string, unknown> | null)?.verify_token === expectedVerifyToken,
       );
+      // O verify_token muda a cada connect; o callback_url da org nao.
+      const porCallback = expectedCallbackUrl
+        ? conectados.find(
+            (r) => (r.extra as Record<string, unknown> | null)?.callback_url === expectedCallbackUrl,
+          )
+        : undefined;
+      const hit = porToken ?? porCallback;
 
       if (hit) return { ok: true, data: hit };
 

@@ -101,9 +101,10 @@ export async function GET(req: NextRequest) {
       connected: integrations.length > 0,
       integrations,
     });
-  } catch (e) { console.error('[status] FATAL:', e); return NextResponse.json({ error: 'internal_error', detail: String((e && (e.message || e.hint || e.code)) || e) }, { status: 500 });
+  } catch (e) { console.error('[status] FATAL:', e); return NextResponse.json({ error: 'internal_error', detail: String(((e as any)?.message) || e) }, { status: 500 });
   }
 }
+
 
 
 

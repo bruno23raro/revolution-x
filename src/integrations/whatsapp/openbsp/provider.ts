@@ -1,5 +1,4 @@
-import { sendViaOpenbsp } from '../../openbsp/send';
-// Provider OpenBSP puro - substitui o provider dual-path que caía no Meta.
+// Provider OpenBSP puro - substitui o provider dual-path que ca├¡a no Meta.
 // Agora usa EXCLUSIVAMENTE OpenBSP para envio e templates.
 
 import type {
@@ -30,7 +29,7 @@ async function send(access: OpenbspChannelAccess, to: string, payload: DispatchP
   // OpenBSP puro - envia via proxy OpenBSP
   const content = payload.kind === 'text' ? textContent(payload.text) : templateContent(payload.name, payload.language, payload.variables);
 
-  // Se phoneNumberId não está no canal, tenta usar do config
+  // Se phoneNumberId n├úo est├í no canal, tenta usar do config
   const phoneNumberId = access.phoneNumberId || process.env.OPENBSP_PHONE_NUMBER_ID;
   if (!phoneNumberId) {
     return { ok: false, error: 'channel_unavailable', errorDetail: 'phoneNumberId ausente' };
@@ -43,13 +42,13 @@ async function send(access: OpenbspChannelAccess, to: string, payload: DispatchP
     return { ok: true, messageId: r.data?.id, via: 'openbsp' };
   }
 
-  // OpenBSP business error - não caímos de volta para Meta
+  // OpenBSP business error - n├úo ca├¡mos de volta para Meta
   return { ok: false, via: 'openbsp', error: (r.error as OfficialSendError) ?? 'provider_error', errorDetail: r.errorDetail };
 }
 
 async function sendButton(access: OpenbspChannelAccess, to: string, body: string, buttons: string[], opts: ProviderCallOpts = {}): Promise<OfficialSendResult> {
-  // OpenBSP não suporta botões interativos nativamente via API simplificada
-  // Envia como texto com botões numerados
+  // OpenBSP n├úo suporta bot├Áes interativos nativamente via API simplificada
+  // Envia como texto com bot├Áes numerados
   const buttonText = buttons.map((b, i) => `${i + 1}. ${b}`).join('\n');
   const bodyWithButtons = `${body}\n\n${buttonText}`;
   return send(access, to, { kind: 'text', text: bodyWithButtons }, opts);
@@ -163,4 +162,3 @@ export const openbspProvider: IWhatsAppProvider = {
   getTemplateStatus,
   createTemplate,
 };
-

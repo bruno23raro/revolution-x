@@ -18,7 +18,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth, getAllOrganizationMemberships } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
+import { encryptToken } from '@/lib/encryption';
 import { openbspConfig, fetchConnectedAddress } from '@/integrations/whatsapp/openbsp/client';
 
 export const dynamic = 'force-dynamic';
@@ -40,37 +41,23 @@ export async function POST(req: NextRequest) {
   const cfg = openbspConfig();
   if (!cfg) return NextResponse.json({ error: 'config_missing' }, { status: 503 });
 
-  // 2) buscar canal conectado (único por tenant)
-  const service = createServiceRoleClient();
-  const { data: integrations } = await service
-    .from('integrations')
-    .select('id,user_id,meta:openbsp_onboarding_token_id,external_account_id,expires_at')
-    .eq('user_id', user.organizationId)
-    .eq('channel', 'whatsapp')
-    .eq('status', 'connected')
-    .eq('provider', 'openbsp');
+  // 2) buscar canal do tenant
+  const channel = await prisma.whatsappChannel.findFirst({
+    where: {
+      organizationId: user.organizationId,
+      status: 'CONNECTED',
+      provider: 'openbsp',
+    },
+    select: { id: true, verifyToken: true, onboardingTokenId: true },
+  });
 
-  if (!integrations || integrations.length === 0) {
+  if (!channel) {
     return NextResponse.json({ error: 'not_connected' }, { status: 409 });
   }
 
-  const integration = integrations[0] as {
-    id: string;
-    user_id: string;
-    meta: Record<string, unknown> | null;
-    external_account_id: string | null;
-    expires_at: string | null;
-  };
 
-  // 3) verificar se o token já expirou localmente
-  if (integration.expires_at) {
-    const expired = new Date(integration.expires_at) < new Date();
-    if (expired) {
-      return NextResponse.json({ error: 'token_expired', detail: 'onboarding expirou' }, { status: 409 });
-    }
-  }
 
-  const tokenId = integration.meta?.openbsp_onboarding_token_id as string | null;
+  const tokenId = channel.onboardingTokenId;
   if (!tokenId) {
     return NextResponse.json({ error: 'no_token' }, { status: 409 });
   }
@@ -91,21 +78,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'token_revoked', detail: 'access_token ausente no provedor' }, { status: 409 });
   }
 
-  // 6) atualizar access_token em cache (OpenBSP renovou automaticamente)
-  const newExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(); // 60 dias
+  // 6) renovar access_token em cache (OpenBSP renova automaticamente)
+  const accessTokenEnc = encryptToken(address.extra.access_token);
 
-  const { error } = await service
-    .from('integrations')
-    .update({
-      external_account_id: address.extra.waba_id ?? null,
-      access_token: address.extra.access_token,
-      expires_at: newExpiresAt,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', integration.id);
-
-  if (error) {
-    console.error('[openbsp-refresh] erro ao atualizar:', error.message);
+  try {
+    await prisma.whatsappChannel.update({
+      where: { id: channel.id },
+      data: {
+        status: 'CONNECTED',
+        wabaId: address.extra.waba_id ?? null,
+        phoneNumberId: address.address,
+        phoneNumber: address.extra.phone_number ?? null,
+        verifiedName: address.extra.verified_name ?? null,
+        accessTokenEnc,
+        lastError: null,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (e) {
+    console.error('[openbsp-refresh] erro ao atualizar:', (e as Error).message);
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 

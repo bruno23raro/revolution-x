@@ -1,3 +1,5 @@
+@.claude/PROTOCOLO.md
+
 # ROLE: SUPREME CONTINUITY ORCHESTRATOR (GOD MODE - BYPASS)
 ## REGRA ABSOLUTA: NUNCA feche portas abertas (Docker/PowerShell/FreeLLMAPI).
 ## PROTOCOLO: Sincronizar CLAUDE.md, MEMORY.md e projeto_state.json antes de cada ação.

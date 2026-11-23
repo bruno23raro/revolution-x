@@ -62,7 +62,11 @@ export async function sendViaOpenBSP(
     return { ok: false, error: 'Canal OpenBSP sem phoneNumberId' };
   }
 
-  const organizationId = (channel as any).organizationId ?? (channel as any).organization_id;
+  // Provedor exige OPENBSP_ORG_ID; organizationId do app (tenant) nao serve.
+  const organizationId =
+    String(process.env.OPENBSP_ORG_ID ?? '').trim() ||
+    (channel as { organizationId?: string; organization_id?: string }).organizationId ||
+    (channel as { organization_id?: string }).organization_id;
 
   const payload = {
     organization_id: organizationId,
@@ -139,7 +143,10 @@ export async function sendTemplateViaOpenBSP(
     return { ok: false, error: 'Canal OpenBSP sem phoneNumberId' };
   }
 
-  const organizationId = (channel as any).organizationId ?? (channel as any).organization_id;
+  const organizationId =
+    String(process.env.OPENBSP_ORG_ID ?? '').trim() ||
+    (channel as { organizationId?: string; organization_id?: string }).organizationId ||
+    (channel as { organization_id?: string }).organization_id;
 
   const payload = {
     organization_id: organizationId,

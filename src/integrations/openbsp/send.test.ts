@@ -28,12 +28,15 @@ describe('OpenBSP Send', () => {
     process.env.OPENBSP_BASE_URL = 'https://test.supabase.co';
     process.env.OPENBSP_PUBLISHABLE_KEY = 'test-pk';
     process.env.OPENBSP_API_KEY = 'test-sk';
+    // Sem OPENBSP_ORG_ID: fallback para organizationId do canal (asserts legados).
+    delete process.env.OPENBSP_ORG_ID;
   });
 
   afterEach(() => {
     delete process.env.OPENBSP_BASE_URL;
     delete process.env.OPENBSP_PUBLISHABLE_KEY;
     delete process.env.OPENBSP_API_KEY;
+    delete process.env.OPENBSP_ORG_ID;
   });
 
   describe('sendViaOpenBSP', () => {

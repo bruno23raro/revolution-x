@@ -87,6 +87,127 @@ export async function openbspPost<T = unknown>(
 
 // ÔöÇÔöÇ Onboarding por tenant ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
+export async function openbspGet<T = unknown>(
+  cfg: OpenbspConfig,
+  pathAndQuery: string,
+  opts: ProviderCallOpts = {},
+): Promise<OpenbspResult<T>> {
+  const fetchImpl = resolveFetch(opts);
+  if (!fetchImpl) return { ok: false, error: 'fetch_unavailable' };
+  const path = pathAndQuery.replace(/^\//, '');
+  const url = `${cfg.base}/${path}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? OPENBSP_TIMEOUT_MS);
+  if (opts.signal) {
+    if (opts.signal.aborted) ctrl.abort();
+    else opts.signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  }
+  try {
+    const res = await fetchImpl(url, {
+      method: 'GET',
+      signal: ctrl.signal,
+      cache: 'no-store',
+      headers: {
+        apikey: cfg.publishableKey,
+        'api-key': cfg.apiKey,
+      },
+    });
+    const textBody = await res.text().catch(() => '');
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: 'http_error', errorDetail: textBody.slice(0, 500) };
+    }
+    let data: T | undefined;
+    try {
+      data = textBody ? (JSON.parse(textBody) as T) : undefined;
+    } catch {
+      data = undefined;
+    }
+    return { ok: true, data, status: res.status };
+  } catch (e) {
+    return { ok: false, error: 'network_error', errorDetail: String((e as Error)?.message ?? e) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export interface OpenbspConversationRow {
+  id: string;
+  organization_id: string;
+  organization_address: string;
+  address: string;
+  service: string;
+  type?: string | null;
+  name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpenbspMessageRow {
+  id: string;
+  organization_id: string;
+  organization_address: string;
+  conversation_id: string;
+  conversation_address: string;
+  sender_address: string | null;
+  content: Record<string, unknown> | null;
+  status: Record<string, unknown> | null;
+  timestamp: string;
+  created_at: string;
+  external_id?: string | null;
+}
+
+export function listProviderConversations(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  organizationAddress: string,
+  opts: ProviderCallOpts & { limit?: number; since?: string } = {},
+): Promise<OpenbspResult<OpenbspConversationRow[]>> {
+  const limit = opts.limit ?? 50;
+  let q =
+    `conversations?organization_id=eq.${encodeURIComponent(organizationId)}` +
+    `&organization_address=eq.${encodeURIComponent(organizationAddress)}` +
+    `&select=id,organization_id,organization_address,address,service,type,name,created_at,updated_at` +
+    `&order=updated_at.desc&limit=${limit}`;
+  if (opts.since) {
+    q += `&updated_at=gt.${encodeURIComponent(opts.since)}`;
+  }
+  return openbspGet<OpenbspConversationRow[]>(cfg, q, opts);
+}
+
+export function listProviderMessages(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  organizationAddress: string,
+  opts: ProviderCallOpts & { conversationId?: string; limit?: number; since?: string } = {},
+): Promise<OpenbspResult<OpenbspMessageRow[]>> {
+  const limit = opts.limit ?? 100;
+  let q =
+    `messages?organization_id=eq.${encodeURIComponent(organizationId)}` +
+    `&organization_address=eq.${encodeURIComponent(organizationAddress)}` +
+    `&select=id,organization_id,organization_address,conversation_id,conversation_address,sender_address,content,status,timestamp,created_at,external_id` +
+    `&order=timestamp.desc&limit=${limit}`;
+  if (opts.conversationId) {
+    q += `&conversation_id=eq.${encodeURIComponent(opts.conversationId)}`;
+  }
+  if (opts.since) {
+    q += `&timestamp=gt.${encodeURIComponent(opts.since)}`;
+  }
+  return openbspGet<OpenbspMessageRow[]>(cfg, q, opts);
+}
+
+export function getProviderConversation(
+  cfg: OpenbspConfig,
+  organizationId: string,
+  conversationId: string,
+  opts: ProviderCallOpts = {},
+): Promise<OpenbspResult<OpenbspConversationRow[]>> {
+  const q =
+    `conversations?id=eq.${encodeURIComponent(conversationId)}` +
+    `&organization_id=eq.${encodeURIComponent(organizationId)}` +
+    `&select=id,organization_id,organization_address,address,service,type,name,created_at,updated_at&limit=1`;
+  return openbspGet<OpenbspConversationRow[]>(cfg, q, opts);
+}
+
 export interface MintTokenResult {
   ok: boolean;
   tokenId?: string;
